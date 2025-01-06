@@ -1,0 +1,297 @@
+API Documentation
+Authentication APIs
+1. Register User
+
+POST /api/auth/register
+Content-Type: application/json
+
+Request:
+{
+    "email": "john@example.com",
+    "password": "securePassword123",
+    "firstName": "John",
+    "lastName": "Doe",
+    "clientId": 1
+}
+
+Response:
+{
+    "status": "success",
+    "message": "User registered successfully",
+    "data": {
+        "id": 1,
+        "email": "john@example.com",
+        "firstName": "John",
+        "lastName": "Doe"
+    }
+}
+2. Login
+
+POST /api/auth/login
+Content-Type: application/json
+
+Request:
+{
+    "email": "john@example.com",
+    "password": "securePassword123"
+}
+
+Response:
+{
+    "status": "success",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "userMaster": {
+        "id": 1,
+        "email": "john@example.com",
+        "firstName": "John",
+        "lastName": "Doe"
+    }
+}
+Category APIs
+1. Create Category
+
+POST /api/categories
+Content-Type: application/json
+Authorization: Bearer {token}
+
+Request:
+{
+    "name": "Electronics",
+    "status": "A"
+}
+
+Response:
+{
+    "status": "success",
+    "data": {
+        "id": 1,
+        "name": "Electronics",
+        "status": "A"
+    }
+}
+2. Update Category
+
+PUT /api/categories/{id}
+Content-Type: application/json
+Authorization: Bearer {token}
+
+Request:
+{
+    "name": "Electronics & Gadgets",
+    "status": "A"
+}
+
+Response:
+{
+    "status": "success",
+    "data": {
+        "id": 1,
+        "name": "Electronics & Gadgets",
+        "status": "A"
+    }
+}
+3. Get All Categories
+
+POST /api/categories
+Authorization: Bearer {token}
+
+Response:
+{
+    "status": "success",
+    "data": [
+        {
+            "id": 1,
+            "name": "Electronics",
+            "status": "A"
+        }
+    ]
+}
+Product APIs
+1. Create Product
+
+POST /api/products
+Content-Type: application/json
+Authorization: Bearer {token}
+
+Request:
+{
+    "name": "Laptop",
+    "categoryId": 1,
+    "description": "High-performance laptop",
+    "minimumStock": 10.0,
+    "status": "A"
+}
+
+Response:
+{
+    "status": "success",
+    "data": {
+        "id": 1,
+        "name": "Laptop",
+        "categoryId": 1,
+        "description": "High-performance laptop",
+        "minimumStock": 10.0,
+        "status": "A"
+    }
+}
+2. Update Product
+
+PUT /api/products/{id}
+Content-Type: application/json
+Authorization: Bearer {token}
+
+Request:
+{
+    "name": "Gaming Laptop",
+    "categoryId": 1,
+    "description": "High-performance gaming laptop",
+    "minimumStock": 5.0,
+    "status": "A"
+}
+Purchase APIs
+1. Create Purchase
+
+POST /api/purchases
+Content-Type: application/json
+Authorization: Bearer {token}
+
+Request:
+{
+    "productId": 1,
+    "quantity": 100,
+    "unitPrice": 1000.00,
+    "purchaseDate": "2024-01-01T10:00:00Z",
+    "invoiceNumber": "INV-001",
+    "otherExpenses": 500.00
+}
+
+Response:
+{
+    "status": "success",
+    "data": {
+        "id": 1,
+        "productId": 1,
+        "quantity": 100,
+        "unitPrice": 1000.00,
+        "totalAmount": 100000.00,
+        "purchaseDate": "2024-01-01T10:00:00Z",
+        "invoiceNumber": "INV-001",
+        "otherExpenses": 500.00,
+        "remainingQuantity": 100
+    }
+}
+Sale APIs
+1. Create Sale
+
+POST /api/sales
+Content-Type: application/json
+Authorization: Bearer {token}
+
+Request:
+{
+    "purchaseId": 1,
+    "quantity": 50,
+    "unitPrice": 1200.00,
+    "saleDate": "2024-01-05T15:00:00Z",
+    "invoiceNumber": "SALE-001",
+    "otherExpenses": 200.00
+}
+
+Response:
+{
+    "status": "success",
+    "data": {
+        "id": 1,
+        "purchaseId": 1,
+        "quantity": 50,
+        "unitPrice": 1200.00,
+        "totalAmount": 60000.00,
+        "saleDate": "2024-01-05T15:00:00Z",
+        "invoiceNumber": "SALE-001",
+        "otherExpenses": 200.00
+    }
+}
+Profit APIs
+1. Get Daily Profit Summary
+
+GET /api/profits/daily?startDate=2024-01-01&endDate=2024-01-31
+Authorization: Bearer {token}
+
+Response:
+{
+    "status": "success",
+    "data": [
+        {
+            "date": "2024-01-05",
+            "grossProfit": 10000.00,
+            "totalExpenses": 700.00,
+            "netProfit": 9300.00
+        }
+    ]
+}
+2. Get Product-wise Profit Summary
+
+GET /api/profits/products?startDate=2024-01-01&endDate=2024-01-31
+Authorization: Bearer {token}
+
+Response:
+{
+    "status": "success",
+    "data": [
+        {
+            "productName": "Laptop",
+            "grossProfit": 10000.00,
+            "totalExpenses": 700.00,
+            "netProfit": 9300.00
+        }
+    ]
+}
+All endpoints except login and register require JWT authentication. Include the JWT token in the Authorization header as:
+
+
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Error Responses:
+
+
+{
+    "status": "error",
+    "message": "Error message here",
+    "code": "ERROR_CODE"
+}
+Common Error Codes:
+
+UNAUTHORIZED: Authentication failed or token expired
+VALIDATION_ERROR: Invalid input data
+NOT_FOUND: Requested resource not found
+INSUFFICIENT_STOCK: Not enough stock for sale
+INTERNAL_ERROR: Server internal error
+
+Here's a summary of the endpoints:
+
+Authentication:
+POST /api/auth/register - Register new userMaster
+POST /api/auth/login - Login userMaster
+Categories:
+POST /api/categories - Create category
+PUT /api/categories/{id} - Update category
+GET /api/categories - Get all active categories
+Products:
+POST /api/products - Create product
+PUT /api/products/{id} - Update product
+GET /api/products - Get all active products
+Purchases:
+POST /api/purchases - Create purchase
+GET /api/purchases - Get all purchases
+Sales:
+POST /api/sales - Create sale
+Profits:
+GET /api/profits/daily?startDate=2024-01-01&endDate=2024-12-31 - Get daily profit summary
+GET /api/profits/products?startDate=2024-01-01&endDate=2024-12-31 - Get product-wise profit summary
+The code includes:
+
+Proper separation of concerns (Controller -> Service -> Repository/DAO)
+Transaction management
+Error handling
+JWT authentication
+Proper DTO mappings
+Complex business logic for sales and profit calculations
