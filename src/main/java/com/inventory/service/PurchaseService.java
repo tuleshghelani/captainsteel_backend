@@ -66,8 +66,8 @@ public class PurchaseService {
                 PurchaseItem item = createPurchaseItem(itemDto, purchase);
                 items.add(item);
                 purchaseItemRepository.save(item);
-                totalAmount = totalAmount.add(BigDecimal.valueOf(item.getQuantity())
-                        .multiply(item.getUnitPrice().subtract(item.getDiscountAmount())));
+                totalAmount = totalAmount.add((BigDecimal.valueOf(item.getQuantity())
+                .multiply(item.getUnitPrice())).subtract(item.getDiscountAmount()));
     //            productQuantityService.updateProductQuantity(
     //                    item.getProduct().getId(),
     //                    item.getQuantity(),
@@ -102,8 +102,8 @@ public class PurchaseService {
         item.setUnitPrice(dto.getUnitPrice());
         item.setDiscountPercentage(dto.getDiscountPercentage());
         item.setDiscountAmount(dto.getDiscountAmount());
-        item.setFinalPrice(BigDecimal.valueOf(dto.getQuantity())
-            .multiply(dto.getUnitPrice().subtract(dto.getDiscountAmount())));
+        item.setFinalPrice((BigDecimal.valueOf(dto.getQuantity())
+            .multiply(dto.getUnitPrice())).subtract(dto.getDiscountAmount()));
         item.setRemainingQuantity(dto.getQuantity());
         item.setClient(purchase.getClient());
         
@@ -111,9 +111,16 @@ public class PurchaseService {
     }
     
     @Transactional(readOnly = true)
-    public ApiResponse<?> searchPurchases(PurchaseDto searchParams) {
-        Page<Map<String, Object>> maps = purchaseDao.searchPurchases(searchParams);
-        return ApiResponse.success("Purchase retrieved successfully", maps);
+    public Page<Map<String, Object>> searchPurchases(PurchaseDto searchParams) {
+        try {
+            UserMaster currentUser = utilityService.getCurrentLoggedInUser();
+            searchParams.setClientId(currentUser.getClient().getId());
+            Page<Map<String, Object>> maps = purchaseDao.searchPurchases(searchParams);
+            return maps;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new ValidationException("Purchase retrieval failed: " + e.getMessage());
+        }
     }
     
     private void validatePurchaseRequest(PurchaseRequestDto request) {

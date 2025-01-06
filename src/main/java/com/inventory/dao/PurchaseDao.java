@@ -48,6 +48,7 @@ public class PurchaseDao {
                 WHERE 1=1
                 """);;
             params.put("clientId", dto.getClientId());
+            params.put("clientId", dto.getClientId());
 
 
             appendSearchConditions(nativeQuery, params, dto);
@@ -58,7 +59,7 @@ public class PurchaseDao {
 
             Pageable pageable = PageRequest.of(dto.getCurrentPage(), dto.getPerPageRecord());
             Query countQueryObj = entityManager.createNativeQuery(countQuery.toString());
-            Query query = entityManager.createNativeQuery(actualQuery.toString(), Map.class);
+            Query query = entityManager.createNativeQuery(actualQuery.toString());
 
             setQueryParameters(query, countQueryObj, params, dto);
 
@@ -99,17 +100,10 @@ public class PurchaseDao {
             Map<String, Object> purchase = new HashMap<>();
             int i = 0;
             purchase.put("id", row[i++]);
-            purchase.put("quantity", row[i++]);
-            purchase.put("unitPrice", row[i++]);
-            purchase.put("totalAmount", row[i++]);
+            purchase.put("totalPurchaseAmount", row[i++]);
             purchase.put("purchaseDate", row[i++]);
             purchase.put("invoiceNumber", row[i++]);
-            purchase.put("otherExpenses", row[i++]);
-            purchase.put("remainingQuantity", row[i++]);
-            purchase.put("productName", row[i++]);
-            purchase.put("productId", row[i++]);
-            purchase.put("categoryName", row[i++]);
-            purchase.put("categoryId", row[i++]);
+            purchase.put("customerName", row[i++]);
             purchases.add(purchase);
         }
         return purchases;

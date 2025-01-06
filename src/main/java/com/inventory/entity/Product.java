@@ -71,13 +71,13 @@ public class Product {
     private String status = "A";
 
     @Column(name = "remaining_quantity", columnDefinition = "bigint DEFAULT 0")
-    private Long remainingQuantity;
+    private Long remainingQuantity = 0L;
 
     @Column(name = "blocked_quantity", columnDefinition = "bigint DEFAULT 0")
-    private Long blockedQuantity;
+    private Long blockedQuantity = 0L;
 
     @Column(name = "total_remaining_quantity", columnDefinition = "bigint DEFAULT 0")
-    private Long totalRemainingQuantity;
+    private Long totalRemainingQuantity = 0L;
     
     @Column(name = "description")
     private String description;

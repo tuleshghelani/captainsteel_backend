@@ -31,6 +31,14 @@ public class ProductQuantityService {
             Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ValidationException("Product not found"));
             
+            // Initialize quantities if null
+            if (product.getRemainingQuantity() == null) {
+                product.setRemainingQuantity(0L);
+            }
+            if (product.getTotalRemainingQuantity() == null) {
+                product.setTotalRemainingQuantity(0L);
+            }
+            
             // For sales, convert quantity to negative
             Long changeAmount = isPurchase ? quantityChange : -quantityChange;
             
