@@ -12,9 +12,13 @@ import com.inventory.entity.UserMaster;
 import com.inventory.exception.ValidationException;
 import com.inventory.repository.CustomerRepository;
 import com.inventory.repository.ProductRepository;
+import com.inventory.repository.PurchaseItemRepository;
 import com.inventory.repository.PurchaseRepository;
+
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -22,6 +26,8 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+import com.inventory.dto.PurchaseDto;
 
 @Service
 @RequiredArgsConstructor
@@ -34,41 +40,55 @@ public class PurchaseService {
     private final BatchProcessingService batchProcessingService;
     private final UtilityService utilityService;
     private final PurchaseDao purchaseDao;
-    
-    @Transactional
+    private final PurchaseItemRepository purchaseItemRepository;
+
+    @Transactional(rollbackFor = Exception.class)
     public ApiResponse<?> createPurchase(PurchaseRequestDto request) {
-        validatePurchaseRequest(request);
-        UserMaster currentUser = utilityService.getCurrentLoggedInUser();
-        
-        Purchase purchase = new Purchase();
-        purchase.setCustomer(customerRepository.findById(request.getCustomerId())
-            .orElseThrow(() -> new ValidationException("Customer not found")));
-        purchase.setPurchaseDate(request.getPurchaseDate());
-        purchase.setInvoiceNumber(request.getInvoiceNumber());
-        purchase.setClient(currentUser.getClient());
-        purchase.setCreatedBy(currentUser);
-        
-        // Process items in batches
-        List<PurchaseItem> items = new ArrayList<>();
-        BigDecimal totalAmount = BigDecimal.ZERO;
-        
-        for (PurchaseItemDto itemDto : request.getProducts()) {
-            PurchaseItem item = createPurchaseItem(itemDto, purchase);
-            items.add(item);
-            totalAmount = totalAmount.add(itemDto.getFinalPrice());
-            productQuantityService.updateProductQuantity(
-                    item.getProduct().getId(),
-                    item.getQuantity()
-            );
+        try {
+            validatePurchaseRequest(request);
+            UserMaster currentUser = utilityService.getCurrentLoggedInUser();
+            
+            Purchase purchase = new Purchase();
+            purchase.setCustomer(customerRepository.findById(request.getCustomerId())
+                .orElseThrow(() -> new ValidationException("Customer not found")));
+            purchase.setPurchaseDate(request.getPurchaseDate());
+            purchase.setInvoiceNumber(request.getInvoiceNumber());
+            purchase.setNumberOfItems(request.getProducts().size());
+            purchase.setClient(currentUser.getClient());
+            purchase.setCreatedBy(currentUser);
+            purchase = purchaseRepository.save(purchase);
+            
+            // Process items in batches
+            List<PurchaseItem> items = new ArrayList<>();
+            BigDecimal totalAmount = BigDecimal.ZERO;
+            
+            for (PurchaseItemDto itemDto : request.getProducts()) {
+                PurchaseItem item = createPurchaseItem(itemDto, purchase);
+                items.add(item);
+                purchaseItemRepository.save(item);
+                totalAmount = totalAmount.add(BigDecimal.valueOf(item.getQuantity())
+                        .multiply(item.getUnitPrice().subtract(item.getDiscountAmount())));
+    //            productQuantityService.updateProductQuantity(
+    //                    item.getProduct().getId(),
+    //                    item.getQuantity(),
+    //                    true
+    //            );
+            }
+            
+            purchase.setTotalPurchaseAmount(totalAmount);
+            purchase = purchaseRepository.save(purchase);
+            
+            // Process items and update product quantities in batches
+            batchProcessingService.processPurchaseItems(items);
+            
+            return ApiResponse.success("Purchase created successfully");
+        } catch(ValidationException ve) {
+            ve.printStackTrace();
+            throw ve;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new ValidationException("Purchase creation failed: " + e.getMessage());
         }
-        
-        purchase.setTotalPurchaseAmount(totalAmount);
-        purchase = purchaseRepository.save(purchase);
-        
-        // Process items and update product quantities in batches
-//        batchProcessingService.processPurchaseItems(items);
-        
-        return ApiResponse.success("Purchase created successfully");
     }
     
     private PurchaseItem createPurchaseItem(PurchaseItemDto dto, Purchase purchase) {
@@ -82,7 +102,8 @@ public class PurchaseService {
         item.setUnitPrice(dto.getUnitPrice());
         item.setDiscountPercentage(dto.getDiscountPercentage());
         item.setDiscountAmount(dto.getDiscountAmount());
-        item.setFinalPrice(dto.getFinalPrice());
+        item.setFinalPrice(BigDecimal.valueOf(dto.getQuantity())
+            .multiply(dto.getUnitPrice().subtract(dto.getDiscountAmount())));
         item.setRemainingQuantity(dto.getQuantity());
         item.setClient(purchase.getClient());
         
@@ -90,7 +111,35 @@ public class PurchaseService {
     }
     
     @Transactional(readOnly = true)
-    public Map<String, Object> searchPurchases(Map<String, Object> searchParams) {
-        return purchaseDao.searchPurchases(searchParams);
+    public ApiResponse<?> searchPurchases(PurchaseDto searchParams) {
+        Page<Map<String, Object>> maps = purchaseDao.searchPurchases(searchParams);
+        return ApiResponse.success("Purchase retrieved successfully", maps);
+    }
+    
+    private void validatePurchaseRequest(PurchaseRequestDto request) {
+        if (request.getCustomerId() == null) {
+            throw new ValidationException("Customer ID is required");
+        }
+        if (request.getPurchaseDate() == null) {
+            throw new ValidationException("Purchase date is required");
+        }
+//        if (request.getInvoiceNumber() == null || request.getInvoiceNumber().trim().isEmpty()) {
+//            throw new ValidationException("Invoice number is required");
+//        }
+        if (request.getProducts() == null || request.getProducts().isEmpty()) {
+            throw new ValidationException("At least one product is required");
+        }
+        
+        request.getProducts().forEach(item -> {
+            if (item.getProductId() == null) {
+                throw new ValidationException("Product ID is required");
+            }
+            if (item.getQuantity() == null || item.getQuantity() <= 0) {
+                throw new ValidationException("Valid quantity is required");
+            }
+            if (item.getUnitPrice() == null || item.getUnitPrice().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ValidationException("Valid unit price is required");
+            }
+        });
     }
 }

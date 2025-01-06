@@ -36,22 +36,19 @@ public class PurchaseDao {
 
             actualQuery.append("""
                 SELECT 
-                    p.id, p.quantity, p.unit_price, p.total_amount, 
-                    p.purchase_date, p.invoice_number, p.other_expenses,
-                    p.remaining_quantity, pr.name as product_name,
-                    pr.id as product_id, c.name as category_name,
-                    c.id as category_id
+                    p.id, p.total_purchase_amount, 
+                    p.purchase_date, p.invoice_number, c.name as customer_name
                 """);
 
             countQuery.append("SELECT COUNT(*) ");
 
             nativeQuery.append("""
-                FROM purchase p 
-                LEFT JOIN product pr ON p.product_id = pr.id and pr.client_id = :clientId
-                LEFT JOIN category c ON p.category_id = c.id and c.client_id = :clientId
+                FROM (select * from purchase p where p.client_id = :clientId) p 
+                LEFT JOIN (select * from customer c where c.client_id = :clientId) c ON p.customer_id = c.id
                 WHERE 1=1
                 """);;
             params.put("clientId", dto.getClientId());
+
 
             appendSearchConditions(nativeQuery, params, dto);
 
@@ -61,7 +58,7 @@ public class PurchaseDao {
 
             Pageable pageable = PageRequest.of(dto.getCurrentPage(), dto.getPerPageRecord());
             Query countQueryObj = entityManager.createNativeQuery(countQuery.toString());
-            Query query = entityManager.createNativeQuery(actualQuery.toString());
+            Query query = entityManager.createNativeQuery(actualQuery.toString(), Map.class);
 
             setQueryParameters(query, countQueryObj, params, dto);
 
@@ -80,20 +77,9 @@ public class PurchaseDao {
     private void appendSearchConditions(StringBuilder sql, Map<String, Object> params, PurchaseDto dto) {
         if (!Objects.isNull(dto.getSearch()) && dto.getSearch().trim().length() > 0) {
             sql.append("""
-                AND (LOWER(pr.name) LIKE :search 
-                OR LOWER(p.invoice_number) LIKE :search)
+                AND (LOWER(p.invoice_number) LIKE :search)
                 """);
             params.put("search", "%" + dto.getSearch().toLowerCase() + "%");
-        }
-        
-        if (!Objects.isNull(dto.getProductId()) && dto.getProductId() > 0) {
-            sql.append(" AND p.product_id = :productId");
-            params.put("productId", dto.getProductId());
-        }
-
-        if (!Objects.isNull(dto.getCategoryId()) && dto.getCategoryId() > 0) {
-            sql.append(" AND p.category_id = :categoryId");
-            params.put("categoryId", dto.getCategoryId());
         }
     }
 
@@ -111,18 +97,19 @@ public class PurchaseDao {
         List<Map<String, Object>> purchases = new ArrayList<>();
         for (Object[] row : results) {
             Map<String, Object> purchase = new HashMap<>();
-            purchase.put("id", row[0]);
-            purchase.put("quantity", row[1]);
-            purchase.put("unitPrice", row[2]);
-            purchase.put("totalAmount", row[3]);
-            purchase.put("purchaseDate", row[4]);
-            purchase.put("invoiceNumber", row[5]);
-            purchase.put("otherExpenses", row[6]);
-            purchase.put("remainingQuantity", row[7]);
-            purchase.put("productName", row[8]);
-            purchase.put("productId", row[9]);
-            purchase.put("categoryName", row[10]);
-            purchase.put("categoryId", row[11]);
+            int i = 0;
+            purchase.put("id", row[i++]);
+            purchase.put("quantity", row[i++]);
+            purchase.put("unitPrice", row[i++]);
+            purchase.put("totalAmount", row[i++]);
+            purchase.put("purchaseDate", row[i++]);
+            purchase.put("invoiceNumber", row[i++]);
+            purchase.put("otherExpenses", row[i++]);
+            purchase.put("remainingQuantity", row[i++]);
+            purchase.put("productName", row[i++]);
+            purchase.put("productId", row[i++]);
+            purchase.put("categoryName", row[i++]);
+            purchase.put("categoryId", row[i++]);
             purchases.add(purchase);
         }
         return purchases;
@@ -134,7 +121,7 @@ public class PurchaseDao {
         String jpql = """
             SELECT DISTINCT p FROM Purchase p 
             LEFT JOIN FETCH p.customer 
-            LEFT JOIN FETCH p.items i 
+            LEFT JOIN FETCH p.purchaseItems i 
             LEFT JOIN FETCH i.product 
             WHERE p.client.id = :clientId 
             AND p.purchaseDate BETWEEN :startDate AND :endDate 

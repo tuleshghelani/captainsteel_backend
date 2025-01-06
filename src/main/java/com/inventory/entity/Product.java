@@ -51,10 +51,10 @@ public class Product {
     @JoinColumn(name = "category_id", referencedColumnName = "id", foreignKey = @ForeignKey(name = "fk_product_category_id_category_id"))
     private Category category;
 
-    @Column(name = "purchase_amount", precision = 19, scale = 2, columnDefinition = "numeric(10,2) DEFAULT 0")
+    @Column(name = "purchase_amount", precision = 19, scale = 2, columnDefinition = "numeric(19,2) ")
     private BigDecimal purchaseAmount = BigDecimal.valueOf(0.00);
 
-    @Column(name = "sale_amount", precision = 19, scale = 2, columnDefinition = "numeric(10,2) DEFAULT 0")
+    @Column(name = "sale_amount", precision = 19, scale = 2, columnDefinition = "numeric(19,2) ")
     private BigDecimal saleAmount = BigDecimal.valueOf(0.00);
     
     @Column(name = "created_at", length = 29, columnDefinition = "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP")
