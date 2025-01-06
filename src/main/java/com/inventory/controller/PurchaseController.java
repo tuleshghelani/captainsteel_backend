@@ -45,10 +45,10 @@ public class PurchaseController {
         return ResponseEntity.ok(purchaseService.searchPurchases(searchParams));
     }
     
-//    @DeleteMapping("/{id}")
-//    public ResponseEntity<ApiResponse<?>> delete(@PathVariable Long id) {
-//        return ResponseEntity.ok(purchaseService.delete(id));
-//    }
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<?>> delete(@PathVariable Long id) {
+        return ResponseEntity.ok(purchaseService.delete(id));
+    }
 //
 //    @PutMapping("/{id}")
 //    public ResponseEntity<ApiResponse<?>> update(

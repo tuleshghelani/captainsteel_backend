@@ -15,11 +15,11 @@ import java.util.List;
 
 @Repository
 public interface PurchaseItemRepository extends JpaRepository<PurchaseItem, Long> {
-    @Query(value = """
-        SELECT pi FROM PurchaseItem pi 
-        JOIN FETCH pi.product 
-        WHERE pi.purchase.id = :purchaseId
-        """)
+//    @Query(value = """
+//        SELECT pi FROM PurchaseItem pi
+//        JOIN FETCH pi.product
+//        WHERE pi.purchase.id = :purchaseId
+//        """)
     @QueryHints(@QueryHint(name = org.hibernate.jpa.QueryHints.HINT_FETCH_SIZE, value = "100"))
     List<PurchaseItem> findByPurchaseId(@Param("purchaseId") Long purchaseId);
     
@@ -30,4 +30,8 @@ public interface PurchaseItemRepository extends JpaRepository<PurchaseItem, Long
         WHERE pi.id = :id
         """)
     int updateRemainingQuantity(@Param("id") Long id, @Param("remainingQuantity") Long remainingQuantity);
+
+    @Modifying
+    @Query("DELETE FROM PurchaseItem pi WHERE pi.purchase.id = :purchaseId")
+    void deleteByPurchaseId(@Param("purchaseId") Long purchaseId);
 }

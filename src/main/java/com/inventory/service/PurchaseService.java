@@ -4,7 +4,6 @@ import com.inventory.dao.PurchaseDao;
 import com.inventory.dto.ApiResponse;
 import com.inventory.dto.PurchaseItemDto;
 import com.inventory.dto.PurchaseRequestDto;
-import com.inventory.entity.Customer;
 import com.inventory.entity.Product;
 import com.inventory.entity.Purchase;
 import com.inventory.entity.PurchaseItem;
@@ -148,5 +147,45 @@ public class PurchaseService {
                 throw new ValidationException("Valid unit price is required");
             }
         });
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public ApiResponse<?> delete(Long id) {
+        try {
+            UserMaster currentUser = utilityService.getCurrentLoggedInUser();
+            Purchase purchase = purchaseRepository.findById(id)
+                .orElseThrow(() -> new ValidationException("Purchase not found"));
+                
+            if (!purchase.getClient().getId().equals(currentUser.getClient().getId())) {
+                throw new ValidationException("You are not authorized to delete this purchase");
+            }
+            
+            List<PurchaseItem> items = purchaseItemRepository.findByPurchaseId(id);
+
+            for (PurchaseItem item : items) {
+                try {
+                    productQuantityService.updateProductQuantity(
+                            item.getProduct().getId(),
+                            item.getQuantity(),
+                            false  // false to subtract the quantity
+                    );
+                } catch (Exception e) {
+                    log.error("Error reversing quantity for product {}: {}",
+                            item.getProduct().getId(), e.getMessage());
+                    throw new ValidationException("Failed to reverse product quantities: " + e.getMessage());
+                }
+            }
+
+            purchaseItemRepository.deleteByPurchaseId(id);
+            purchaseRepository.delete(purchase);
+            
+            return ApiResponse.success("Purchase deleted successfully");
+        } catch (ValidationException ve) {
+            ve.printStackTrace();
+            throw ve;
+        } catch (Exception e) {
+            log.error("Error deleting purchase: {}", e.getMessage(), e);
+            throw new ValidationException("Failed to delete purchase: " + e.getMessage());
+        }
     }
 }

@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import com.inventory.entity.Client;
+import com.inventory.repository.ClientRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -13,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.inventory.dto.ApiResponse;
 import com.inventory.dto.LoginRequest;
 import com.inventory.dto.RegisterRequest;
 import com.inventory.entity.UserMaster;
@@ -26,12 +29,13 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AuthService {
     private final UserRepository userRepository;
+    private final ClientRepository clientRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider tokenProvider;
 
     @Transactional
-    public UserMaster register(RegisterRequest request) {
+    public ApiResponse<?> register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email already exists");
         }
@@ -41,7 +45,13 @@ public class AuthService {
         userMaster.setPassword(passwordEncoder.encode(request.getPassword()));
         userMaster.setFirstName(request.getFirstName());
         userMaster.setLastName(request.getLastName());
-        return userRepository.save(userMaster);
+        if(request.getClientId() != null) {
+            Client client = clientRepository.findById(request.getClientId())
+                    .orElseThrow(() -> new ValidationException("Client not found"));
+            userMaster.setClient(client);
+        }
+        userRepository.save(userMaster);
+        return ApiResponse.success("User created successfully");
     }
 
     public Map<String, String> login(LoginRequest request) throws ValidationException {
