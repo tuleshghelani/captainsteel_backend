@@ -29,19 +29,7 @@ public class PurchaseController {
     }
     
     @PostMapping("/searchPurchase")
-    public ResponseEntity<?> searchPurchases(
-            @RequestParam(required = false) String invoiceNumber,
-            @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        
-        PurchaseDto searchParams = new PurchaseDto();
-        searchParams.setInvoiceNumber(invoiceNumber);
-        searchParams.setCurrentPage(page);
-        searchParams.setPerPageRecord(size);
-        // Set other search parameters as needed
-        
+    public ResponseEntity<?> searchPurchases(@RequestBody PurchaseDto searchParams) {
         return ResponseEntity.ok(purchaseService.searchPurchases(searchParams));
     }
     

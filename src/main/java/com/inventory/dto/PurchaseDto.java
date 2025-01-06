@@ -1,15 +1,17 @@
 package com.inventory.dto;
 
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.util.Date;
+
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.inventory.config.CustomDateDeserializer;
+
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.math.BigDecimal;
-import java.time.OffsetDateTime;
 
 @Data
 @Getter
@@ -35,4 +37,8 @@ public class PurchaseDto {
     private BigDecimal discount;
     private BigDecimal discountAmount;
     private BigDecimal discountPrice;
+    private int page;
+    private int size;
+    private Date startDate;
+    private Date endDate;
 }

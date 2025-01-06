@@ -48,7 +48,7 @@ public class PurchaseDao {
                 WHERE 1=1
                 """);;
             params.put("clientId", dto.getClientId());
-            params.put("clientId", dto.getClientId());
+//            params.put("clientId", dto.getClientId());
 
 
             appendSearchConditions(nativeQuery, params, dto);
@@ -80,7 +80,19 @@ public class PurchaseDao {
             sql.append("""
                 AND (LOWER(p.invoice_number) LIKE :search)
                 """);
-            params.put("search", "%" + dto.getSearch().toLowerCase() + "%");
+            params.put("search", "%" + dto.getSearch().toLowerCase().trim() + "%");
+        }
+        if(!Objects.isNull(dto.getStartDate())) {
+            sql.append("""
+                AND (p.purchase_date >= :startDate)
+                """);
+            params.put("startDate", dto.getStartDate());
+        }
+        if(!Objects.isNull(dto.getEndDate())) {
+            sql.append("""
+                AND (p.purchase_date <= :endDate)
+                """);
+            params.put("endDate", dto.getEndDate());
         }
     }
 
