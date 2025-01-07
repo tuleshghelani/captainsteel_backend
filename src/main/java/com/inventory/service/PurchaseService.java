@@ -181,7 +181,8 @@ public class PurchaseService {
                     productQuantityService.updateProductQuantity(
                             item.getProduct().getId(),
                             item.getQuantity(),
-                            false  // false to subtract the quantity
+                            false,  // false to subtract the quantity,
+                            null
                     );
                 } catch (Exception e) {
                     log.error("Error reversing quantity for product {}: {}",

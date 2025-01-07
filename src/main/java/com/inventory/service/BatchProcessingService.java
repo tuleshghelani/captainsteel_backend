@@ -38,7 +38,8 @@ public class BatchProcessingService {
                         productQuantityService.updateProductQuantity(
                             item.getProduct().getId(),
                             item.getQuantity(),
-                            true  // true for purchase
+                            true,  // true for purchase,
+                            null
                         );
                     } catch (Exception e) {
                         log.error("Error processing purchase item: {}", e.getMessage(), e);

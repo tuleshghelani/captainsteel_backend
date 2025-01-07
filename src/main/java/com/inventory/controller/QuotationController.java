@@ -3,6 +3,7 @@ package com.inventory.controller;
 import com.inventory.dto.ApiResponse;
 import com.inventory.dto.QuotationDto;
 import com.inventory.dto.QuotationRequestDto;
+import com.inventory.dto.QuotationStatusUpdateDto;
 import com.inventory.service.QuotationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -53,5 +54,11 @@ public class QuotationController {
         headers.setContentDispositionFormData("filename", "quotation.pdf");
         
         return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+    }
+    
+    @PutMapping("/update-status")
+    public ResponseEntity<ApiResponse<?>> updateQuotationStatus(@RequestBody QuotationStatusUpdateDto request) {
+        log.debug("Received quotation status update request for ID: {}", request.getId());
+        return ResponseEntity.ok(quotationService.updateQuotationStatus(request));
     }
 } 

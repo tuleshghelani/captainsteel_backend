@@ -7,6 +7,7 @@ public class ValidationException extends RuntimeException {
     private HttpStatus httpStatus = HttpStatus.UNPROCESSABLE_ENTITY;
     public ValidationException(String message) {
         super(message);
+        this.httpStatus = HttpStatus.UNPROCESSABLE_ENTITY;
     }
 
 

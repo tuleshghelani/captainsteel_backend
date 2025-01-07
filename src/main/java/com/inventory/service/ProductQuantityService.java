@@ -24,7 +24,7 @@ public class ProductQuantityService {
     }
     
     @Transactional
-    public void updateProductQuantity(Long productId, Long quantityChange, boolean isPurchase) {
+    public void updateProductQuantity(Long productId, Long quantityChange, boolean isPurchase, Boolean isBlock) {
         Lock lock = getProductLock(productId);
         lock.lock();
         try {
@@ -38,6 +38,9 @@ public class ProductQuantityService {
             if (product.getTotalRemainingQuantity() == null) {
                 product.setTotalRemainingQuantity(0L);
             }
+            if (product.getBlockedQuantity() == null) {
+                product.setBlockedQuantity(0L);
+            }
             
             // For sales, convert quantity to negative
             Long changeAmount = isPurchase ? quantityChange : -quantityChange;
@@ -45,6 +48,15 @@ public class ProductQuantityService {
             // Validate stock for sales
             if (!isPurchase && product.getRemainingQuantity() < quantityChange) {
                 throw new ValidationException("Insufficient stock for product: " + product.getName());
+            }
+            
+            // Handle blocked quantity
+            if (isBlock != null) {
+                Long newBlockedQuantity = product.getBlockedQuantity() + (isBlock ? quantityChange : -quantityChange);
+                if (newBlockedQuantity < 0) {
+                    throw new ValidationException("Operation would result in negative blocked quantity for product: " + product.getName());
+                }
+                product.setBlockedQuantity(newBlockedQuantity);
             }
             
             Long newRemainingQuantity = product.getRemainingQuantity() + changeAmount;
@@ -56,10 +68,13 @@ public class ProductQuantityService {
             }
             
             product.setRemainingQuantity(newRemainingQuantity);
-            product.setTotalRemainingQuantity(newTotalRemainingQuantity);
+            if(isBlock == null) {
+                product.setTotalRemainingQuantity(newTotalRemainingQuantity);
+            }
             productRepository.save(product);
-            log.info("Product {} quantity updated. Change: {}, IsPurchase: {}, New Remaining: {}", 
-                product.getId(), quantityChange, isPurchase, newRemainingQuantity);
+            
+            log.info("Product {} quantity updated. Change: {}, IsPurchase: {}, IsBlock: {}, New Remaining: {}, Blocked: {}", 
+                product.getId(), quantityChange, isPurchase, isBlock, newRemainingQuantity, product.getBlockedQuantity());
             
         } catch (Exception e) {
             log.error("Error updating product quantity: {}", e.getMessage(), e);
