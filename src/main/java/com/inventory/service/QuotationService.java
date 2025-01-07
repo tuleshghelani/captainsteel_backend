@@ -30,6 +30,7 @@ public class QuotationService {
     private final UtilityService utilityService;
     private final QuotationDao quotationDao;
     private final QuoteNumberGeneratorService quoteNumberGeneratorService;
+    private final PdfGenerationService pdfGenerationService;
 
     @Transactional(rollbackFor = Exception.class)
     public ApiResponse<?> createQuotation(QuotationRequestDto request) {
@@ -237,6 +238,21 @@ public class QuotationService {
         } catch (Exception e) {
             log.error("Error fetching quotation detail", e);
             throw new ValidationException("Failed to fetch quotation detail: " + e.getMessage());
+        }
+    }
+
+    public byte[] generateQuotationPdf(QuotationDto request) {
+        try {
+            UserMaster currentUser = utilityService.getCurrentLoggedInUser();
+            request.setClientId(currentUser.getClient().getId());
+            Map<String, Object> quotationData = quotationDao.getQuotationDetail(request);
+            return pdfGenerationService.generateQuotationPdf(quotationData);
+        } catch (ValidationException ve) {
+            ve.printStackTrace();
+            throw ve;
+        } catch (Exception e) {
+            log.error("Error generating quotation PDF", e);
+            throw new ValidationException("Failed to generate PDF: " + e.getMessage());
         }
     }
 } 

@@ -8,6 +8,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 
 @RestController
 @RequestMapping("/api/quotations")
@@ -38,5 +41,17 @@ public class QuotationController {
     public ResponseEntity<?> getQuotationDetail(@RequestBody QuotationDto request) {
         log.debug("Received quotation detail request for ID: {}", request.getId());
         return ResponseEntity.ok(quotationService.getQuotationDetail(request));
+    }
+    
+    @PostMapping("/generate-pdf")
+    public ResponseEntity<byte[]> generateQuotationPdf(@RequestBody QuotationDto request) {
+        log.debug("Received quotation PDF generation request for ID: {}", request.getId());
+        byte[] pdfBytes = quotationService.generateQuotationPdf(request);
+        
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDispositionFormData("filename", "quotation.pdf");
+        
+        return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
     }
 } 
