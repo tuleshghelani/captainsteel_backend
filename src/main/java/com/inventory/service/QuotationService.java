@@ -38,14 +38,14 @@ public class QuotationService {
             UserMaster currentUser = utilityService.getCurrentLoggedInUser();
             Quotation quotation = new Quotation();
             
-            if(request.getQuotationId() != null){
-                quotation = quotationRepository.findById(request.getQuotationId())
-                .orElseThrow(() -> new ValidationException("Quotation not found"));
+            // if(request.getQuotationId() != null){
+            //     quotation = quotationRepository.findById(request.getQuotationId())
+            //     .orElseThrow(() -> new ValidationException("Quotation not found"));
                 
-                if(quotation.getClient().getId() != currentUser.getClient().getId()){
-                    throw new ValidationException("Unauthorized access to quotation");
-                }
-            }
+            //     if(quotation.getClient().getId() != currentUser.getClient().getId()){
+            //         throw new ValidationException("Unauthorized access to quotation");
+            //     }
+            // }
             if(request.getCustomerId() != null){
                 Customer customer = customerRepository.findById(request.getCustomerId())
                 .orElseThrow(() -> new ValidationException("Customer not found"));
@@ -66,9 +66,10 @@ public class QuotationService {
 
             // Generate quote number
             String quoteNumber = quoteNumberGeneratorService.generateQuoteNumber(currentUser.getClient());
+            System.out.println("Generated quote number: " + quoteNumber);
 
             // Set the generated quote number
-            request.setQuoteNumber(quoteNumber);
+            quotation.setQuoteNumber(quoteNumber);
             
             quotation = quotationRepository.save(quotation);
             
@@ -225,6 +226,17 @@ public class QuotationService {
         } catch (Exception e) {
             log.error("Error searching quotations", e);
             throw new ValidationException("Failed to search quotations: " + e.getMessage());
+        }
+    }
+
+    public Map<String, Object> getQuotationDetail(QuotationDto request) {
+        try {
+            UserMaster currentUser = utilityService.getCurrentLoggedInUser();
+            request.setClientId(currentUser.getClient().getId());
+            return quotationDao.getQuotationDetail(request);
+        } catch (Exception e) {
+            log.error("Error fetching quotation detail", e);
+            throw new ValidationException("Failed to fetch quotation detail: " + e.getMessage());
         }
     }
 } 

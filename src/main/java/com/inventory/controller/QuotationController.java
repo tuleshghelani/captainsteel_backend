@@ -33,4 +33,10 @@ public class QuotationController {
         log.debug("Received search quotation request: {}", searchParams);
         return ResponseEntity.ok(quotationService.searchQuotations(searchParams));
     }
+    
+    @PostMapping("/detail")
+    public ResponseEntity<?> getQuotationDetail(@RequestBody QuotationDto request) {
+        log.debug("Received quotation detail request for ID: {}", request.getId());
+        return ResponseEntity.ok(quotationService.getQuotationDetail(request));
+    }
 } 
