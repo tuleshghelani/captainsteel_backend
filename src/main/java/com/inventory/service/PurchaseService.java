@@ -182,6 +182,7 @@ public class PurchaseService {
                             item.getProduct().getId(),
                             item.getQuantity(),
                             false,  // false to subtract the quantity,
+                            true,
                             null
                     );
                 } catch (Exception e) {

@@ -39,6 +39,7 @@ public class BatchProcessingService {
                             item.getProduct().getId(),
                             item.getQuantity(),
                             true,  // true for purchase,
+                            false,
                             null
                         );
                     } catch (Exception e) {

@@ -270,19 +270,31 @@ public class QuotationService {
                 throw new ValidationException("Unauthorized access to quotation");
             }
 
-            // Validate status transition
-            if (!QuotationStatus.Q.equals(quotation.getStatus())) {
-                throw new ValidationException("Only quotations in 'Quote' status can be updated");
-            }
-
             QuotationStatus newStatus = QuotationStatus.valueOf(request.getStatus());
-            if (!Arrays.asList(QuotationStatus.A, QuotationStatus.D).contains(newStatus)) {
-                throw new ValidationException("Invalid status transition");
+            QuotationStatus currentStatus = quotation.getStatus();
+
+            // Validate status transition
+            if (currentStatus == QuotationStatus.Q) {
+                if (!Arrays.asList(QuotationStatus.A, QuotationStatus.D).contains(newStatus)) {
+                    throw new ValidationException("Quote can only be Accepted or Declined");
+                }
+            } else if (Arrays.asList(QuotationStatus.A, QuotationStatus.D).contains(currentStatus)) {
+                if (!Arrays.asList(QuotationStatus.A, QuotationStatus.D).contains(newStatus)) {
+                    throw new ValidationException("Invalid status transition");
+                }
+            } else {
+                throw new ValidationException("Current status cannot be updated");
             }
 
-            // If accepting quotation, update product quantities
-            if (QuotationStatus.A.equals(newStatus)) {
-                updateProductQuantities(quotation);
+            // Handle product quantities based on status change
+            if (currentStatus != newStatus) {
+                if (newStatus == QuotationStatus.A) {
+                    // Block quantities when accepting
+                    updateProductQuantities(quotation, true);
+                } else if (currentStatus == QuotationStatus.A) {
+                    // Unblock quantities when moving from Accepted to any other status
+                    updateProductQuantities(quotation, false);
+                }
             }
 
             quotation.setStatus(newStatus);
@@ -297,7 +309,7 @@ public class QuotationService {
         }
     }
 
-    private void updateProductQuantities(Quotation quotation) {
+    private void updateProductQuantities(Quotation quotation, boolean block) {
         List<QuotationItem> items = quotationItemRepository.findByQuotationId(quotation.getId());
         
         for (QuotationItem item : items) {
@@ -305,8 +317,9 @@ public class QuotationService {
             productQuantityService.updateProductQuantity(
                 product.getId(), 
                 item.getQuantity(),
-                false, // not a purchase
-                true  // block the quantity
+                false,  // not a purchase
+                false,  // not a sale
+                block   // block or unblock based on status
             );
         }
     }
