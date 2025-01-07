@@ -27,7 +27,7 @@ public class ProductService {
     private final ProductDao productDao;
     private final UtilityService utilityService;
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResponse<?> create(ProductDto dto) {
         validateProduct(dto);
         
@@ -59,7 +59,7 @@ public class ProductService {
         }
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResponse<?> update(Long id, ProductDto dto) {
         validateProduct(dto);
         

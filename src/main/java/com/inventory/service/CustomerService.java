@@ -25,7 +25,7 @@ public class CustomerService {
     private final CustomerDao customerDao;
     private final UtilityService utilityService;
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResponse<?> create(CustomerDto dto) {
         try {
             validateCustomer(dto);
