@@ -6,23 +6,23 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.inventory.config.CustomDateDeserializer;
 import lombok.Data;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.Date;
+import java.util.List;
 
 @Data
 @Getter
 @Setter
+@NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class PurchaseItemDto {
+public class QuotationItemRequestDto {
     private Long productId;
     private Long quantity;
     private BigDecimal unitPrice;
+    private BigDecimal taxPercentage;
     private BigDecimal discountPercentage;
-    private BigDecimal discountAmount;
-    private BigDecimal finalPrice;
-    private Long remainingQuantity;
-    private Long clientId;
-
 } 

@@ -65,8 +65,7 @@ public class PurchaseService {
                 PurchaseItem item = createPurchaseItem(itemDto, purchase);
                 items.add(item);
                 purchaseItemRepository.save(item);
-                totalAmount = totalAmount.add((BigDecimal.valueOf(item.getQuantity())
-                .multiply(item.getUnitPrice())).subtract(item.getDiscountAmount()));
+                totalAmount = totalAmount.add(item.getFinalPrice());
     //            productQuantityService.updateProductQuantity(
     //                    item.getProduct().getId(),
     //                    item.getQuantity(),
@@ -98,15 +97,30 @@ public class PurchaseService {
         item.setProduct(product);
         item.setPurchase(purchase);
         item.setQuantity(dto.getQuantity());
-        item.setUnitPrice(dto.getUnitPrice());
+        item.setUnitPrice(dto.getUnitPrice().setScale(2, BigDecimal.ROUND_HALF_UP));
         item.setDiscountPercentage(dto.getDiscountPercentage());
-        item.setDiscountAmount(dto.getDiscountAmount());
-        item.setFinalPrice((BigDecimal.valueOf(dto.getQuantity())
-            .multiply(dto.getUnitPrice())).subtract(dto.getDiscountAmount()));
+        
+        // Calculate amounts with 2 decimal places
+        BigDecimal subTotal = dto.getUnitPrice()
+            .multiply(BigDecimal.valueOf(dto.getQuantity()))
+            .setScale(2, BigDecimal.ROUND_HALF_UP);
+            
+        BigDecimal discountAmount = calculateDiscountAmount(subTotal, dto.getDiscountPercentage())
+            .setScale(2, BigDecimal.ROUND_HALF_UP);
+        
+        item.setDiscountAmount(discountAmount);
+        item.setFinalPrice(subTotal.subtract(discountAmount).setScale(2, BigDecimal.ROUND_HALF_UP));
         item.setRemainingQuantity(dto.getQuantity());
         item.setClient(purchase.getClient());
         
         return item;
+    }
+
+    private BigDecimal calculateDiscountAmount(BigDecimal base, BigDecimal percentage) {
+        return percentage != null ? 
+            base.multiply(percentage)
+                .divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP) : 
+            BigDecimal.ZERO;
     }
     
     @Transactional(readOnly = true)

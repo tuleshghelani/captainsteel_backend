@@ -37,4 +37,7 @@ public class Client {
     
     @Column(name = "updated_at", length = 29, columnDefinition = "TIMESTAMP WITH TIME ZONE")
     private OffsetDateTime updatedAt = OffsetDateTime.now();
+    
+    @Column(name = "last_quote_number", columnDefinition = "BIGINT DEFAULT 0")
+    private Long lastQuoteNumber = 0L;
 }

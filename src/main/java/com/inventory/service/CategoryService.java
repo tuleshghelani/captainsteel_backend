@@ -30,7 +30,7 @@ public class CategoryService {
     private final CategoryDao categoryDao;
     private final UtilityService utilityService;
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResponse<?> create(CategoryDto dto) {
         validateCategory(dto);
         
@@ -59,7 +59,7 @@ public class CategoryService {
         }
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResponse<?> update(Long id, CategoryDto dto) {
         validateCategory(dto);
         
