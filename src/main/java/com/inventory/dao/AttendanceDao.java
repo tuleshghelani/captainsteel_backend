@@ -29,7 +29,7 @@ public class AttendanceDao {
         if (request.getStartDate() != null && request.getEndDate() != null) {
             baseCondition.append(" AND a.start_date_time >= :startDate AND a.start_date_time <= :endDate");
             params.put("startDate", request.getStartDate());
-            params.put("endDate", request.getEndDate());
+            params.put("endDate", request.getEndDate().plusDays(1));
         }
         
         // Count Query
