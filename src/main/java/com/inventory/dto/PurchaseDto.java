@@ -21,6 +21,7 @@ public class PurchaseDto {
     private Long id;
     private Long productId;
     private Long categoryId;
+    private Long customerId;
     private Integer quantity;
     private BigDecimal unitPrice;
     private BigDecimal totalAmount;

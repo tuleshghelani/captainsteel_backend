@@ -46,7 +46,7 @@ public class Quotation {
     
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
-    private QuotationStatus status = QuotationStatus.QUOTE;
+    private QuotationStatus status = QuotationStatus.Q;
     
     @Column(name = "valid_until", columnDefinition = "DATE")
     private LocalDate validUntil;

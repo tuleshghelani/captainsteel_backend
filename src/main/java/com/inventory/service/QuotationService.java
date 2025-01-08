@@ -3,6 +3,7 @@ package com.inventory.service;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -14,6 +15,7 @@ import com.inventory.dto.ApiResponse;
 import com.inventory.dto.QuotationDto;
 import com.inventory.dto.QuotationItemRequestDto;
 import com.inventory.dto.QuotationRequestDto;
+import com.inventory.dto.QuotationStatusUpdateDto;
 import com.inventory.entity.Customer;
 import com.inventory.entity.Product;
 import com.inventory.entity.Quotation;
@@ -41,6 +43,7 @@ public class QuotationService {
     private final QuotationDao quotationDao;
     private final QuoteNumberGeneratorService quoteNumberGeneratorService;
     private final PdfGenerationService pdfGenerationService;
+    private final ProductQuantityService productQuantityService;
 
     @Transactional(rollbackFor = Exception.class)
     public ApiResponse<?> createQuotation(QuotationRequestDto request) {
@@ -71,7 +74,7 @@ public class QuotationService {
             quotation.setValidUntil(request.getValidUntil());
             quotation.setRemarks(request.getRemarks());
             quotation.setTermsConditions(request.getTermsConditions());
-            quotation.setStatus(QuotationStatus.QUOTE);
+            quotation.setStatus(QuotationStatus.Q);
             quotation.setClient(currentUser.getClient());
             quotation.setCreatedBy(currentUser);
 
@@ -263,6 +266,71 @@ public class QuotationService {
         } catch (Exception e) {
             log.error("Error generating quotation PDF", e);
             throw new ValidationException("Failed to generate PDF: " + e.getMessage());
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public ApiResponse<?> updateQuotationStatus(QuotationStatusUpdateDto request) {
+        try {
+            UserMaster currentUser = utilityService.getCurrentLoggedInUser();
+            Quotation quotation = quotationRepository.findById(request.getId())
+                .orElseThrow(() -> new ValidationException("Quotation not found"));
+
+            if (!quotation.getClient().getId().equals(currentUser.getClient().getId())) {
+                throw new ValidationException("Unauthorized access to quotation");
+            }
+
+            QuotationStatus newStatus = QuotationStatus.valueOf(request.getStatus());
+            QuotationStatus currentStatus = quotation.getStatus();
+
+            // Validate status transition
+            if (currentStatus == QuotationStatus.Q) {
+                if (!Arrays.asList(QuotationStatus.A, QuotationStatus.D).contains(newStatus)) {
+                    throw new ValidationException("Quote can only be Accepted or Declined");
+                }
+            } else if (Arrays.asList(QuotationStatus.A, QuotationStatus.D).contains(currentStatus)) {
+                if (!Arrays.asList(QuotationStatus.A, QuotationStatus.D).contains(newStatus)) {
+                    throw new ValidationException("Invalid status transition");
+                }
+            } else {
+                throw new ValidationException("Current status cannot be updated");
+            }
+
+            // Handle product quantities based on status change
+            if (currentStatus != newStatus) {
+                if (newStatus == QuotationStatus.A) {
+                    // Block quantities when accepting
+                    updateProductQuantities(quotation, true);
+                } else if (currentStatus == QuotationStatus.A) {
+                    // Unblock quantities when moving from Accepted to any other status
+                    updateProductQuantities(quotation, false);
+                }
+            }
+
+            quotation.setStatus(newStatus);
+            quotation.setUpdatedAt(OffsetDateTime.now());
+            quotation.setUpdatedBy(currentUser);
+            quotationRepository.save(quotation);
+
+            return ApiResponse.success("Quotation status updated successfully");
+        } catch (Exception e) {
+            log.error("Error updating quotation status", e);
+            throw new ValidationException("Failed to update quotation status: " + e.getMessage());
+        }
+    }
+
+    private void updateProductQuantities(Quotation quotation, boolean block) {
+        List<QuotationItem> items = quotationItemRepository.findByQuotationId(quotation.getId());
+        
+        for (QuotationItem item : items) {
+            Product product = item.getProduct();
+            productQuantityService.updateProductQuantity(
+                product.getId(), 
+                item.getQuantity(),
+                false,  // not a purchase
+                false,  // not a sale
+                block   // block or unblock based on status
+            );
         }
     }
 } 
