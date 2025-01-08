@@ -2,6 +2,7 @@ package com.inventory.dao;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -156,5 +157,65 @@ public class PurchaseDao {
             .setParameter("clientId", clientId)
             .setHint(QueryHints.HINT_FETCH_SIZE, 100)
             .getResultList();
+    }
+
+    public Map<String, Object> getPurchaseDetail(Long purchaseId, Long clientId) {
+        String sql = """
+            SELECT 
+                p.id, p.invoice_number, p.purchase_date, p.total_purchase_amount,
+                p.created_at, p.updated_at, p.customer_id, p.created_by,
+                pi.id as item_id, pi.quantity, pi.unit_price, pi.discount_percentage,
+                pi.discount_amount, pi.final_price, pi.remaining_quantity,
+                pi.product_id
+            FROM (SELECT * FROM purchase WHERE id = :purchaseId AND client_id = :clientId) p
+            LEFT JOIN (SELECT * FROM purchase_items WHERE purchase_id = :purchaseId) pi ON p.id = pi.purchase_id
+            WHERE p.id = :purchaseId
+        """;
+
+        Query query = entityManager.createNativeQuery(sql)
+            .setParameter("purchaseId", purchaseId)
+            .setParameter("clientId", clientId);
+
+        List<Object[]> results = query.getResultList();
+        return transformToDetailResponse(results);
+    }
+
+    private Map<String, Object> transformToDetailResponse(List<Object[]> results) {
+        if (results.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        Object[] firstRow = results.get(0);
+
+        // Set purchase details
+        response.put("id", firstRow[0]);
+        response.put("invoiceNumber", firstRow[1]);
+        response.put("purchaseDate", firstRow[2]);
+        response.put("totalAmount", firstRow[3]);
+        response.put("createdAt", firstRow[4]);
+        response.put("updatedAt", firstRow[5]);
+        response.put("customerId", firstRow[6]);
+        response.put("createdBy", firstRow[7]);
+
+        // Set items
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (Object[] row : results) {
+            if (row[8] != null) { // if item exists
+                items.add(Map.of(
+                    "id", row[8],
+                    "quantity", row[9],
+                    "unitPrice", row[10],
+                    "discountPercentage", row[11],
+                    "discountAmount", row[12],
+                    "finalPrice", row[13],
+                    "remainingQuantity", row[14],
+                    "productId", row[15]
+                ));
+            }
+        }
+        response.put("items", items);
+
+        return response;
     }
 }

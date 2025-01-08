@@ -204,4 +204,15 @@ public class PurchaseService {
             throw new ValidationException("Failed to delete purchase: " + e.getMessage());
         }
     }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> getPurchaseDetail(PurchaseDto request) {
+        try {
+            UserMaster currentUser = utilityService.getCurrentLoggedInUser();
+            return purchaseDao.getPurchaseDetail(request.getId(), currentUser.getClient().getId());
+        } catch (Exception e) {
+            log.error("Error fetching purchase detail: {}", e.getMessage(), e);
+            throw new ValidationException("Failed to fetch purchase detail: " + e.getMessage());
+        }
+    }
 }
