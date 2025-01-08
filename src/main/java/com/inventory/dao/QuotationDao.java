@@ -129,12 +129,11 @@ public class QuotationDao {
                 qi.discount_percentage, qi.discount_amount,
                 qi.tax_percentage, qi.tax_amount, qi.final_price,
                 p.id as product_id, p.name as product_name
-            FROM quotation q
-            LEFT JOIN customer c ON q.customer_id = c.id
-            LEFT JOIN quotation_items qi ON q.id = qi.quotation_id
-            LEFT JOIN product p ON qi.product_id = p.id
+            FROM (select * from quotation q where q.client_id = :clientId and q.id = :quotationId) q
+            LEFT JOIN (select * from customer c where c.client_id = :clientId) c ON q.customer_id = c.id
+            LEFT JOIN (select * from quotation_items qi where qi.client_id = :clientId) qi ON q.id = qi.quotation_id
+            LEFT JOIN (select * from product p where p.client_id = :clientId) p ON qi.product_id = p.id
             WHERE q.id = :quotationId 
-            AND q.client_id = :clientId
         """);
 
         Query query = entityManager.createNativeQuery(sql.toString());
