@@ -1,27 +1,33 @@
 package com.inventory.service;
 
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.inventory.dao.AttendanceDao;
 import com.inventory.dto.ApiResponse;
+import com.inventory.dto.request.AttendanceDeleteRequestDto;
 import com.inventory.dto.request.AttendanceRequestDto;
 import com.inventory.dto.request.AttendanceSearchRequestDto;
-import com.inventory.dto.request.AttendanceDeleteRequestDto;
 import com.inventory.entity.Attendance;
 import com.inventory.entity.Employee;
 import com.inventory.entity.UserMaster;
 import com.inventory.exception.ValidationException;
 import com.inventory.repository.AttendanceRepository;
 import com.inventory.repository.EmployeeRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.OffsetDateTime;
-import java.util.*;
-import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
 public class AttendanceService {
+    private static final Logger logger = LoggerFactory.getLogger(AttendanceService.class);
     private final AttendanceRepository attendanceRepository;
     private final EmployeeRepository employeeRepository;
     private final UtilityService utilityService;
@@ -60,7 +66,11 @@ public class AttendanceService {
             attendanceRepository.saveAll(attendances);
             
             return ApiResponse.success("Attendance saved successfully", attendances.size());
+        } catch (ValidationException e) {
+            logger.error("Validation error: ", e);
+            throw e;
         } catch (Exception e) {
+            logger.error("Failed to save attendance", e);
             throw new ValidationException("Failed to save attendance: " + e.getMessage());
         }
     }

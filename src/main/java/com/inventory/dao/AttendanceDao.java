@@ -19,59 +19,49 @@ public class AttendanceDao {
     private EntityManager entityManager;
     
     public Map<String, Object> getAttendanceByEmployee(Long employeeId, Long clientId, Integer page, Integer size, AttendanceSearchRequestDto request) {
-        String countSql = """
-            SELECT COUNT(a.id) 
-            FROM attendance a 
-            WHERE a.employee_id = :employeeId 
-            AND a.client_id = :clientId
-        """;
-
+        StringBuilder baseCondition = new StringBuilder();
+        Map<String, Object> params = new HashMap<>();
+        
+        baseCondition.append(" WHERE a.employee_id = :employeeId AND a.client_id = :clientId");
+        params.put("employeeId", employeeId);
+        params.put("clientId", clientId);
+        
         if (request.getStartDate() != null && request.getEndDate() != null) {
-            countSql += " AND a.start_date_time >= :startDate AND a.start_date_time <= :endDate";
+            baseCondition.append(" AND a.start_date_time >= :startDate AND a.start_date_time <= :endDate");
+            params.put("startDate", request.getStartDate());
+            params.put("endDate", request.getEndDate());
         }
         
+        // Count Query
+        String countSql = "SELECT COUNT(a.id) FROM attendance a" + baseCondition;
         Query countQuery = entityManager.createNativeQuery(countSql);
-        countQuery.setParameter("employeeId", employeeId);
-        countQuery.setParameter("clientId", clientId);
-        if (request.getStartDate() != null && request.getEndDate() != null) {
-            countQuery.setParameter("startDate", request.getStartDate());
-            countQuery.setParameter("endDate", request.getEndDate());
-        }
-        
+        setQueryParameters(countQuery, params);
         Long totalRecords = ((Number) countQuery.getSingleResult()).longValue();
         
+        // Main Query
         String sql = """
             SELECT 
                 a.id, a.start_date_time, a.end_date_time, 
                 a.remarks, a.created_at,
                 e.id as employee_id, e.name as employee_name,
                 u.id as created_by_id, u.first_name as created_by_first_name, u.last_name as created_by_last_name
-            FROM (SELECT * FROM attendance WHERE employee_id = :employeeId AND client_id = :clientId) a
-            JOIN (SELECT * FROM employee) e ON a.employee_id = e.id
-            JOIN (SELECT * FROM user_master) u ON a.created_by = u.id
-            WHERE 1=1
-        """;
-        
-        if (request.getStartDate() != null && request.getEndDate() != null) {
-            sql += " AND a.start_date_time >= :startDate AND a.start_date_time <= :endDate";
-        }
-        
-        sql += " ORDER BY a.start_date_time DESC";
-        sql += " LIMIT :pageSize OFFSET :offset";
+            FROM attendance a
+            JOIN employee e ON a.employee_id = e.id
+            JOIN user_master u ON a.created_by = u.id
+        """ + baseCondition + 
+        " ORDER BY a.start_date_time DESC LIMIT :pageSize OFFSET :offset";
         
         Query query = entityManager.createNativeQuery(sql);
-        query.setParameter("employeeId", employeeId);
-        query.setParameter("clientId", clientId);
+        setQueryParameters(query, params);
         query.setParameter("pageSize", size);
         query.setParameter("offset", page * size);
         
-        if (request.getStartDate() != null && request.getEndDate() != null) {
-            query.setParameter("startDate", request.getStartDate());
-            query.setParameter("endDate", request.getEndDate());
-        }
-
         List<Object[]> results = query.getResultList();
         return transformResults(results, totalRecords, size);
+    }
+    
+    private void setQueryParameters(Query query, Map<String, Object> params) {
+        params.forEach(query::setParameter);
     }
     
     private Map<String, Object> transformResults(List<Object[]> results, long totalRecords, int pageSize) {
