@@ -243,11 +243,11 @@ public class QuotationService {
         }
     }
 
-    public Map<String, Object> getQuotationDetail(QuotationDto request) {
+    public ApiResponse getQuotationDetail(QuotationDto request) {
         try {
             UserMaster currentUser = utilityService.getCurrentLoggedInUser();
             request.setClientId(currentUser.getClient().getId());
-            return quotationDao.getQuotationDetail(request);
+            return ApiResponse.success("Data fetched successfully", quotationDao.getQuotationDetail(request));
         } catch (Exception e) {
             log.error("Error fetching quotation detail", e);
             throw new ValidationException("Failed to fetch quotation detail: " + e.getMessage());
