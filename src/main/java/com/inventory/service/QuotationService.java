@@ -150,6 +150,7 @@ public class QuotationService {
             
             return ApiResponse.success("Quotation updated successfully");
         } catch (Exception e) {
+            e.printStackTrace();
             log.error("Error updating quotation", e);
             throw new ValidationException("Failed to update quotation: " + e.getMessage());
         }
@@ -225,7 +226,7 @@ public class QuotationService {
 
     private void updateQuotationDetails(Quotation quotation, QuotationRequestDto request, UserMaster currentUser) {
         quotation.setQuoteDate(request.getQuoteDate());
-        quotation.setQuoteNumber(request.getQuoteNumber());
+//        quotation.setQuoteNumber(request.getQuoteNumber());
         quotation.setValidUntil(request.getValidUntil());
         quotation.setRemarks(request.getRemarks());
         quotation.setTermsConditions(request.getTermsConditions());
