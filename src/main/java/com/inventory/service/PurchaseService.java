@@ -25,6 +25,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.time.OffsetDateTime;
 
 import com.inventory.dto.PurchaseDto;
 
@@ -47,6 +48,12 @@ public class PurchaseService {
             validatePurchaseRequest(request);
             UserMaster currentUser = utilityService.getCurrentLoggedInUser();
             
+            // Handle update case
+            if (request.getId() != null) {
+                return handlePurchaseUpdate(request, currentUser);
+            }
+            
+            // Existing create logic
             Purchase purchase = new Purchase();
             purchase.setCustomer(customerRepository.findById(request.getCustomerId())
                 .orElseThrow(() -> new ValidationException("Customer not found")));
@@ -214,5 +221,57 @@ public class PurchaseService {
             log.error("Error fetching purchase detail: {}", e.getMessage(), e);
             throw new ValidationException("Failed to fetch purchase detail: " + e.getMessage());
         }
+    }
+
+    private ApiResponse<?> handlePurchaseUpdate(PurchaseRequestDto request, UserMaster currentUser) {
+        Purchase existingPurchase = purchaseRepository.findById(request.getId())
+            .orElseThrow(() -> new ValidationException("Purchase not found"));
+            
+        if (!existingPurchase.getClient().getId().equals(currentUser.getClient().getId())) {
+            throw new ValidationException("Unauthorized access to purchase");
+        }
+        
+        // Reverse existing quantities
+        List<PurchaseItem> existingItems = purchaseItemRepository.findByPurchaseId(request.getId());
+        for (PurchaseItem item : existingItems) {
+            productQuantityService.updateProductQuantity(
+                item.getProduct().getId(),
+                item.getQuantity(),
+                false,  // not a purchase
+                true,   // is a sale (reverse)
+                null    // no blocking
+            );
+        }
+        
+        // Delete existing items
+        purchaseItemRepository.deleteByPurchaseId(request.getId());
+        
+        // Update purchase details
+        existingPurchase.setCustomer(customerRepository.findById(request.getCustomerId())
+            .orElseThrow(() -> new ValidationException("Customer not found")));
+        existingPurchase.setPurchaseDate(request.getPurchaseDate());
+        existingPurchase.setInvoiceNumber(request.getInvoiceNumber());
+        existingPurchase.setNumberOfItems(request.getProducts().size());
+        existingPurchase.setUpdatedBy(currentUser);
+        existingPurchase.setUpdatedAt(OffsetDateTime.now());
+        
+        // Process new items
+        List<PurchaseItem> newItems = new ArrayList<>();
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        
+        for (PurchaseItemDto itemDto : request.getProducts()) {
+            PurchaseItem item = createPurchaseItem(itemDto, existingPurchase);
+            newItems.add(item);
+            purchaseItemRepository.save(item);
+            totalAmount = totalAmount.add(item.getFinalPrice());
+        }
+        
+        existingPurchase.setTotalPurchaseAmount(totalAmount);
+        purchaseRepository.save(existingPurchase);
+        
+        // Process items and update product quantities in batches
+        batchProcessingService.processPurchaseItems(newItems);
+        
+        return ApiResponse.success("Purchase updated successfully");
     }
 }

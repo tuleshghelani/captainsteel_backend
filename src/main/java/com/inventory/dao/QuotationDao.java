@@ -49,7 +49,8 @@ public class QuotationDao {
     private String buildMainQuery(String nativeQuery, String conditions, QuotationDto searchParams) {
         return new StringBuilder()
             .append("SELECT q.id, q.quote_number, q.quote_date,")
-            .append(" q.total_amount, q.status, c.name as customer_name ")
+            .append(" q.total_amount, q.status, COALESCE(c.name, q.customer_name, '') as customer_name, ")
+            .append(" q.valid_until, q.remarks, q.terms_conditions ")
             .append(nativeQuery)
             .append(conditions)
             .append(" ORDER BY q.").append(searchParams.getSortBy()).append(" ")
@@ -85,6 +86,10 @@ public class QuotationDao {
             conditions.append(" AND q.status = :status");
             params.put("status", searchParams.getStatus());
         }
+        if(searchParams.getCustomerId() != null) {
+            conditions.append(" AND q.customer_id = :customerId");
+            params.put("customerId", searchParams.getCustomerId());
+        }
         
         return conditions;
     }
@@ -102,20 +107,25 @@ public class QuotationDao {
         
         for (Object[] row : results) {
             Map<String, Object> quotation = new HashMap<>();
-            quotation.put("id", row[0]);
-            quotation.put("quoteNumber", row[1]);
-            quotation.put("quoteDate", row[2]);
-            quotation.put("totalAmount", row[3]);
-            quotation.put("status", row[4]);
-            quotation.put("customerName", row[5]);
+            int index = 0;
+            quotation.put("id", row[index++]);
+            quotation.put("quoteNumber", row[index++]);
+            quotation.put("quoteDate", row[index++]);
+            quotation.put("totalAmount", row[index++]);
+            quotation.put("status", row[index++]);
+            quotation.put("customerName", row[index++]);
+            quotation.put("validUntil", row[index++]);
+            quotation.put("remarks", row[index++]);
+            quotation.put("termsConditions", row[index++]);
             quotations.add(quotation);
         }
 
         Map<String, Object> response = new HashMap<>();
-        response.put("quotations", quotations);
-        response.put("totalRecords", totalRecords);
+        response.put("content", quotations);
+        response.put("totalElements", totalRecords);
         response.put("pageSize", pageSize);
-        
+        response.put("totalPages", (totalRecords + pageSize - 1) / pageSize);
+
         return response;
     }
 
