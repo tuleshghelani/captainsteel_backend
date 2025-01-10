@@ -22,7 +22,9 @@ public class PurchaseItemDto {
     private BigDecimal discountPercentage;
     private BigDecimal discountAmount;
     private BigDecimal finalPrice;
-    private Long remainingQuantity;
     private Long clientId;
+    private String remarks;
+    private String coalNumber;
+
 
 } 

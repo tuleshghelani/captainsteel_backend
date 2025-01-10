@@ -45,6 +45,12 @@ public class PurchaseItem {
     @Column(name = "quantity", nullable = false)
     private Long quantity;
     
+    @Column(name = "remarks", columnDefinition = "text")
+    private String remarks;
+
+    @Column(name = "coal_number")
+    private String coalNumber;
+    
     @Column(name = "unit_price", nullable = false, precision = 19, scale = 2)
     private BigDecimal unitPrice;
     

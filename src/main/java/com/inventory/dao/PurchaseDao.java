@@ -45,11 +45,10 @@ public class PurchaseDao {
 
             nativeQuery.append("""
                 FROM (select * from purchase p where p.client_id = :clientId) p 
-                LEFT JOIN (select * from customer c where c.client_id = :clientId and c.id = :customerId) c ON p.customer_id = c.id
+                LEFT JOIN (select * from customer c where c.client_id = :clientId) c ON p.customer_id = c.id
                 WHERE 1=1
                 """);
             params.put("clientId", dto.getClientId());
-            params.put("customerId", dto.getCustomerId());
 
             appendSearchConditions(nativeQuery, params, dto);
 
@@ -94,6 +93,22 @@ public class PurchaseDao {
                 """);
             params.put("endDate", dto.getEndDate());
         }
+        if(!Objects.isNull(dto.getCoalNumber()) && !dto.getCoalNumber().isEmpty()) {
+            sql.append("""
+                AND p.coal_numbers @> CAST(:coalNumber AS jsonb)
+                """);
+            params.put("coalNumber", "[\"" + dto.getCoalNumber().trim().toLowerCase() + "\"]");
+        }
+
+        // if(!Objects.isNull(dto.getCoalNumber()) && !dto.getCoalNumber().isEmpty()) {
+        //     sql.append("""
+        //         AND EXISTS (
+        //             SELECT FROM jsonb_array_elements_text(p.coal_numbers) 
+        //             WHERE value LIKE :coalNumber
+        //         )
+        //         """);
+        //     params.put("coalNumber", "%" + dto.getCoalNumber() + "%");
+        // }
     }
 
     private void setQueryParameters(Query query, Query countQuery, Map<String, Object> params, PurchaseDto dto) {
@@ -165,7 +180,7 @@ public class PurchaseDao {
                 p.id, p.invoice_number, p.purchase_date, p.total_purchase_amount,
                 p.created_at, p.updated_at, p.customer_id, p.created_by,
                 pi.id as item_id, pi.quantity, pi.unit_price, pi.discount_percentage,
-                pi.discount_amount, pi.final_price, pi.remaining_quantity,
+                pi.discount_amount, pi.final_price, 
                 pi.product_id
             FROM (SELECT * FROM purchase WHERE id = :purchaseId AND client_id = :clientId) p
             LEFT JOIN (SELECT * FROM purchase_items WHERE purchase_id = :purchaseId) pi ON p.id = pi.purchase_id
@@ -209,7 +224,6 @@ public class PurchaseDao {
                     "discountPercentage", row[11],
                     "discountAmount", row[12],
                     "finalPrice", row[13],
-                    "remainingQuantity", row[14],
                     "productId", row[15]
                 ));
             }

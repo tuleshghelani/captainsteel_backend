@@ -24,6 +24,7 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Type;
 
 @Data
 @Entity
@@ -58,6 +59,10 @@ public class Purchase {
 
     @Column(name = "number_of_items")
     private Integer numberOfItems;
+
+    @Column(name = "coal_numbers", columnDefinition = "jsonb default '[]'")
+    @Type(value = com.vladmihalcea.hibernate.type.json.JsonType.class)
+    private List<String> coalNumbers = new ArrayList<>();
     
     @Column(length = 29, columnDefinition = "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP")
     private OffsetDateTime createdAt = OffsetDateTime.now();

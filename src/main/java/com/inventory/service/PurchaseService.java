@@ -67,12 +67,19 @@ public class PurchaseService {
             // Process items in batches
             List<PurchaseItem> items = new ArrayList<>();
             BigDecimal totalAmount = BigDecimal.ZERO;
+
+            List<String> coalNumbers = new ArrayList<>();
             
             for (PurchaseItemDto itemDto : request.getProducts()) {
                 PurchaseItem item = createPurchaseItem(itemDto, purchase);
                 items.add(item);
                 purchaseItemRepository.save(item);
                 totalAmount = totalAmount.add(item.getFinalPrice());
+                if (item.getCoalNumber() != null && !item.getCoalNumber().isEmpty()) {
+                    // Escape any special characters including commas
+                    String escapedCoalNumber = item.getCoalNumber().replace(",", "\\,");
+                    coalNumbers.add(escapedCoalNumber);
+                }
     //            productQuantityService.updateProductQuantity(
     //                    item.getProduct().getId(),
     //                    item.getQuantity(),
@@ -81,6 +88,7 @@ public class PurchaseService {
             }
             
             purchase.setTotalPurchaseAmount(totalAmount);
+            purchase.setCoalNumbers(coalNumbers);
             purchase = purchaseRepository.save(purchase);
             
             // Process items and update product quantities in batches
@@ -104,8 +112,12 @@ public class PurchaseService {
         item.setProduct(product);
         item.setPurchase(purchase);
         item.setQuantity(dto.getQuantity());
+        item.setRemarks(dto.getRemarks());
+        if (dto.getCoalNumber() != null && !dto.getCoalNumber().isEmpty()) {
+            item.setCoalNumber(dto.getCoalNumber().toLowerCase());
+        }
         item.setUnitPrice(dto.getUnitPrice().setScale(2, BigDecimal.ROUND_HALF_UP));
-        item.setDiscountPercentage(dto.getDiscountPercentage());
+//        item.setDiscountPercentage(dto.getDiscountPercentage());
         
         // Calculate amounts with 2 decimal places
         BigDecimal subTotal = dto.getUnitPrice()
@@ -115,9 +127,9 @@ public class PurchaseService {
         BigDecimal discountAmount = calculateDiscountAmount(subTotal, dto.getDiscountPercentage())
             .setScale(2, BigDecimal.ROUND_HALF_UP);
         
-        item.setDiscountAmount(discountAmount);
+//        item.setDiscountAmount(discountAmount);
         item.setFinalPrice(subTotal.subtract(discountAmount).setScale(2, BigDecimal.ROUND_HALF_UP));
-        item.setRemainingQuantity(dto.getQuantity());
+//        item.setRemainingQuantity(dto.getQuantity());
         item.setClient(purchase.getClient());
         
         return item;
