@@ -1,9 +1,25 @@
 package com.inventory.entity;
 
-import jakarta.persistence.*;
-import lombok.*;
-
+import java.math.BigDecimal;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Data
 @Entity
@@ -39,6 +55,21 @@ public class Employee {
     
     @Column(name = "department", length = 100)
     private String department;
+    
+    @Column(name = "wage_type", length = 10)
+    private String wageType;  // 'HOURLY' or 'FIXED'
+    
+    @Column(name = "regular_hours", precision = 4, scale = 2)
+    private BigDecimal regularHours;
+    
+    @Column(name = "start_time")
+    private LocalTime startTime;
+    
+    @Column(name = "regular_pay", precision = 7, scale = 2)
+    private BigDecimal regularPay;
+    
+    @Column(name = "overtime_pay", precision = 7, scale = 2)
+    private BigDecimal overtimePay;
     
     @Column(name = "created_at", length = 29, columnDefinition = "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP")
     private OffsetDateTime createdAt = OffsetDateTime.now();

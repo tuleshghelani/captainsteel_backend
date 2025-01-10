@@ -1,22 +1,24 @@
 package com.inventory.service;
 
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import com.inventory.dao.EmployeeDao;
 import com.inventory.dto.ApiResponse;
 import com.inventory.dto.EmployeeDto;
 import com.inventory.entity.Employee;
 import com.inventory.entity.UserMaster;
 import com.inventory.exception.ValidationException;
 import com.inventory.repository.EmployeeRepository;
-import com.inventory.dao.EmployeeDao;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
-import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -44,7 +46,7 @@ public class EmployeeService {
             employee.setClient(currentUser.getClient());
             
             employee = employeeRepository.save(employee);
-            return ApiResponse.success("Employee created successfully", mapEntityToDto(employee));
+            return ApiResponse.success("Employee created successfully");
         } catch (ValidationException e) {
             throw e;
         } catch (Exception e) {
@@ -77,7 +79,7 @@ public class EmployeeService {
             employee.setUpdatedAt(OffsetDateTime.now());
             
             employee = employeeRepository.save(employee);
-            return ApiResponse.success("Employee updated successfully", mapEntityToDto(employee));
+            return ApiResponse.success("Employee updated successfully");
         } catch (ValidationException e) {
             throw e;
         } catch (Exception e) {
@@ -164,7 +166,13 @@ public class EmployeeService {
         employee.setDepartment(dto.getDepartment());
         employee.setStatus(dto.getStatus() != null ? dto.getStatus() : "A");
         employee.setClient(utilityService.getCurrentLoggedInUser().getClient());
+        employee.setWageType(dto.getWageType());
+        employee.setRegularHours(dto.getRegularHours());
+        employee.setStartTime(dto.getStartTime());
+        employee.setRegularPay(dto.getRegularPay());
+        employee.setOvertimePay(dto.getOvertimePay());
     }
+
 
     private EmployeeDto mapEntityToDto(Employee employee) {
         EmployeeDto dto = new EmployeeDto();
