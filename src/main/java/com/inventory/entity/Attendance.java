@@ -2,6 +2,9 @@ package com.inventory.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.math.BigDecimal;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 
 @Data
@@ -28,6 +31,21 @@ public class Attendance {
     
     @Column(name = "end_date_time", nullable = false)
     private OffsetDateTime endDateTime;
+    
+    @Column(name = "regular_hours", precision = 4, scale = 2)
+    private BigDecimal regularHours;
+    
+    @Column(name = "overtime_hours", precision = 4, scale = 2)
+    private BigDecimal overtimeHours;
+    
+    @Column(name = "regular_pay", precision = 8, scale = 2)
+    private BigDecimal regularPay;
+    
+    @Column(name = "overtime_pay", precision = 8, scale = 2)
+    private BigDecimal overtimePay;
+    
+    @Column(name = "total_pay", precision = 8, scale = 2)
+    private BigDecimal totalPay;
     
     @Column(name = "remarks", length = 255)
     private String remarks;

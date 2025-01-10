@@ -57,7 +57,7 @@ public class Employee {
     private String department;
     
     @Column(name = "wage_type", length = 10)
-    private String wageType;  // 'HOURLY' or 'FIXED'
+    private String wageType = "HOURLY";  // 'HOURLY' or 'FIXED'
     
     @Column(name = "regular_hours", precision = 4, scale = 2)
     private BigDecimal regularHours;

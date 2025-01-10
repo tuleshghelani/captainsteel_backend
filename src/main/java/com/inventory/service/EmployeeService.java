@@ -1,5 +1,7 @@
 package com.inventory.service;
 
+import java.math.BigDecimal;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
@@ -149,12 +151,31 @@ public class EmployeeService {
         if (!StringUtils.hasText(dto.getName())) {
             throw new ValidationException("Name is required");
         }
-//        if (!StringUtils.hasText(dto.getMobileNumber())) {
-//            throw new ValidationException("Mobile number is required");
-//        }
-//        if (dto.getMobileNumber().length() < 10 || dto.getMobileNumber().length() > 15) {
-//            throw new ValidationException("Invalid mobile number");
-//        }
+        
+        if (dto.getWageType() != null) {
+            String wageType = dto.getWageType().toUpperCase();
+            if (!wageType.equals("HOURLY") && !wageType.equals("FIXED")) {
+                throw new ValidationException("Wage type must be either 'HOURLY' or 'FIXED'");
+            }
+        } else {
+            dto.setWageType("HOURLY");
+        }
+
+        if (dto.getRegularHours() == null || dto.getRegularHours().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ValidationException("Regular hours must be greater than 0");
+        }
+
+        if (dto.getRegularPay() == null || dto.getRegularPay().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ValidationException("Regular pay must be greater than 0");
+        }
+
+        if (dto.getOvertimePay() == null || dto.getOvertimePay().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ValidationException("Overtime pay must be greater than 0");
+        }
+
+        if (dto.getStartTime() == null || dto.getStartTime().isAfter(LocalTime.of(23, 59, 59))) {
+            throw new ValidationException("Start time must be before 11:59 PM");
+        }
     }
 
     private void mapDtoToEntity(EmployeeDto dto, Employee employee) {

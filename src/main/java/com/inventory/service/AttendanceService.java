@@ -1,5 +1,8 @@
 package com.inventory.service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +30,7 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class AttendanceService {
+    private static final BigDecimal DEFAULT_REGULAR_HOURS = new BigDecimal("8.00");
     private static final Logger logger = LoggerFactory.getLogger(AttendanceService.class);
     private final AttendanceRepository attendanceRepository;
     private final EmployeeRepository employeeRepository;
@@ -51,15 +55,7 @@ public class AttendanceService {
                         throw new ValidationException("Employee not found with ID: " + employeeId);
                     }
                     
-                    return Attendance.builder()
-                        .employee(employee)
-                        .startDateTime(request.getStartDateTime())
-                        .endDateTime(request.getEndDateTime())
-                        .remarks(request.getRemarks())
-                        .client(currentUser.getClient())
-                        .createdBy(currentUser)
-                        .createdAt(OffsetDateTime.now())
-                        .build();
+                    return createAttendanceWithSalary(employee, request, currentUser);
                 })
                 .collect(Collectors.toList());
             
@@ -73,6 +69,68 @@ public class AttendanceService {
             logger.error("Failed to save attendance", e);
             throw new ValidationException("Failed to save attendance: " + e.getMessage());
         }
+    }
+
+    private Attendance createAttendanceWithSalary(Employee employee, AttendanceRequestDto request, UserMaster currentUser) {
+        // Calculate hours worked
+        Duration duration = Duration.between(request.getStartDateTime(), request.getEndDateTime());
+        BigDecimal hoursWorked = BigDecimal.valueOf(duration.toMinutes())
+            .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+        
+        // Get regular hours (default to 8 if not set)
+        BigDecimal regularHours = employee.getRegularHours() != null && employee.getRegularHours().compareTo(BigDecimal.ZERO) > 0 
+            ? employee.getRegularHours() 
+            : DEFAULT_REGULAR_HOURS;
+        
+        // Calculate overtime hours
+        BigDecimal overtimeHours = hoursWorked.compareTo(regularHours) > 0 
+            ? hoursWorked.subtract(regularHours)
+            : BigDecimal.ZERO;
+        
+        // Calculate pays
+        BigDecimal regularPay = calculateRegularPay(employee, regularHours);
+        BigDecimal overtimePay = calculateOvertimePay(employee, overtimeHours);
+        BigDecimal totalPay = regularPay.add(overtimePay);
+        
+        return Attendance.builder()
+            .employee(employee)
+            .startDateTime(request.getStartDateTime())
+            .endDateTime(request.getEndDateTime())
+            .regularHours(regularHours)
+            .overtimeHours(overtimeHours)
+            .regularPay(regularPay)
+            .overtimePay(overtimePay)
+            .totalPay(totalPay)
+            .remarks(request.getRemarks())
+            .client(currentUser.getClient())
+            .createdBy(currentUser)
+            .createdAt(OffsetDateTime.now())
+            .build();
+    }
+
+    private BigDecimal calculateRegularPay(Employee employee, BigDecimal regularHours) {
+        if (!"HOURLY".equalsIgnoreCase(employee.getWageType())) {
+            return employee.getRegularPay() != null ? employee.getRegularPay() : BigDecimal.ZERO;
+        }
+        
+        BigDecimal hourlyRate = employee.getRegularPay() != null ? 
+            employee.getRegularPay() : BigDecimal.ZERO;
+        
+        return hourlyRate.multiply(regularHours)
+            .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal calculateOvertimePay(Employee employee, BigDecimal overtimeHours) {
+        if (!"HOURLY".equalsIgnoreCase(employee.getWageType()) || 
+            overtimeHours.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        
+        BigDecimal overtimeRate = employee.getOvertimePay() != null ? 
+            employee.getOvertimePay() : BigDecimal.ZERO;
+        
+        return overtimeRate.multiply(overtimeHours)
+            .setScale(2, RoundingMode.HALF_UP);
     }
 
     private void validateRequest(AttendanceRequestDto request) {
