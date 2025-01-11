@@ -44,10 +44,9 @@ public class AttendanceDao {
                 a.id, a.start_date_time, a.end_date_time, 
                 a.remarks, a.created_at,
                 e.id as employee_id, e.name as employee_name,
-                u.id as created_by_id, u.first_name as created_by_first_name, u.last_name as created_by_last_name
+                a.regular_hours, a.overtime_hours, a.regular_pay, a.overtime_pay, a.total_pay
             FROM attendance a
             JOIN employee e ON a.employee_id = e.id
-            JOIN user_master u ON a.created_by = u.id
         """ + baseCondition + 
         " ORDER BY a.start_date_time DESC LIMIT :pageSize OFFSET :offset";
         
@@ -69,25 +68,23 @@ public class AttendanceDao {
         
         for (Object[] row : results) {
             Map<String, Object> attendance = new HashMap<>();
-            attendance.put("id", row[0]);
-            attendance.put("startDateTime", row[1]);
-            attendance.put("endDateTime", row[2]);
-            attendance.put("remarks", row[3]);
-            attendance.put("createdAt", row[4]);
+            int index = 0;
+            attendance.put("id", row[index++]);
+            attendance.put("startDateTime", row[index++]);
+            attendance.put("endDateTime", row[index++]);
+            attendance.put("remarks", row[index++]);
+            attendance.put("createdAt", row[index++]);
             
             attendance.put("employee", Map.of(
-                "id", row[5],
-                "name", row[6]
+                "id", row[index++],
+                "name", row[index++]
             ));
-            
-            String createdByName = String.format("%s %s", 
-                row[8] != null ? row[8] : "",
-                row[9] != null ? row[9] : "").trim();
-            
-            attendance.put("createdBy", Map.of(
-                "id", row[7],
-                "name", createdByName
-            ));
+
+            attendance.put("regularHours", row[index++]);
+            attendance.put("overtimeHours", row[index++]);
+            attendance.put("regularPay", row[index++]);
+            attendance.put("overtimePay", row[index++]);
+            attendance.put("totalPay", row[index++]);
             
             attendances.add(attendance);
         }
