@@ -68,17 +68,17 @@ public class PurchaseService {
             List<PurchaseItem> items = new ArrayList<>();
             BigDecimal totalAmount = BigDecimal.ZERO;
 
-            List<String> coalNumbers = new ArrayList<>();
+            List<String> coilNumbers = new ArrayList<>();
             
             for (PurchaseItemDto itemDto : request.getProducts()) {
                 PurchaseItem item = createPurchaseItem(itemDto, purchase);
                 items.add(item);
                 purchaseItemRepository.save(item);
                 totalAmount = totalAmount.add(item.getFinalPrice());
-                if (item.getCoalNumber() != null && !item.getCoalNumber().isEmpty()) {
+                if (item.getCoilNumber() != null && !item.getCoilNumber().isEmpty()) {
                     // Escape any special characters including commas
-                    String escapedCoalNumber = item.getCoalNumber().replace(",", "\\,");
-                    coalNumbers.add(escapedCoalNumber);
+                    String escapedcoilNumber = item.getCoilNumber().replace(",", "\\,");
+                    coilNumbers.add(escapedcoilNumber);
                 }
     //            productQuantityService.updateProductQuantity(
     //                    item.getProduct().getId(),
@@ -88,7 +88,7 @@ public class PurchaseService {
             }
             
             purchase.setTotalPurchaseAmount(totalAmount);
-            purchase.setCoalNumbers(coalNumbers);
+            purchase.setCoilNumbers(coilNumbers);
             purchase = purchaseRepository.save(purchase);
             
             // Process items and update product quantities in batches
@@ -113,8 +113,8 @@ public class PurchaseService {
         item.setPurchase(purchase);
         item.setQuantity(dto.getQuantity());
         item.setRemarks(dto.getRemarks());
-        if (dto.getCoalNumber() != null && !dto.getCoalNumber().isEmpty()) {
-            item.setCoalNumber(dto.getCoalNumber().toLowerCase());
+        if (dto.getCoilNumber() != null && !dto.getCoilNumber().isEmpty()) {
+            item.setCoilNumber(dto.getCoilNumber().toLowerCase());
         }
         item.setUnitPrice(dto.getUnitPrice().setScale(2, BigDecimal.ROUND_HALF_UP));
 //        item.setDiscountPercentage(dto.getDiscountPercentage());

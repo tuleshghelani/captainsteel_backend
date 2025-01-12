@@ -93,21 +93,21 @@ public class PurchaseDao {
                 """);
             params.put("endDate", dto.getEndDate());
         }
-        if(!Objects.isNull(dto.getCoalNumber()) && !dto.getCoalNumber().isEmpty()) {
+        if(!Objects.isNull(dto.getCoilNumber()) && !dto.getCoilNumber().isEmpty()) {
             sql.append("""
-                AND p.coal_numbers @> CAST(:coalNumber AS jsonb)
+                AND p.coal_numbers @> CAST(:coilNumber AS jsonb)
                 """);
-            params.put("coalNumber", "[\"" + dto.getCoalNumber().trim().toLowerCase() + "\"]");
+            params.put("coilNumber", "[\"" + dto.getCoilNumber().trim().toLowerCase() + "\"]");
         }
 
-        // if(!Objects.isNull(dto.getCoalNumber()) && !dto.getCoalNumber().isEmpty()) {
+        // if(!Objects.isNull(dto.getcoilNumber()) && !dto.getcoilNumber().isEmpty()) {
         //     sql.append("""
         //         AND EXISTS (
         //             SELECT FROM jsonb_array_elements_text(p.coal_numbers) 
-        //             WHERE value LIKE :coalNumber
+        //             WHERE value LIKE :coilNumber
         //         )
         //         """);
-        //     params.put("coalNumber", "%" + dto.getCoalNumber() + "%");
+        //     params.put("coilNumber", "%" + dto.getcoilNumber() + "%");
         // }
     }
 

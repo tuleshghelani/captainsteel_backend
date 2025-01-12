@@ -25,5 +25,5 @@ public class PurchaseRequestDto {
     private Date purchaseDate;
     private String invoiceNumber;
     private List<PurchaseItemDto> products;
-    private List<String> coalNumbers;
+    private List<String> coilNumbers;
 }

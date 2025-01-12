@@ -60,9 +60,9 @@ public class Purchase {
     @Column(name = "number_of_items")
     private Integer numberOfItems;
 
-    @Column(name = "coal_numbers", columnDefinition = "jsonb default '[]'")
+    @Column(name = "coil_numbers", columnDefinition = "jsonb default '[]'")
     @Type(value = com.vladmihalcea.hibernate.type.json.JsonType.class)
-    private List<String> coalNumbers = new ArrayList<>();
+    private List<String> coilNumbers = new ArrayList<>();
     
     @Column(length = 29, columnDefinition = "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP")
     private OffsetDateTime createdAt = OffsetDateTime.now();

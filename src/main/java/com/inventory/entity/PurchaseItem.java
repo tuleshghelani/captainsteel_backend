@@ -48,8 +48,8 @@ public class PurchaseItem {
     @Column(name = "remarks", columnDefinition = "text")
     private String remarks;
 
-    @Column(name = "coal_number")
-    private String coalNumber;
+    @Column(name = "coil_number")
+    private String coilNumber;
     
     @Column(name = "unit_price", nullable = false, precision = 19, scale = 2)
     private BigDecimal unitPrice;
