@@ -21,6 +21,7 @@ public class EmployeeDto {
     private Long id;
     private String name;
     private String mobileNumber;
+    private String aadharNumber;
     private String email;
     private String address;
     private String designation;

@@ -3,11 +3,13 @@ package com.inventory.service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.inventory.dao.EmployeeDao;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,8 @@ import com.inventory.entity.UserMaster;
 import com.inventory.exception.ValidationException;
 import com.inventory.repository.AttendanceRepository;
 import com.inventory.repository.EmployeeRepository;
+import com.inventory.dto.request.AttendancePdfRequestDto;
+import com.inventory.service.AttendancePdfService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -36,6 +40,8 @@ public class AttendanceService {
     private final EmployeeRepository employeeRepository;
     private final UtilityService utilityService;
     private final AttendanceDao attendanceDao;
+    private final AttendancePdfService attendancePdfService;
+    private final EmployeeDao employeeDao;
 
     @Transactional(rollbackFor = Exception.class)
     public ApiResponse<?> saveAttendance(AttendanceRequestDto request) {
@@ -198,6 +204,33 @@ public class AttendanceService {
             return ApiResponse.success("Attendance records deleted successfully", request.getAttendanceIds().size());
         } catch (Exception e) {
             throw new ValidationException("Failed to delete attendance records: " + e.getMessage());
+        }
+    }
+
+    public byte[] generateAttendancePdf(AttendancePdfRequestDto request) {
+        try {
+            // Validate request
+            if (request.getEmployeeId() == null) {
+                throw new ValidationException("Employee ID is required");
+            }
+            
+            // Get month start and end dates
+            LocalDate startDate = request.getStartDate().withDayOfMonth(1);
+            LocalDate endDate = startDate.plusMonths(1).minusDays(1);
+            
+            // Get employee details
+            Map<String, Object> employeeData = employeeDao.getEmployeeDetail(request.getEmployeeId());
+            
+            // Get attendance records
+            List<Map<String, Object>> attendanceRecords = attendanceDao.getMonthlyAttendance(
+                request.getEmployeeId(), 
+                startDate, 
+                endDate
+            );
+            
+            return attendancePdfService.generatePdf(employeeData, attendanceRecords, startDate, endDate);
+        } catch (Exception e) {
+            throw new ValidationException("Failed to generate attendance PDF: " + e.getMessage());
         }
     }
 } 

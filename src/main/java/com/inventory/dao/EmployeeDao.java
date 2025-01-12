@@ -104,6 +104,7 @@ public class EmployeeDao {
                 e.id,
                 e.name,
                 e.mobile_number,
+                e.aadhar_number,
                 e.email,
                 e.address,
                 e.designation,
@@ -128,19 +129,21 @@ public class EmployeeDao {
         }
         
         Map<String, Object> employee = new HashMap<>();
-        employee.put("id", result[0]);
-        employee.put("name", result[1]);
-        employee.put("mobileNumber", result[2]);
-        employee.put("email", result[3]);
-        employee.put("address", result[4]);
-        employee.put("designation", result[5]);
-        employee.put("department", result[6]);
-        employee.put("status", result[7]);
-        employee.put("wageType", result[8]);
-        employee.put("regularHours", result[9]);
-        employee.put("startTime", result[10]);
-        employee.put("regularPay", result[11]);
-        employee.put("overtimePay", result[12]);
+        int index = 0;
+        employee.put("id", result[index++]);
+        employee.put("name", result[index++]);
+        employee.put("mobileNumber", result[index++]);
+        employee.put("aadharNumber", result[index++]);
+        employee.put("email", result[index++]);
+        employee.put("address", result[index++]);
+        employee.put("designation", result[index++]);
+        employee.put("department", result[index++]);
+        employee.put("status", result[index++]);
+        employee.put("wageType", result[index++]);
+        employee.put("regularHours", result[index++]);
+        employee.put("startTime", result[index++]);
+        employee.put("regularPay", result[index++]);
+        employee.put("overtimePay", result[index++]);
         return employee;
     }
 

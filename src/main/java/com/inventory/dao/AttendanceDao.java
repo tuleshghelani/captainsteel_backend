@@ -4,7 +4,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.time.LocalDate;
+import java.math.BigDecimal;
 
+import org.hibernate.jpa.QueryHints;
 import org.springframework.stereotype.Repository;
 
 import com.inventory.dto.request.AttendanceSearchRequestDto;
@@ -94,5 +97,47 @@ public class AttendanceDao {
             "totalElements", totalRecords,
             "totalPages", (totalRecords + pageSize - 1) / pageSize
         );
+    }
+    
+    public List<Map<String, Object>> getMonthlyAttendance(Long employeeId, LocalDate startDate, LocalDate endDate) {
+        String sql = """
+            select DATE(a.start_date_time) as attendance_date, a.start_date_time, a.end_date_time,
+            a.regular_hours, a.overtime_hours, a.regular_pay, a.overtime_pay , a.total_pay        \s
+                FROM
+                    attendance a        \s
+                WHERE a.employee_id = :employeeId
+                AND DATE(a.start_date_time) BETWEEN :startDate AND :endDate
+        """;
+        
+        Query query = entityManager.createNativeQuery(sql)
+            .setParameter("employeeId", employeeId)
+            .setParameter("startDate", startDate)
+            .setParameter("endDate", endDate)
+            .setHint(QueryHints.HINT_FETCH_SIZE, 50);
+        
+        List<Object[]> results = query.getResultList();
+        return transformAttendanceResults(results);
+    }
+    
+    private List<Map<String, Object>> transformAttendanceResults(List<Object[]> results) {
+        List<Map<String, Object>> attendances = new ArrayList<>();
+        
+        for (Object[] row : results) {
+            Map<String, Object> attendance = new HashMap<>();
+            int index = 0;
+            
+            // Map fields based on the query columns from getMonthlyAttendance()
+            attendance.put("attendance_date", row[index++]);
+            attendance.put("start_date_time", row[index++]);
+            attendance.put("end_date_time", row[index++]);
+            attendance.put("regular_hours", row[index++]);
+            attendance.put("overtime_hours", row[index++]);
+            attendance.put("regular_pay", row[index++]);
+            attendance.put("overtime_pay", row[index++]);
+            attendance.put("total_pay", row[index++]);
+            attendances.add(attendance);
+        }
+        
+        return attendances;
     }
 } 

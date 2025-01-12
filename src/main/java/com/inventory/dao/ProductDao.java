@@ -116,7 +116,9 @@ public class ProductDao {
                 p.purchase_amount,
                 p.sale_amount,
                 p.blocked_quantity,
-                p.total_remaining_quantity
+                p.total_remaining_quantity,
+                p.weight,
+                p.type
             FROM product p
             LEFT JOIN category c ON p.category_id = c.id
             WHERE 1=1
@@ -185,6 +187,8 @@ public class ProductDao {
                 product.put("saleAmount", row[index++]);
                 product.put("blockedQuantity", row[index++]);
                 product.put("totalRemainingQuantity", row[index++]);
+                product.put("weight", row[index++]);
+                product.put("type", row[index++]);
                 products.add(product);
             }
         }

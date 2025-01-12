@@ -47,6 +47,8 @@ public class ProductService {
             product.setSaleAmount(dto.getSaleAmount() != null ? dto.getSaleAmount() : BigDecimal.valueOf(0));
             product.setMinimumStock(dto.getMinimumStock());
             product.setStatus(dto.getStatus().trim());
+            product.setWeight(dto.getWeight() != null ? dto.getWeight() : BigDecimal.valueOf(0));
+            product.setType(dto.getType() != null ? dto.getType() : null);
             product.setClient(currentUser.getClient());
             product.setCreatedBy(currentUser);
 
@@ -84,6 +86,8 @@ public class ProductService {
             product.setSaleAmount(dto.getSaleAmount() != null ? dto.getSaleAmount() : BigDecimal.valueOf(0));
             product.setMinimumStock(dto.getMinimumStock());
             product.setStatus(dto.getStatus().trim());
+            product.setWeight(dto.getWeight() != null ? dto.getWeight() : BigDecimal.valueOf(0));
+            product.setType(dto.getType() != null ? dto.getType() : null);
             product.setClient(currentUser.getClient());
 
             productRepository.save(product);

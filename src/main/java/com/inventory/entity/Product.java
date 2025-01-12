@@ -70,6 +70,12 @@ public class Product {
     @Column(name = "status", nullable = false, length = 2)
     private String status = "A";
 
+    @Column(name = "weight", precision = 8, scale = 3, columnDefinition = "numeric(8,3) ")
+    private BigDecimal weight = BigDecimal.valueOf(0.00);
+
+    @Column(name = "type")
+    private String type;
+
     @Column(name = "remaining_quantity", columnDefinition = "bigint DEFAULT 0")
     private Long remainingQuantity = 0L;
 

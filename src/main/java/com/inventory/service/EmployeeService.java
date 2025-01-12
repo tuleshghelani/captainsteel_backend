@@ -181,6 +181,7 @@ public class EmployeeService {
     private void mapDtoToEntity(EmployeeDto dto, Employee employee) {
         employee.setName(dto.getName().trim());
         employee.setMobileNumber(dto.getMobileNumber() != null ? dto.getMobileNumber().trim() : null);
+        employee.setAadharNumber(dto.getAadharNumber() != null ? dto.getAadharNumber().trim() : null);
         employee.setEmail(dto.getEmail());
         employee.setAddress(dto.getAddress());
         employee.setDesignation(dto.getDesignation());

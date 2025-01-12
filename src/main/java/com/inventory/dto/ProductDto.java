@@ -21,6 +21,8 @@ public class ProductDto {
     private BigDecimal saleAmount;
     private BigDecimal minimumStock;
     private String status;
+    private BigDecimal weight;
+    private String type;
     private Long remainingQuantity;
     private Long clientId;
     private Integer page = 0;

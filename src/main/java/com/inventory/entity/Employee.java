@@ -44,6 +44,9 @@ public class Employee {
     @Column(name = "mobile_number", length = 15)
     private String mobileNumber;
     
+    @Column(name = "aadhar_number", length = 12)
+    private String aadharNumber;
+    
     @Column(name = "email", length = 256)
     private String email;
     
