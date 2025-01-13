@@ -1,17 +1,18 @@
 package com.inventory.dao;
 
-import com.inventory.dto.CategoryDto;
-import com.inventory.dto.ProductDto;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.Query;
-import org.springframework.stereotype.Repository;
-import org.springframework.util.StringUtils;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.springframework.stereotype.Repository;
+import org.springframework.util.StringUtils;
+
+import com.inventory.dto.ProductDto;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.Query;
 
 @Repository
 public class ProductDao {
@@ -27,7 +28,9 @@ public class ProductDao {
                 p.id,
                 p.name,
                 p.purchase_amount,
-                p.sale_amount
+                p.sale_amount,
+                p.type,
+                p.weight
             FROM product p
             WHERE 1=1
         """);
@@ -68,10 +71,13 @@ public class ProductDao {
         for (Object[] row : results) {
             if (row[0] != null) {
                 Map<String, Object> product = new HashMap<>(10);
-                product.put("id", row[0]);
-                product.put("name", row[1]);
-                product.put("purchase_amount", row[2]);
-                product.put("sale_amount", row[3]);
+                int index = 0;
+                product.put("id", row[index++]);
+                product.put("name", row[index++]);
+                product.put("purchase_amount", row[index++]);
+                product.put("sale_amount", row[index++]);
+                product.put("type", row[index++]);
+                product.put("weight", row[index++]);
 
                 products.add(product);
             }
