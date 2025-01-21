@@ -5,6 +5,7 @@ import java.math.RoundingMode;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -382,7 +383,79 @@ public class QuotationService {
         try {
             UserMaster currentUser = utilityService.getCurrentLoggedInUser();
             request.setClientId(currentUser.getClient().getId());
-            return ApiResponse.success("Data fetched successfully", quotationDao.getQuotationDetail(request));
+            
+            // Get quotation and verify access
+            Quotation quotation = quotationRepository.findById(request.getId())
+                .orElseThrow(() -> new ValidationException("Quotation not found"));
+                
+            if (!quotation.getClient().getId().equals(currentUser.getClient().getId())) {
+                throw new ValidationException("Unauthorized access to quotation");
+            }
+            
+            // Get all quotation items with calculations
+            List<QuotationItem> items = quotationItemRepository.findByQuotationId(quotation.getId());
+            List<QuotationItemCalculation> calculations = quotationItemCalculationRepository
+                .findByQuotationId(quotation.getId());
+                
+            // Transform data into response format
+            Map<String, Object> response = new HashMap<>();
+            
+            // Add quotation details
+            response.put("id", quotation.getId());
+            response.put("quoteNumber", quotation.getQuoteNumber());
+            response.put("quoteDate", quotation.getQuoteDate());
+            response.put("validUntil", quotation.getValidUntil());
+            response.put("totalAmount", quotation.getTotalAmount());
+            response.put("status", quotation.getStatus());
+            response.put("remarks", quotation.getRemarks());
+            response.put("termsConditions", quotation.getTermsConditions());
+            response.put("customerName", quotation.getCustomerName());
+            response.put("customerId", quotation.getCustomer() != null ? quotation.getCustomer().getId() : null);
+            response.put("contactNumber", quotation.getContactNumber());
+            response.put("address", quotation.getAddress());
+            
+            // Transform and add items
+            List<Map<String, Object>> itemsList = new ArrayList<>();
+            for (QuotationItem item : items) {
+                Map<String, Object> itemMap = new HashMap<>();
+                itemMap.put("id", item.getId());
+                itemMap.put("productId", item.getProduct().getId());
+                itemMap.put("productName", item.getProduct().getName());
+                itemMap.put("productType", item.getProduct().getType());
+                itemMap.put("quantity", item.getQuantity());
+                itemMap.put("weight", item.getWeight());
+                itemMap.put("unitPrice", item.getUnitPrice());
+                itemMap.put("discountPercentage", item.getDiscountPercentage());
+                itemMap.put("discountAmount", item.getDiscountAmount());
+                itemMap.put("discountPrice", item.getDiscountPrice());
+                itemMap.put("taxPercentage", item.getTaxPercentage());
+                itemMap.put("taxAmount", item.getTaxAmount());
+                itemMap.put("finalPrice", item.getFinalPrice());
+                itemMap.put("calculationType", item.getCalculationType());
+                
+                // Add calculations for this item
+                List<Map<String, Object>> itemCalculations = calculations.stream()
+                    .filter(calc -> calc.getQuotationItem().getId().equals(item.getId()))
+                    .map(calc -> {
+                        Map<String, Object> calcMap = new HashMap<>();
+                        calcMap.put("id", calc.getId());
+                        calcMap.put("feet", calc.getFeet());
+                        calcMap.put("inch", calc.getInch());
+                        calcMap.put("nos", calc.getNos());
+                        calcMap.put("runningFeet", calc.getRunningFeet());
+                        calcMap.put("sqFeet", calc.getSqFeet());
+                        calcMap.put("weight", calc.getWeight());
+                        return calcMap;
+                    })
+                    .collect(Collectors.toList());
+                    
+                itemMap.put("calculations", itemCalculations);
+                itemsList.add(itemMap);
+            }
+            
+            response.put("items", itemsList);
+            
+            return ApiResponse.success("Data fetched successfully", response);
         } catch (Exception e) {
             log.error("Error fetching quotation detail", e);
             throw new ValidationException("Failed to fetch quotation detail: " + e.getMessage());
