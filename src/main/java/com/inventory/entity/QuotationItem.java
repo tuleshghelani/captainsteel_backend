@@ -73,7 +73,7 @@ public class QuotationItem {
     @Column(name = "final_price", precision = 19, scale = 2, columnDefinition = "NUMERIC(19, 2) DEFAULT 0.00")
     private BigDecimal finalPrice = BigDecimal.ZERO;
     
-    @Column(name = "calculation_type", nullable = false)
+    @Column(name = "calculation_type")
     private String calculationType;
     
     @ManyToOne(fetch = FetchType.LAZY)
