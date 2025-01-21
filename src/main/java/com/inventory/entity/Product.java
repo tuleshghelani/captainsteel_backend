@@ -3,8 +3,12 @@ package com.inventory.entity;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
+import com.inventory.enums.ProductMainType;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
@@ -74,7 +78,8 @@ public class Product {
     private BigDecimal weight = BigDecimal.valueOf(0.00);
 
     @Column(name = "type")
-    private String type;
+    @Enumerated(EnumType.STRING)
+    private ProductMainType type;
 
     @Column(name = "remaining_quantity", columnDefinition = "bigint DEFAULT 0")
     private Long remainingQuantity = 0L;

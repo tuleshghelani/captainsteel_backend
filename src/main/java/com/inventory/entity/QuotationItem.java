@@ -32,6 +32,9 @@ public class QuotationItem {
     
     @Column(name = "quantity", nullable = false)
     private Long quantity;
+
+    @Column(name = "weight", precision = 12, scale = 3, columnDefinition = "numeric(12,3) DEFAULT 0.00")
+    private BigDecimal weight = BigDecimal.valueOf(0.00);
     
     @Column(name = "unit_price", precision = 19, scale = 2, columnDefinition = "NUMERIC(19, 2) DEFAULT 0.00")
     private BigDecimal unitPrice = BigDecimal.ZERO;

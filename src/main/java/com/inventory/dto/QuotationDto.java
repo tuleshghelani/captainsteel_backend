@@ -1,15 +1,16 @@
 package com.inventory.dto;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
+
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.List;
 
 @Data
 @Getter
@@ -49,4 +50,7 @@ public class QuotationDto {
     
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate endDate;
+
+    private String contactNumber;
+    private String address;
 } 

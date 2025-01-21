@@ -1,6 +1,7 @@
 package com.inventory.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.inventory.enums.ProductMainType;
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
@@ -22,7 +23,7 @@ public class ProductDto {
     private BigDecimal minimumStock;
     private String status;
     private BigDecimal weight;
-    private String type;
+    private ProductMainType type;
     private Long remainingQuantity;
     private Long clientId;
     private Integer page = 0;

@@ -1,19 +1,15 @@
 package com.inventory.dto;
 
+import java.time.LocalDate;
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.inventory.config.CustomDateDeserializer;
+
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.OffsetDateTime;
-import java.util.Date;
-import java.util.List;
 
 @Data
 @Getter
@@ -27,6 +23,8 @@ public class QuotationRequestDto {
     private String quoteNumber;
     private String remarks;
     private String termsConditions;
+    private String contactNumber;
+    private String address;
     
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate quoteDate;
