@@ -14,7 +14,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class QuotationItemCalculationDto {
+public class QuotationCalculationDto {
     private Long id;
     private Long quotationItemId;
     private BigDecimal feet;
@@ -23,4 +23,5 @@ public class QuotationItemCalculationDto {
     private BigDecimal runningFeet;
     private BigDecimal sqFeet;
     private BigDecimal weight;
+    private Long clientId;
 } 
