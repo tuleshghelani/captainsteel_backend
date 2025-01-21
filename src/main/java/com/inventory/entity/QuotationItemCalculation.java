@@ -55,4 +55,9 @@ public class QuotationItemCalculation {
     
     @Column(name = "weight", precision = 8, scale = 2, columnDefinition = "numeric(8,2) DEFAULT 0.00")
     private BigDecimal weight = BigDecimal.ZERO;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "client_id", nullable = false,
+            foreignKey = @ForeignKey(name = "fk_quotation_item_calculations_client_id_client_id"))
+    private Client client;
 } 

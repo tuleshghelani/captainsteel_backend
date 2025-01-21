@@ -1,17 +1,21 @@
 package com.inventory.service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.inventory.dao.QuotationDao;
 import com.inventory.dto.ApiResponse;
+import com.inventory.dto.QuotationCalculationDto;
 import com.inventory.dto.QuotationDto;
 import com.inventory.dto.QuotationItemRequestDto;
 import com.inventory.dto.QuotationRequestDto;
@@ -20,11 +24,14 @@ import com.inventory.entity.Customer;
 import com.inventory.entity.Product;
 import com.inventory.entity.Quotation;
 import com.inventory.entity.QuotationItem;
+import com.inventory.entity.QuotationItemCalculation;
 import com.inventory.entity.UserMaster;
+import com.inventory.enums.ProductMainType;
 import com.inventory.enums.QuotationStatus;
 import com.inventory.exception.ValidationException;
 import com.inventory.repository.CustomerRepository;
 import com.inventory.repository.ProductRepository;
+import com.inventory.repository.QuotationItemCalculationRepository;
 import com.inventory.repository.QuotationItemRepository;
 import com.inventory.repository.QuotationRepository;
 
@@ -35,6 +42,10 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class QuotationService {
+    private static final BigDecimal INCHES_IN_FOOT = BigDecimal.valueOf(12);
+    private static final BigDecimal SQ_FEET_MULTIPLIER = BigDecimal.valueOf(3.5);
+    private static final BigDecimal DEFAULT_TAX_PERCENTAGE = BigDecimal.valueOf(18);
+    
     private final QuotationRepository quotationRepository;
     private final QuotationItemRepository quotationItemRepository;
     private final CustomerRepository customerRepository;
@@ -44,6 +55,7 @@ public class QuotationService {
     private final QuoteNumberGeneratorService quoteNumberGeneratorService;
     private final PdfGenerationService pdfGenerationService;
     private final ProductQuantityService productQuantityService;
+    private final QuotationItemCalculationRepository quotationItemCalculationRepository;
 
     @Transactional(rollbackFor = Exception.class)
     public ApiResponse<?> createQuotation(QuotationRequestDto request) {
@@ -156,41 +168,156 @@ public class QuotationService {
         }
     }
 
+    private void validateAndProcessItem(QuotationItemRequestDto itemDto, Product product) {
+        if (product.getType() == ProductMainType.REGULAR) {
+            validateRegularProductCalculations(itemDto);
+            calculateMeasurements(itemDto, product);
+        } else if (product.getType() == ProductMainType.NOS) {
+            validateNosProduct(itemDto);
+        }
+        
+        // Set default tax percentage if not provided
+        if (itemDto.getTaxPercentage() == null) {
+            itemDto.setTaxPercentage(DEFAULT_TAX_PERCENTAGE);
+        }
+        
+        // Set default discount percentage if not provided
+        if (itemDto.getDiscountPercentage() == null) {
+            itemDto.setDiscountPercentage(BigDecimal.ZERO);
+        }
+    }
+
+    private void validateRegularProductCalculations(QuotationItemRequestDto itemDto) {
+        if (itemDto.getCalculations() == null || itemDto.getCalculations().isEmpty()) {
+            throw new ValidationException("Calculations are required for REGULAR products");
+        }
+
+        for (QuotationCalculationDto calc : itemDto.getCalculations()) {
+            if ((calc.getFeet() == null || calc.getFeet().compareTo(BigDecimal.ZERO) <= 0) &&
+                (calc.getInch() == null || calc.getInch().compareTo(BigDecimal.ZERO) <= 0)) {
+                throw new ValidationException("Either feet or inch must be greater than 0");
+            }
+            
+            if (calc.getNos() == null || calc.getNos() <= 0) {
+                throw new ValidationException("NOS must be greater than 0");
+            }
+        }
+    }
+
+    private void validateNosProduct(QuotationItemRequestDto itemDto) {
+        if (itemDto.getQuantity() == null || itemDto.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ValidationException("Quantity must be greater than 0 for NOS products");
+        }
+    }
+
+    private void calculateMeasurements(QuotationItemRequestDto itemDto, Product product) {
+        if ("SQ_FEET".equalsIgnoreCase(itemDto.getCalculationType())) {
+            calculateSqFeetMeasurements(itemDto, product);
+        } else if ("MM".equalsIgnoreCase(itemDto.getCalculationType())) {
+            calculateMMeasurements(itemDto, product);
+        }
+    }
+
+    private void calculateSqFeetMeasurements(QuotationItemRequestDto itemDto, Product product) {
+        BigDecimal totalWeight = BigDecimal.ZERO;
+        BigDecimal totalSqFeet = BigDecimal.ZERO;
+        
+        for (QuotationCalculationDto calc : itemDto.getCalculations()) {
+            // Convert all measurements to inches first
+            BigDecimal feetToInches = calc.getFeet().multiply(INCHES_IN_FOOT);
+            BigDecimal totalInches = feetToInches.add(calc.getInch());
+            
+            if((calc.getFeet() == null || calc.getFeet().compareTo(BigDecimal.ZERO) <= 0) && (calc.getInch() == null || calc.getInch().compareTo(BigDecimal.ZERO) <= 0)) {
+                throw new ValidationException("Either feet or inch must be greater than 0");
+            }
+            if((calc.getNos() == null || Objects.equals(calc.getNos(), 0))) {
+                throw new ValidationException("NOS must be greater than 0");
+            }
+            // Convert back to feet for running feet calculation
+//            BigDecimal runningFeet = totalInches.divide(INCHES_IN_FOOT, 2, RoundingMode.HALF_UP)
+//                .multiply(BigDecimal.valueOf(calc.getNos()));
+            BigDecimal runningFeet = totalInches
+                    .multiply(BigDecimal.valueOf(calc.getNos()));
+            
+            // Calculate sq feet and weight
+            BigDecimal sqFeet = runningFeet.multiply(SQ_FEET_MULTIPLIER);
+            BigDecimal weight = runningFeet.multiply(product.getWeight());
+            
+            // Update calculation object
+            calc.setRunningFeet(runningFeet);
+            calc.setSqFeet(sqFeet);
+            calc.setWeight(weight);
+            
+            // Accumulate totals
+            totalWeight = totalWeight.add(weight);
+            totalSqFeet = totalSqFeet.add(sqFeet);
+        }
+        
+        // Update item totals
+        itemDto.setWeight(totalWeight);
+        itemDto.setQuantity(totalSqFeet);
+    }
+
+    private void calculateMMeasurements(QuotationItemRequestDto itemDto, Product product) {
+        // TODO: Implement MM calculation logic here
+    }
+
     private QuotationItem createQuotationItem(QuotationItemRequestDto itemDto, Quotation quotation, UserMaster currentUser) {
         Product product = productRepository.findById(itemDto.getProductId())
             .orElseThrow(() -> new ValidationException("Product not found"));
             
+        // Validate and process item based on product type
+        validateAndProcessItem(itemDto, product);
+        
         QuotationItem item = new QuotationItem();
         item.setQuotation(quotation);
         item.setProduct(product);
-        item.setQuantity(itemDto.getQuantity());
-        item.setUnitPrice(itemDto.getUnitPrice().setScale(2, BigDecimal.ROUND_HALF_UP));
+        item.setQuantity(itemDto.getQuantity().longValue());
+        item.setWeight(itemDto.getWeight());
+        item.setUnitPrice(itemDto.getUnitPrice());
         item.setDiscountPercentage(itemDto.getDiscountPercentage());
         item.setTaxPercentage(itemDto.getTaxPercentage());
         
-        // Calculate amounts with 2 decimal places
-        BigDecimal subTotal = itemDto.getUnitPrice()
-            .multiply(BigDecimal.valueOf(itemDto.getQuantity()))
-            .setScale(2, BigDecimal.ROUND_HALF_UP);
-            
-        BigDecimal discountAmount = calculatePercentageAmount(subTotal, itemDto.getDiscountPercentage())
-            .setScale(2, BigDecimal.ROUND_HALF_UP);
-            
-        BigDecimal afterDiscount = subTotal.subtract(discountAmount)
-            .setScale(2, BigDecimal.ROUND_HALF_UP);
-            
-        BigDecimal taxAmount = calculatePercentageAmount(afterDiscount, itemDto.getTaxPercentage())
-            .setScale(2, BigDecimal.ROUND_HALF_UP);
-            
-        BigDecimal discountPrice = afterDiscount;
+        // Calculate price components
+        BigDecimal subTotal = itemDto.getUnitPrice().multiply(itemDto.getQuantity())
+            .setScale(2, RoundingMode.HALF_UP);
         
-        item.setDiscountPrice(discountPrice);
+        BigDecimal discountAmount = calculatePercentageAmount(subTotal, itemDto.getDiscountPercentage());
+        BigDecimal afterDiscount = subTotal.subtract(discountAmount);
+        BigDecimal taxAmount = calculatePercentageAmount(afterDiscount, itemDto.getTaxPercentage());
+        
         item.setDiscountAmount(discountAmount);
+        item.setDiscountPrice(afterDiscount);
         item.setTaxAmount(taxAmount);
-        item.setFinalPrice(afterDiscount.add(taxAmount).setScale(2, BigDecimal.ROUND_HALF_UP));
+        item.setFinalPrice(afterDiscount.add(taxAmount));
         item.setClient(currentUser.getClient());
         
+        // Save calculations if present
+        if (product.getType() == ProductMainType.REGULAR && itemDto.getCalculations() != null) {
+            saveCalculations(item, itemDto.getCalculations());
+        }
+        
         return item;
+    }
+
+    private void saveCalculations(QuotationItem item, List<QuotationCalculationDto> calculations) {
+        List<QuotationItemCalculation> itemCalculations = calculations.stream()
+            .map(calc -> mapToCalculationEntity(calc, item))
+            .collect(Collectors.toList());
+        
+        quotationItemCalculationRepository.saveAll(itemCalculations);
+    }
+
+    private QuotationItemCalculation mapToCalculationEntity(QuotationCalculationDto dto, QuotationItem item) {
+        QuotationItemCalculation calc = new QuotationItemCalculation();
+        calc.setQuotationItem(item);
+        calc.setFeet(dto.getFeet());
+        calc.setInch(dto.getInch());
+        calc.setNos(dto.getNos());
+        calc.setRunningFeet(dto.getRunningFeet());
+        calc.setSqFeet(dto.getSqFeet());
+        calc.setWeight(dto.getWeight());
+        return calc;
     }
 
     private BigDecimal calculatePercentageAmount(BigDecimal base, BigDecimal percentage) {
@@ -215,7 +342,7 @@ public class QuotationService {
             if (item.getProductId() == null) {
                 throw new ValidationException("Product ID is required");
             }
-            if (item.getQuantity() == null || item.getQuantity() <= 0) {
+            if (item.getQuantity() == null || item.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new ValidationException("Valid quantity is required");
             }
             if (item.getUnitPrice() == null || item.getUnitPrice().compareTo(BigDecimal.ZERO) <= 0) {
