@@ -24,6 +24,6 @@ public class QuotationItemRequestDto {
     private BigDecimal unitPrice;
     private BigDecimal taxPercentage = BigDecimal.valueOf(18); // Default 18%
     private BigDecimal discountPercentage = BigDecimal.ZERO;
-    private List<QuotationCalculationDto> calculations;
+    private List<QuotationItemCalculationDto> calculations;
     private BigDecimal finalPrice;
 } 

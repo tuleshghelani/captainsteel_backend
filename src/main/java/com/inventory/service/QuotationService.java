@@ -15,8 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.inventory.dao.QuotationDao;
 import com.inventory.dto.ApiResponse;
-import com.inventory.dto.QuotationCalculationDto;
 import com.inventory.dto.QuotationDto;
+import com.inventory.dto.QuotationItemCalculationDto;
 import com.inventory.dto.QuotationItemRequestDto;
 import com.inventory.dto.QuotationRequestDto;
 import com.inventory.dto.QuotationStatusUpdateDto;
@@ -145,6 +145,7 @@ public class QuotationService {
             updateQuotationDetails(quotation, request, currentUser);
             
             // Delete existing items
+            quotationItemCalculationRepository.deleteByQuotationId(quotation.getId());
             quotationItemRepository.deleteByQuotationId(quotation.getId());
             
             List<QuotationItem> items = new ArrayList<>();
@@ -168,10 +169,10 @@ public class QuotationService {
         }
     }
 
-    private void validateAndProcessItem(QuotationItemRequestDto itemDto, Product product) {
+    private void validateAndProcessItem(QuotationItemRequestDto itemDto, Product product, UserMaster currentUser) {
         if (product.getType() == ProductMainType.REGULAR) {
             validateRegularProductCalculations(itemDto);
-            calculateMeasurements(itemDto, product);
+            calculateMeasurements(itemDto, product, currentUser);
         } else if (product.getType() == ProductMainType.NOS) {
             validateNosProduct(itemDto);
         }
@@ -192,7 +193,7 @@ public class QuotationService {
             throw new ValidationException("Calculations are required for REGULAR products");
         }
 
-        for (QuotationCalculationDto calc : itemDto.getCalculations()) {
+        for (QuotationItemCalculationDto calc : itemDto.getCalculations()) {
             if ((calc.getFeet() == null || calc.getFeet().compareTo(BigDecimal.ZERO) <= 0) &&
                 (calc.getInch() == null || calc.getInch().compareTo(BigDecimal.ZERO) <= 0)) {
                 throw new ValidationException("Either feet or inch must be greater than 0");
@@ -210,19 +211,19 @@ public class QuotationService {
         }
     }
 
-    private void calculateMeasurements(QuotationItemRequestDto itemDto, Product product) {
+    private void calculateMeasurements(QuotationItemRequestDto itemDto, Product product, UserMaster currentUser) {
         if ("SQ_FEET".equalsIgnoreCase(itemDto.getCalculationType())) {
-            calculateSqFeetMeasurements(itemDto, product);
+            calculateSqFeetMeasurements(itemDto, product, currentUser);
         } else if ("MM".equalsIgnoreCase(itemDto.getCalculationType())) {
-            calculateMMeasurements(itemDto, product);
+            calculateMMeasurements(itemDto, product, currentUser);
         }
     }
 
-    private void calculateSqFeetMeasurements(QuotationItemRequestDto itemDto, Product product) {
+    private void calculateSqFeetMeasurements(QuotationItemRequestDto itemDto, Product product, UserMaster currentUser) {
         BigDecimal totalWeight = BigDecimal.ZERO;
         BigDecimal totalSqFeet = BigDecimal.ZERO;
         
-        for (QuotationCalculationDto calc : itemDto.getCalculations()) {
+        for (QuotationItemCalculationDto calc : itemDto.getCalculations()) {
             // Convert all measurements to inches first
             BigDecimal feetToInches = calc.getFeet().multiply(INCHES_IN_FOOT);
             BigDecimal totalInches = feetToInches.add(calc.getInch());
@@ -234,10 +235,10 @@ public class QuotationService {
                 throw new ValidationException("NOS must be greater than 0");
             }
             // Convert back to feet for running feet calculation
-//            BigDecimal runningFeet = totalInches.divide(INCHES_IN_FOOT, 2, RoundingMode.HALF_UP)
-//                .multiply(BigDecimal.valueOf(calc.getNos()));
-            BigDecimal runningFeet = totalInches
-                    .multiply(BigDecimal.valueOf(calc.getNos()));
+            BigDecimal runningFeet = totalInches.divide(INCHES_IN_FOOT, 2, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(calc.getNos()));
+//            BigDecimal runningFeet = totalInches
+//                    .multiply(BigDecimal.valueOf(calc.getNos()));
             
             // Calculate sq feet and weight
             BigDecimal sqFeet = runningFeet.multiply(SQ_FEET_MULTIPLIER);
@@ -247,7 +248,7 @@ public class QuotationService {
             calc.setRunningFeet(runningFeet);
             calc.setSqFeet(sqFeet);
             calc.setWeight(weight);
-            
+
             // Accumulate totals
             totalWeight = totalWeight.add(weight);
             totalSqFeet = totalSqFeet.add(sqFeet);
@@ -258,7 +259,7 @@ public class QuotationService {
         itemDto.setQuantity(totalSqFeet);
     }
 
-    private void calculateMMeasurements(QuotationItemRequestDto itemDto, Product product) {
+    private void calculateMMeasurements(QuotationItemRequestDto itemDto, Product product, UserMaster currentUser) {
         // TODO: Implement MM calculation logic here
     }
 
@@ -267,7 +268,7 @@ public class QuotationService {
             .orElseThrow(() -> new ValidationException("Product not found"));
             
         // Validate and process item based on product type
-        validateAndProcessItem(itemDto, product);
+        validateAndProcessItem(itemDto, product, currentUser);
         
         QuotationItem item = new QuotationItem();
         item.setQuotation(quotation);
@@ -277,7 +278,8 @@ public class QuotationService {
         item.setUnitPrice(itemDto.getUnitPrice());
         item.setDiscountPercentage(itemDto.getDiscountPercentage());
         item.setTaxPercentage(itemDto.getTaxPercentage());
-        
+        item.setCalculationType(itemDto.getCalculationType());
+
         // Calculate price components
         BigDecimal subTotal = itemDto.getUnitPrice().multiply(itemDto.getQuantity())
             .setScale(2, RoundingMode.HALF_UP);
@@ -294,21 +296,22 @@ public class QuotationService {
         
         // Save calculations if present
         if (product.getType() == ProductMainType.REGULAR && itemDto.getCalculations() != null) {
-            saveCalculations(item, itemDto.getCalculations());
+            saveCalculations(item, itemDto.getCalculations(), currentUser, quotation);
         }
         
         return item;
     }
 
-    private void saveCalculations(QuotationItem item, List<QuotationCalculationDto> calculations) {
+    private void saveCalculations(QuotationItem item, List<QuotationItemCalculationDto> calculations, UserMaster currentUser, Quotation quotation) {
         List<QuotationItemCalculation> itemCalculations = calculations.stream()
-            .map(calc -> mapToCalculationEntity(calc, item))
+            .map(calc -> mapToCalculationEntity(calc, item, currentUser, quotation))
             .collect(Collectors.toList());
         
         quotationItemCalculationRepository.saveAll(itemCalculations);
     }
 
-    private QuotationItemCalculation mapToCalculationEntity(QuotationCalculationDto dto, QuotationItem item) {
+    private QuotationItemCalculation mapToCalculationEntity(QuotationItemCalculationDto dto, QuotationItem item, 
+        UserMaster currentUser, Quotation quotation) {
         QuotationItemCalculation calc = new QuotationItemCalculation();
         calc.setQuotationItem(item);
         calc.setFeet(dto.getFeet());
@@ -317,6 +320,8 @@ public class QuotationService {
         calc.setRunningFeet(dto.getRunningFeet());
         calc.setSqFeet(dto.getSqFeet());
         calc.setWeight(dto.getWeight());
+        calc.setClient(currentUser.getClient());
+        calc.setQuotation(quotation);
         return calc;
     }
 
@@ -352,12 +357,15 @@ public class QuotationService {
     }
 
     private void updateQuotationDetails(Quotation quotation, QuotationRequestDto request, UserMaster currentUser) {
-        quotation.setQuoteDate(request.getQuoteDate());
+        // quotation.setQuoteDate(request.getQuoteDate());
 //        quotation.setQuoteNumber(request.getQuoteNumber());
         quotation.setValidUntil(request.getValidUntil());
         quotation.setRemarks(request.getRemarks());
         quotation.setTermsConditions(request.getTermsConditions());
+        quotation.setContactNumber(request.getContactNumber());
+        quotation.setAddress(request.getAddress());
         quotation.setUpdatedAt(OffsetDateTime.now());
+        quotation.setUpdatedBy(currentUser);
     }
 
     public Map<String, Object> searchQuotations(QuotationDto searchParams) {
