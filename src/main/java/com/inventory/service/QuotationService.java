@@ -82,7 +82,6 @@ public class QuotationService {
             }
 
             quotation.setQuoteDate(request.getQuoteDate());
-            quotation.setQuoteNumber(request.getQuoteNumber());
             quotation.setValidUntil(request.getValidUntil());
             quotation.setRemarks(request.getRemarks());
             quotation.setTermsConditions(request.getTermsConditions());
