@@ -86,6 +86,8 @@ public class QuotationService {
             quotation.setValidUntil(request.getValidUntil());
             quotation.setRemarks(request.getRemarks());
             quotation.setTermsConditions(request.getTermsConditions());
+            quotation.setContactNumber(request.getContactNumber());
+            quotation.setAddress(request.getAddress());
             quotation.setStatus(QuotationStatus.Q);
             quotation.setClient(currentUser.getClient());
             quotation.setCreatedBy(currentUser);
