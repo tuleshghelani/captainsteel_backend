@@ -115,6 +115,7 @@ public class QuotationService {
             
             return ApiResponse.success("Quotation created successfully");
         } catch (Exception e) {
+            e.printStackTrace();
             log.error("Error creating quotation", e);
             throw new ValidationException("Failed to create quotation: " + e.getMessage());
         }
@@ -265,11 +266,11 @@ public class QuotationService {
 
     private QuotationItem createQuotationItem(QuotationItemRequestDto itemDto, Quotation quotation, UserMaster currentUser) {
         Product product = productRepository.findById(itemDto.getProductId())
-            .orElseThrow(() -> new ValidationException("Product not found"));
-            
+                .orElseThrow(() -> new ValidationException("Product not found"));
+
         // Validate and process item based on product type
         validateAndProcessItem(itemDto, product, currentUser);
-        
+
         QuotationItem item = new QuotationItem();
         item.setQuotation(quotation);
         item.setProduct(product);
@@ -282,32 +283,36 @@ public class QuotationService {
 
         // Calculate price components
         BigDecimal subTotal = itemDto.getUnitPrice().multiply(itemDto.getQuantity())
-            .setScale(2, RoundingMode.HALF_UP);
-        
+                .setScale(2, RoundingMode.HALF_UP);
+
         BigDecimal discountAmount = calculatePercentageAmount(subTotal, itemDto.getDiscountPercentage());
         BigDecimal afterDiscount = subTotal.subtract(discountAmount);
         BigDecimal taxAmount = calculatePercentageAmount(afterDiscount, itemDto.getTaxPercentage());
-        
+
         item.setDiscountAmount(discountAmount);
         item.setDiscountPrice(afterDiscount);
         item.setTaxAmount(taxAmount);
         item.setFinalPrice(afterDiscount.add(taxAmount));
         item.setClient(currentUser.getClient());
-        
+
+        // Save the item first
+        item = quotationItemRepository.save(item);
+
         // Save calculations if present
         if (product.getType() == ProductMainType.REGULAR && itemDto.getCalculations() != null) {
             saveCalculations(item, itemDto.getCalculations(), currentUser, quotation);
         }
-        
+
         return item;
     }
 
     private void saveCalculations(QuotationItem item, List<QuotationItemCalculationDto> calculations, UserMaster currentUser, Quotation quotation) {
         List<QuotationItemCalculation> itemCalculations = calculations.stream()
-            .map(calc -> mapToCalculationEntity(calc, item, currentUser, quotation))
-            .collect(Collectors.toList());
-        
-        quotationItemCalculationRepository.saveAll(itemCalculations);
+                .map(calc -> {
+                    QuotationItemCalculation calcEntity = mapToCalculationEntity(calc, item, currentUser, quotation);
+                    return quotationItemCalculationRepository.save(calcEntity);
+                })
+                .collect(Collectors.toList());
     }
 
     private QuotationItemCalculation mapToCalculationEntity(QuotationItemCalculationDto dto, QuotationItem item, 
