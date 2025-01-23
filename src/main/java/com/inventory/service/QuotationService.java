@@ -227,28 +227,32 @@ public class QuotationService {
         BigDecimal totalSqFeet = BigDecimal.ZERO;
         
         for (QuotationItemCalculationDto calc : itemDto.getCalculations()) {
-            // Convert all measurements to inches first
-            BigDecimal feetToInches = calc.getFeet().multiply(INCHES_IN_FOOT);
-            BigDecimal totalInches = feetToInches.add(calc.getInch());
-            
-            if((calc.getFeet() == null || calc.getFeet().compareTo(BigDecimal.ZERO) <= 0) && (calc.getInch() == null || calc.getInch().compareTo(BigDecimal.ZERO) <= 0)) {
+            if((calc.getFeet() == null || calc.getFeet().compareTo(BigDecimal.ZERO) <= 0) && 
+               (calc.getInch() == null || calc.getInch().compareTo(BigDecimal.ZERO) <= 0)) {
                 throw new ValidationException("Either feet or inch must be greater than 0");
             }
             if((calc.getNos() == null || Objects.equals(calc.getNos(), 0))) {
                 throw new ValidationException("NOS must be greater than 0");
             }
-            // Convert back to feet for running feet calculation
-            BigDecimal runningFeet = totalInches.divide(INCHES_IN_FOOT, 2, RoundingMode.HALF_UP)
-                .multiply(BigDecimal.valueOf(calc.getNos()));
-//            BigDecimal runningFeet = totalInches
-//                    .multiply(BigDecimal.valueOf(calc.getNos()));
+
+            // Convert feet to inches first
+            BigDecimal feetToInches = calc.getFeet().multiply(INCHES_IN_FOOT);
+            // Add additional inches
+            BigDecimal totalInches = feetToInches.add(calc.getInch());
             
+            // Calculate running feet without intermediate rounding
+            BigDecimal runningFeet = totalInches
+                .multiply(BigDecimal.valueOf(calc.getNos()))
+                .divide(INCHES_IN_FOOT, 4, RoundingMode.HALF_UP);  // Use 4 decimal places for intermediate calculation
+                
             // Calculate sq feet and weight
-            BigDecimal sqFeet = runningFeet.multiply(SQ_FEET_MULTIPLIER);
-            BigDecimal weight = runningFeet.multiply(product.getWeight());
+            BigDecimal sqFeet = runningFeet.multiply(SQ_FEET_MULTIPLIER)
+                .setScale(2, RoundingMode.HALF_UP);  // Final rounding to 2 decimal places
+            BigDecimal weight = runningFeet.multiply(product.getWeight())
+                .setScale(2, RoundingMode.HALF_UP);
             
             // Update calculation object
-            calc.setRunningFeet(runningFeet);
+            calc.setRunningFeet(runningFeet.setScale(2, RoundingMode.HALF_UP));
             calc.setSqFeet(sqFeet);
             calc.setWeight(weight);
 
