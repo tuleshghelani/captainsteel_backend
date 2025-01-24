@@ -3,6 +3,7 @@ package com.inventory.entity;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
+import com.inventory.enums.PolyCarbonateType;
 import com.inventory.enums.ProductMainType;
 
 import jakarta.persistence.Column;
@@ -80,6 +81,10 @@ public class Product {
     @Column(name = "type")
     @Enumerated(EnumType.STRING)
     private ProductMainType type;
+
+    @Column(name = "poly_carbonate_type")
+    @Enumerated(EnumType.STRING)
+    private PolyCarbonateType polyCarbonateType;
 
     @Column(name = "remaining_quantity", columnDefinition = "numeric(15,3) ")
     private BigDecimal remainingQuantity = BigDecimal.ZERO;

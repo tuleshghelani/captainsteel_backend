@@ -4,6 +4,7 @@ import com.inventory.dto.ApiResponse;
 import com.inventory.dto.ProductDto;
 import com.inventory.entity.Product;
 import com.inventory.entity.UserMaster;
+import com.inventory.enums.ProductMainType;
 import com.inventory.exception.ValidationException;
 import com.inventory.repository.ProductRepository;
 import com.inventory.repository.CategoryRepository;
@@ -49,6 +50,7 @@ public class ProductService {
             product.setStatus(dto.getStatus().trim());
             product.setWeight(dto.getWeight() != null ? dto.getWeight() : BigDecimal.valueOf(0));
             product.setType(dto.getType() != null ? dto.getType() : null);
+            product.setPolyCarbonateType(dto.getType() == ProductMainType.POLY_CARBONATE ? dto.getPolyCarbonateType() : null);
             product.setClient(currentUser.getClient());
             product.setCreatedBy(currentUser);
 
@@ -88,6 +90,7 @@ public class ProductService {
             product.setStatus(dto.getStatus().trim());
             product.setWeight(dto.getWeight() != null ? dto.getWeight() : BigDecimal.valueOf(0));
             product.setType(dto.getType() != null ? dto.getType() : null);
+            product.setPolyCarbonateType(dto.getType() == ProductMainType.POLY_CARBONATE ? dto.getPolyCarbonateType() : null);
             product.setClient(currentUser.getClient());
 
             productRepository.save(product);
@@ -160,6 +163,13 @@ public class ProductService {
         if (dto.getMinimumStock() == null || dto.getMinimumStock().compareTo(BigDecimal.ZERO) < 0) {
             throw new ValidationException("Minimum stock must be a non-negative number");
         }
+        if (ProductMainType.POLY_CARBONATE == dto.getType()) {
+            if (dto.getPolyCarbonateType() == null) {
+                throw new ValidationException("Poly carbonate type is required for POLY_CARBONATE products");
+            }
+        } else if (dto.getPolyCarbonateType() != null) {
+            throw new ValidationException("Poly carbonate type should only be set for POLY_CARBONATE products");
+        }
     }
 
     private ProductDto mapToDto(Product product) {
@@ -172,6 +182,7 @@ public class ProductService {
         dto.setStatus(product.getStatus());
         dto.setRemainingQuantity(product.getRemainingQuantity());
         dto.setClientId(product.getClient().getId());
+        dto.setPolyCarbonateType(product.getPolyCarbonateType());
         return dto;
     }
 }

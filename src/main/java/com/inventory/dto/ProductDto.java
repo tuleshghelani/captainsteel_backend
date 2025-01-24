@@ -1,12 +1,14 @@
 package com.inventory.dto;
 
+import java.math.BigDecimal;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.inventory.enums.PolyCarbonateType;
 import com.inventory.enums.ProductMainType;
+
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.math.BigDecimal;
 
 @Data
 @Getter
@@ -30,4 +32,5 @@ public class ProductDto {
     private Integer size = 10;
     private String sortBy = "id";
     private String sortDir = "desc";
+    private PolyCarbonateType polyCarbonateType;
 }

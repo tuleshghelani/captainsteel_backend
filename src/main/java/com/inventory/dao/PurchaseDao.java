@@ -95,7 +95,7 @@ public class PurchaseDao {
         }
         if(!Objects.isNull(dto.getCoilNumber()) && !dto.getCoilNumber().isEmpty()) {
             sql.append("""
-                AND p.coal_numbers @> CAST(:coilNumber AS jsonb)
+                AND p.coil_numbers @> CAST(:coilNumber AS jsonb)
                 """);
             params.put("coilNumber", "[\"" + dto.getCoilNumber().trim().toLowerCase() + "\"]");
         }
@@ -103,7 +103,7 @@ public class PurchaseDao {
         // if(!Objects.isNull(dto.getcoilNumber()) && !dto.getcoilNumber().isEmpty()) {
         //     sql.append("""
         //         AND EXISTS (
-        //             SELECT FROM jsonb_array_elements_text(p.coal_numbers) 
+        //             SELECT FROM jsonb_array_elements_text(p.coil_numbers)
         //             WHERE value LIKE :coilNumber
         //         )
         //         """);

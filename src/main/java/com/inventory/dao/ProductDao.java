@@ -124,7 +124,8 @@ public class ProductDao {
                 p.blocked_quantity,
                 p.total_remaining_quantity,
                 p.weight,
-                p.type
+                p.type,
+                p.poly_carbonate_type
             FROM product p
             LEFT JOIN category c ON p.category_id = c.id
             WHERE 1=1
@@ -195,6 +196,7 @@ public class ProductDao {
                 product.put("totalRemainingQuantity", row[index++]);
                 product.put("weight", row[index++]);
                 product.put("type", row[index++]);
+                product.put("polyCarbonateType", row[index++]);
                 products.add(product);
             }
         }
