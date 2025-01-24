@@ -30,7 +30,8 @@ public class ProductDao {
                 p.purchase_amount,
                 p.sale_amount,
                 p.type,
-                p.weight
+                p.weight,
+                p.poly_carbonate_type
             FROM product p
             WHERE 1=1
         """);
@@ -78,6 +79,7 @@ public class ProductDao {
                 product.put("sale_amount", row[index++]);
                 product.put("type", row[index++]);
                 product.put("weight", row[index++]);
+                product.put("poly_carbonate_type", row[index++]);
 
                 products.add(product);
             }
