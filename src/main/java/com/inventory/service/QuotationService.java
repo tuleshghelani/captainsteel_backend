@@ -280,7 +280,7 @@ public class QuotationService {
         QuotationItem item = new QuotationItem();
         item.setQuotation(quotation);
         item.setProduct(product);
-        item.setQuantity(itemDto.getQuantity().longValue());
+        item.setQuantity(itemDto.getQuantity());
         item.setWeight(itemDto.getWeight());
         item.setUnitPrice(itemDto.getUnitPrice());
         item.setDiscountPercentage(itemDto.getDiscountPercentage());

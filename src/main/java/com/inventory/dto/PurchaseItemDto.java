@@ -1,11 +1,12 @@
 package com.inventory.dto;
 
+import java.math.BigDecimal;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
+
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.math.BigDecimal;
 
 @Data
 @Getter
@@ -13,7 +14,7 @@ import java.math.BigDecimal;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class PurchaseItemDto {
     private Long productId;
-    private Long quantity;
+    private BigDecimal quantity;
     private BigDecimal unitPrice;
     private BigDecimal discountPercentage;
     private BigDecimal discountAmount;

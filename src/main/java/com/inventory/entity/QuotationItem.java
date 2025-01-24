@@ -46,8 +46,8 @@ public class QuotationItem {
         foreignKey = @ForeignKey(name = "fk_quotation_items_product_id_product_id"))
     private Product product;
     
-    @Column(name = "quantity", nullable = false)
-    private Long quantity;
+    @Column(name = "quantity", nullable = false, columnDefinition = "numeric(12,3)")
+    private BigDecimal quantity = BigDecimal.ZERO;
 
     @Column(name = "weight", precision = 12, scale = 3, columnDefinition = "numeric(12,3) DEFAULT 0.00")
     private BigDecimal weight = BigDecimal.valueOf(0.00);

@@ -1,5 +1,6 @@
 package com.inventory.service;
 
+import java.math.BigDecimal;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -26,7 +27,7 @@ public class ProductQuantityService {
     }
     
     @Transactional
-    public void updateProductQuantity(Long productId, Long quantityChange, Boolean isPurchase, Boolean isSale, Boolean isBlock) {
+    public void updateProductQuantity(Long productId, BigDecimal quantityChange, Boolean isPurchase, Boolean isSale, Boolean isBlock) {
         Lock lock = getProductLock(productId);
         lock.lock();
         try {
@@ -55,16 +56,16 @@ public class ProductQuantityService {
         Product product = productRepository.findById(productId)
             .orElseThrow(() -> new ValidationException("Product not found"));
             
-        if (product.getRemainingQuantity() == null) product.setRemainingQuantity(0L);
-        if (product.getTotalRemainingQuantity() == null) product.setTotalRemainingQuantity(0L);
-        if (product.getBlockedQuantity() == null) product.setBlockedQuantity(0L);
+        if (product.getRemainingQuantity() == null) product.setRemainingQuantity(BigDecimal.ZERO);
+        if (product.getTotalRemainingQuantity() == null) product.setTotalRemainingQuantity(BigDecimal.ZERO);
+        if (product.getBlockedQuantity() == null) product.setBlockedQuantity(BigDecimal.ZERO);
         
         return product;
     }
     
-    private void handlePurchase(Product product, Long quantityChange) {
-        Long newRemainingQuantity = product.getRemainingQuantity() + quantityChange;
-        Long newTotalRemainingQuantity = product.getTotalRemainingQuantity() + quantityChange;
+    private void handlePurchase(Product product, BigDecimal quantityChange) {
+        BigDecimal newRemainingQuantity = product.getRemainingQuantity().add(quantityChange);
+        BigDecimal newTotalRemainingQuantity = product.getTotalRemainingQuantity().add(quantityChange);
         
         validateNonNegativeQuantity(product, newRemainingQuantity, newTotalRemainingQuantity);
         
@@ -72,13 +73,13 @@ public class ProductQuantityService {
         product.setTotalRemainingQuantity(newTotalRemainingQuantity);
     }
     
-    private void handleSale(Product product, Long quantityChange) {
-        if (product.getRemainingQuantity() < quantityChange) {
+    private void handleSale(Product product, BigDecimal quantityChange) {
+        if (product.getRemainingQuantity().compareTo(quantityChange) < 0) {
             throw new ValidationException("Insufficient stock for product: " + product.getName());
         }
         
-        Long newRemainingQuantity = product.getRemainingQuantity() - quantityChange;
-        Long newTotalRemainingQuantity = product.getTotalRemainingQuantity() - quantityChange;
+        BigDecimal newRemainingQuantity = product.getRemainingQuantity().subtract(quantityChange);
+        BigDecimal newTotalRemainingQuantity = product.getTotalRemainingQuantity().subtract(quantityChange);
         
         validateNonNegativeQuantity(product, newRemainingQuantity, newTotalRemainingQuantity);
         
@@ -86,15 +87,15 @@ public class ProductQuantityService {
         product.setTotalRemainingQuantity(newTotalRemainingQuantity);
     }
     
-    private void handleBlockUnblock(Product product, Long quantityChange, boolean isBlock) {
-        if (isBlock && product.getRemainingQuantity() < quantityChange) {
+    private void handleBlockUnblock(Product product, BigDecimal quantityChange, boolean isBlock) {
+        if (isBlock && product.getRemainingQuantity().compareTo(quantityChange) < 0) {
             throw new ValidationException("Insufficient stock for product: " + product.getName());
         }
         
-        Long newBlockedQuantity = product.getBlockedQuantity() + (isBlock ? quantityChange : -quantityChange);
-        Long newRemainingQuantity = product.getRemainingQuantity() + (isBlock ? -quantityChange : quantityChange);
+        BigDecimal newBlockedQuantity = product.getBlockedQuantity().add(isBlock ? quantityChange : quantityChange.negate());
+        BigDecimal newRemainingQuantity = product.getRemainingQuantity().add(isBlock ? quantityChange.negate() : quantityChange);
         
-        if (newBlockedQuantity < 0) {
+        if (newBlockedQuantity.compareTo(BigDecimal.ZERO) < 0) {
             throw new ValidationException("Operation would result in negative blocked quantity for product: " + product.getName());
         }
         
@@ -104,16 +105,16 @@ public class ProductQuantityService {
         product.setRemainingQuantity(newRemainingQuantity);
     }
     
-    private void validateNonNegativeQuantity(Product product, Long remaining, Long totalRemaining) {
-        if (remaining != null && remaining < 0) {
+    private void validateNonNegativeQuantity(Product product, BigDecimal remaining, BigDecimal totalRemaining) {
+        if (remaining != null && remaining.compareTo(BigDecimal.ZERO) < 0) {
             throw new ValidationException("Operation would result in negative stock for product: " + product.getName());
         }
-        if (totalRemaining != null && totalRemaining < 0) {
+        if (totalRemaining != null && totalRemaining.compareTo(BigDecimal.ZERO) < 0) {
             throw new ValidationException("Operation would result in negative total stock for product: " + product.getName());
         }
     }
     
-    private void logQuantityUpdate(Product product, Long quantityChange, Boolean isPurchase, Boolean isSale, Boolean isBlock) {
+    private void logQuantityUpdate(Product product, BigDecimal quantityChange, Boolean isPurchase, Boolean isSale, Boolean isBlock) {
         log.info("Product {} quantity updated. Change: {}, Purchase: {}, Sale: {}, Block: {}, Remaining: {}, Blocked: {}", 
             product.getId(), quantityChange, isPurchase, isSale, isBlock, 
             product.getRemainingQuantity(), product.getBlockedQuantity());

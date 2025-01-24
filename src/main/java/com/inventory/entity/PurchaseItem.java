@@ -42,8 +42,8 @@ public class PurchaseItem {
     @JoinColumn(name = "product_id", nullable = false, foreignKey = @ForeignKey(name = "fk_purchase_items_product_id"))
     private Product product;
     
-    @Column(name = "quantity", nullable = false)
-    private Long quantity;
+    @Column(name = "quantity", nullable = false, columnDefinition = "numeric(12,3) ")
+    private BigDecimal quantity = BigDecimal.ZERO;
     
     @Column(name = "remarks", columnDefinition = "text")
     private String remarks;
@@ -63,8 +63,8 @@ public class PurchaseItem {
     @Column(name = "final_price", nullable = false, precision = 19, scale = 2)
     private BigDecimal finalPrice;
     
-    @Column(name = "remaining_quantity", columnDefinition = "bigint DEFAULT 0")
-    private Long remainingQuantity;
+//    @Column(name = "remaining_quantity", columnDefinition = "numeric(12,3) DEFAULT 0.000")
+//    private BigDecimal remainingQuantity = BigDecimal.ZERO;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_id", nullable = false, referencedColumnName = "id", foreignKey = @ForeignKey(name = "fk_purchase_item_client_id_client_id"))

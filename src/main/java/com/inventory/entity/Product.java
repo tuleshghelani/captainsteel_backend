@@ -81,14 +81,14 @@ public class Product {
     @Enumerated(EnumType.STRING)
     private ProductMainType type;
 
-    @Column(name = "remaining_quantity", columnDefinition = "bigint DEFAULT 0")
-    private Long remainingQuantity = 0L;
+    @Column(name = "remaining_quantity", columnDefinition = "numeric(15,3) ")
+    private BigDecimal remainingQuantity = BigDecimal.ZERO;
 
-    @Column(name = "blocked_quantity", columnDefinition = "bigint DEFAULT 0")
-    private Long blockedQuantity = 0L;
+    @Column(name = "blocked_quantity", columnDefinition = "numeric(15,3) ")
+    private BigDecimal blockedQuantity = BigDecimal.ZERO;
 
-    @Column(name = "total_remaining_quantity", columnDefinition = "bigint DEFAULT 0")
-    private Long totalRemainingQuantity = 0L;
+    @Column(name = "total_remaining_quantity", columnDefinition = "numeric(15,3) ")
+    private BigDecimal totalRemainingQuantity = BigDecimal.ZERO;
     
     @Column(name = "description")
     private String description;

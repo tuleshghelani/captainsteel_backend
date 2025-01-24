@@ -121,7 +121,7 @@ public class PurchaseService {
         
         // Calculate amounts with 2 decimal places
         BigDecimal subTotal = dto.getUnitPrice()
-            .multiply(BigDecimal.valueOf(dto.getQuantity()))
+            .multiply((dto.getQuantity()))
             .setScale(2, BigDecimal.ROUND_HALF_UP);
             
         BigDecimal discountAmount = calculateDiscountAmount(subTotal, dto.getDiscountPercentage())
@@ -173,7 +173,7 @@ public class PurchaseService {
             if (item.getProductId() == null) {
                 throw new ValidationException("Product ID is required");
             }
-            if (item.getQuantity() == null || item.getQuantity() <= 0) {
+            if (item.getQuantity() == null || item.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new ValidationException("Valid quantity is required");
             }
             if (item.getUnitPrice() == null || item.getUnitPrice().compareTo(BigDecimal.ZERO) <= 0) {
