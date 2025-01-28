@@ -27,6 +27,7 @@ import com.inventory.entity.Quotation;
 import com.inventory.entity.QuotationItem;
 import com.inventory.entity.QuotationItemCalculation;
 import com.inventory.entity.UserMaster;
+import com.inventory.enums.PolyCarbonateType;
 import com.inventory.enums.ProductMainType;
 import com.inventory.enums.QuotationStatus;
 import com.inventory.exception.ValidationException;
@@ -50,6 +51,10 @@ public class QuotationService {
     
     private static final int WEIGHT_SCALE = 3;
     private static final RoundingMode WEIGHT_ROUNDING = RoundingMode.HALF_UP;
+    
+    private static final BigDecimal SINGLE_MULTIPLIER = BigDecimal.valueOf(1.6);
+    private static final BigDecimal DOUBLE_MULTIPLIER = BigDecimal.valueOf(2.0);
+    private static final BigDecimal FULL_SHEET_MULTIPLIER = BigDecimal.valueOf(4.0);
     
     private final QuotationRepository quotationRepository;
     private final QuotationItemRepository quotationItemRepository;
@@ -180,6 +185,9 @@ public class QuotationService {
         if (product.getType() == ProductMainType.REGULAR) {
             validateRegularProductCalculations(itemDto);
             calculateMeasurements(itemDto, product, currentUser);
+        } else if (product.getType() == ProductMainType.POLY_CARBONATE) {
+            validatePolyCarbonateProduct(product, itemDto);
+            calculateMeasurements(itemDto, product, currentUser);
         } else if (product.getType() == ProductMainType.NOS) {
             validateNosProduct(itemDto);
         }
@@ -220,6 +228,13 @@ public class QuotationService {
         }
     }
 
+    private void validatePolyCarbonateProduct(Product product, QuotationItemRequestDto itemDto) {
+        if (product.getPolyCarbonateType() == null) {
+            throw new ValidationException("Please set poly_carbonate_type in " + product.getName());
+        }
+        validateRegularProductCalculations(itemDto);
+    }
+
     private void validateNosProduct(QuotationItemRequestDto itemDto) {
         if (itemDto.getQuantity() == null || itemDto.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
             throw new ValidationException("Quantity must be greater than 0 for NOS products");
@@ -227,12 +242,12 @@ public class QuotationService {
     }
 
     private void calculateMeasurements(QuotationItemRequestDto itemDto, Product product, UserMaster currentUser) {
-        if ("SQ_FEET".equalsIgnoreCase(itemDto.getCalculationType())) {
-            calculateSqFeetMeasurements(itemDto, product, currentUser);
-        } else if ("MM".equalsIgnoreCase(itemDto.getCalculationType())) {
+        if ("MM".equalsIgnoreCase(itemDto.getCalculationType())) {
             calculateMMeasurements(itemDto, product, currentUser);
+        } else if ("SQ_FEET".equalsIgnoreCase(itemDto.getCalculationType())) {
+            calculateSqFeetMeasurements(itemDto, product, currentUser);
         } else {
-            throw new ValidationException("Unknown calculation type: " + itemDto.getCalculationType());
+            throw new ValidationException("Invalid calculation type: " + itemDto.getCalculationType());
         }
     }
 
@@ -262,8 +277,7 @@ public class QuotationService {
             // Calculate sq feet and weight
             BigDecimal sqFeet = runningFeet.multiply(SQ_FEET_MULTIPLIER)
                 .setScale(2, RoundingMode.HALF_UP);  // Final rounding to 2 decimal places
-            BigDecimal weight = runningFeet.multiply(product.getWeight())
-                .setScale(3, RoundingMode.HALF_UP);
+            BigDecimal weight = calculateWeight(runningFeet, product);
             
             // Update calculation object
             calc.setRunningFeet(runningFeet.setScale(4, RoundingMode.HALF_UP));
@@ -308,8 +322,7 @@ public class QuotationService {
                 .setScale(2, RoundingMode.HALF_UP);
 
             // Calculate weight
-            BigDecimal weight = runningFeet.multiply(product.getWeight())
-                .setScale(3, RoundingMode.HALF_UP);
+            BigDecimal weight = calculateWeight(runningFeet, product);
 
             // Update calculation object
             calc.setRunningFeet(runningFeet.setScale(4, RoundingMode.HALF_UP));
@@ -611,8 +624,28 @@ public class QuotationService {
         }
     }
 
-    private BigDecimal calculateWeight(BigDecimal runningFeet, BigDecimal productWeight) {
-        return runningFeet.multiply(productWeight)
-            .setScale(WEIGHT_SCALE, WEIGHT_ROUNDING);
+    private BigDecimal calculateWeight(BigDecimal runningFeet, Product product) {
+        // BigDecimal baseWeight = runningFeet.multiply(product.getWeight());
+        
+        if (product.getType() == ProductMainType.POLY_CARBONATE) {
+            BigDecimal multiplier = getPolyCarbonateMultiplier(product.getPolyCarbonateType());
+            return runningFeet.multiply(multiplier).setScale(3, RoundingMode.HALF_UP);
+        } else if (product.getType() == ProductMainType.REGULAR) {
+            return runningFeet.multiply(product.getWeight())
+                    .setScale(3, RoundingMode.HALF_UP);
+        } else {
+            throw new ValidationException("Invalid product type");
+        }
+        
+        // return baseWeight.setScale(3, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal getPolyCarbonateMultiplier(PolyCarbonateType type) {
+        return switch (type) {
+            case SINGLE -> SINGLE_MULTIPLIER;
+            case DOUBLE -> DOUBLE_MULTIPLIER;
+            case FULL_SHEET -> FULL_SHEET_MULTIPLIER;
+            default -> throw new ValidationException("Invalid poly_carbonate_type");
+        };
     }
 } 
