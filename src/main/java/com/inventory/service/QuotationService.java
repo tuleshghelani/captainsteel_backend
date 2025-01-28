@@ -46,6 +46,10 @@ public class QuotationService {
     private static final BigDecimal INCHES_IN_FOOT = BigDecimal.valueOf(12);
     private static final BigDecimal SQ_FEET_MULTIPLIER = BigDecimal.valueOf(3.5);
     private static final BigDecimal DEFAULT_TAX_PERCENTAGE = BigDecimal.valueOf(18);
+    private static final BigDecimal MM_TO_FEET_CONVERSION = BigDecimal.valueOf(304.8);
+    
+    private static final int WEIGHT_SCALE = 3;
+    private static final RoundingMode WEIGHT_ROUNDING = RoundingMode.HALF_UP;
     
     private final QuotationRepository quotationRepository;
     private final QuotationItemRepository quotationItemRepository;
@@ -197,9 +201,17 @@ public class QuotationService {
         }
 
         for (QuotationItemCalculationDto calc : itemDto.getCalculations()) {
-            if ((calc.getFeet() == null || calc.getFeet().compareTo(BigDecimal.ZERO) <= 0) &&
-                (calc.getInch() == null || calc.getInch().compareTo(BigDecimal.ZERO) <= 0)) {
-                throw new ValidationException("Either feet or inch must be greater than 0");
+            if ("SQ_FEET".equalsIgnoreCase(itemDto.getCalculationType())) {
+                if ((calc.getFeet() == null || calc.getFeet().compareTo(BigDecimal.ZERO) <= 0) &&
+                    (calc.getInch() == null || calc.getInch().compareTo(BigDecimal.ZERO) <= 0)) {
+                    throw new ValidationException("Either feet or inch must be greater than 0");
+                }
+            } else if ("MM".equalsIgnoreCase(itemDto.getCalculationType())) {
+                if (calc.getMm() == null || calc.getMm().compareTo(BigDecimal.ZERO) <= 0) {
+                    throw new ValidationException("MM measurement must be greater than 0");
+                }
+            } else {
+                throw new ValidationException("Invalid calculation type: " + itemDto.getCalculationType());
             }
             
             if (calc.getNos() == null || calc.getNos() <= 0) {
@@ -219,6 +231,8 @@ public class QuotationService {
             calculateSqFeetMeasurements(itemDto, product, currentUser);
         } else if ("MM".equalsIgnoreCase(itemDto.getCalculationType())) {
             calculateMMeasurements(itemDto, product, currentUser);
+        } else {
+            throw new ValidationException("Unknown calculation type: " + itemDto.getCalculationType());
         }
     }
 
@@ -249,10 +263,10 @@ public class QuotationService {
             BigDecimal sqFeet = runningFeet.multiply(SQ_FEET_MULTIPLIER)
                 .setScale(2, RoundingMode.HALF_UP);  // Final rounding to 2 decimal places
             BigDecimal weight = runningFeet.multiply(product.getWeight())
-                .setScale(2, RoundingMode.HALF_UP);
+                .setScale(3, RoundingMode.HALF_UP);
             
             // Update calculation object
-            calc.setRunningFeet(runningFeet.setScale(2, RoundingMode.HALF_UP));
+            calc.setRunningFeet(runningFeet.setScale(4, RoundingMode.HALF_UP));
             calc.setSqFeet(sqFeet);
             calc.setWeight(weight);
 
@@ -267,7 +281,49 @@ public class QuotationService {
     }
 
     private void calculateMMeasurements(QuotationItemRequestDto itemDto, Product product, UserMaster currentUser) {
-        // TODO: Implement MM calculation logic here
+        if (product.getType() != ProductMainType.REGULAR || 
+            !"MM".equalsIgnoreCase(itemDto.getCalculationType())) {
+            throw new ValidationException("MM calculations are only valid for REGULAR products with MM calculation type");
+        }
+
+        BigDecimal totalWeight = BigDecimal.ZERO;
+        BigDecimal totalSqFeet = BigDecimal.ZERO;
+
+        for (QuotationItemCalculationDto calc : itemDto.getCalculations()) {
+            // Validate inputs
+            if (calc.getMm() == null || calc.getMm().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ValidationException("MM measurement must be greater than 0");
+            }
+            if (calc.getNos() == null || calc.getNos() <= 0) {
+                throw new ValidationException("NOS must be greater than 0");
+            }
+
+            // Calculate running feet: (MM * NOS) / 304.8
+            BigDecimal runningFeet = calc.getMm()
+                .multiply(BigDecimal.valueOf(calc.getNos()))
+                .divide(MM_TO_FEET_CONVERSION, 4, RoundingMode.HALF_UP);
+
+            // Calculate sq feet
+            BigDecimal sqFeet = runningFeet.multiply(SQ_FEET_MULTIPLIER)
+                .setScale(2, RoundingMode.HALF_UP);
+
+            // Calculate weight
+            BigDecimal weight = runningFeet.multiply(product.getWeight())
+                .setScale(3, RoundingMode.HALF_UP);
+
+            // Update calculation object
+            calc.setRunningFeet(runningFeet.setScale(4, RoundingMode.HALF_UP));
+            calc.setSqFeet(sqFeet);
+            calc.setWeight(weight);
+
+            // Accumulate totals
+            totalWeight = totalWeight.add(weight);
+            totalSqFeet = totalSqFeet.add(sqFeet);
+        }
+
+        // Update item totals
+        itemDto.setWeight(totalWeight);
+        itemDto.setQuantity(totalSqFeet);
     }
 
     private QuotationItem createQuotationItem(QuotationItemRequestDto itemDto, Quotation quotation, UserMaster currentUser) {
@@ -327,6 +383,7 @@ public class QuotationService {
         calc.setQuotationItem(item);
         calc.setFeet(dto.getFeet());
         calc.setInch(dto.getInch());
+        calc.setMm(dto.getMm());
         calc.setNos(dto.getNos());
         calc.setRunningFeet(dto.getRunningFeet());
         calc.setSqFeet(dto.getSqFeet());
@@ -452,6 +509,7 @@ public class QuotationService {
                         calcMap.put("id", calc.getId());
                         calcMap.put("feet", calc.getFeet());
                         calcMap.put("inch", calc.getInch());
+                        calcMap.put("mm", calc.getMm());
                         calcMap.put("nos", calc.getNos());
                         calcMap.put("runningFeet", calc.getRunningFeet());
                         calcMap.put("sqFeet", calc.getSqFeet());
@@ -551,5 +609,10 @@ public class QuotationService {
                 block   // block or unblock based on status
             );
         }
+    }
+
+    private BigDecimal calculateWeight(BigDecimal runningFeet, BigDecimal productWeight) {
+        return runningFeet.multiply(productWeight)
+            .setScale(WEIGHT_SCALE, WEIGHT_ROUNDING);
     }
 } 

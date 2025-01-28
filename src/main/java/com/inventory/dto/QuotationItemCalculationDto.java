@@ -19,6 +19,7 @@ public class QuotationItemCalculationDto {
     private Long id;
     private Long quotationItemId;
     private BigDecimal feet;
+    private BigDecimal mm;
     private BigDecimal inch;
     private Long nos;
     private BigDecimal runningFeet;

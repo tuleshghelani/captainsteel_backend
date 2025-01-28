@@ -47,13 +47,16 @@ public class QuotationItemCalculation {
     @Column(name = "nos", nullable = false)
     private Long nos = 0L;
     
-    @Column(name = "running_feet", precision = 8, scale = 2, columnDefinition = "numeric(8,2) DEFAULT 0.00")
+    @Column(name = "running_feet", precision = 10, scale = 4, columnDefinition = "numeric(10,4) DEFAULT 0.00")
     private BigDecimal runningFeet = BigDecimal.ZERO;
     
-    @Column(name = "sq_feet", precision = 8, scale = 2, columnDefinition = "numeric(8,2) DEFAULT 0.00")
+    @Column(name = "mm", precision = 14, scale = 2, columnDefinition = "numeric(14,2) DEFAULT 0.00")
+    private BigDecimal mm = BigDecimal.ZERO;
+    
+    @Column(name = "sq_feet", precision = 10, scale = 4, columnDefinition = "numeric(10,4) DEFAULT 0.00")
     private BigDecimal sqFeet = BigDecimal.ZERO;
     
-    @Column(name = "weight", precision = 8, scale = 2, columnDefinition = "numeric(8,2) DEFAULT 0.00")
+    @Column(name = "weight", precision = 9, scale = 3, columnDefinition = "numeric(9,3) DEFAULT 0.00")
     private BigDecimal weight = BigDecimal.ZERO;
 
     @ManyToOne(fetch = FetchType.LAZY)
