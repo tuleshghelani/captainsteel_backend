@@ -75,11 +75,11 @@ public class ProductDao {
                 int index = 0;
                 product.put("id", row[index++]);
                 product.put("name", row[index++]);
-                product.put("purchase_amount", row[index++]);
-                product.put("sale_amount", row[index++]);
+                product.put("purchaseAmount", row[index++]);
+                product.put("saleAmount", row[index++]);
                 product.put("type", row[index++]);
                 product.put("weight", row[index++]);
-                product.put("poly_carbonate_type", row[index++]);
+                product.put("polyCarbonateType", row[index++]);
 
                 products.add(product);
             }
