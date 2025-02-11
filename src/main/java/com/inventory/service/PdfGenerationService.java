@@ -106,12 +106,12 @@ public class PdfGenerationService {
     }
     
     private void addItemsTable(Document document, List<Map<String, Object>> items) {
-        Table table = new Table(new float[]{2, 4, 2, 2, 2, 2, 2, 2, 2})
+        Table table = new Table(new float[]{2, 4, 2, 2, 2, 2, 2, 2})
             .useAllAvailableWidth()
             .setMarginTop(20);
             
         // Add headers
-        Stream.of("Sr.", "Product", "Qty", "Weight", "Price", "Discount", "Tax %", "Tax", "Total")
+        Stream.of("Sr.", "Product", "Qty", "Price", "Discount", "Tax %", "Tax", "Total")
               .forEach(title -> table.addHeaderCell(
                   new Cell().add(new Paragraph(title))
                            .setBackgroundColor(PRIMARY_COLOR)
@@ -122,12 +122,10 @@ public class PdfGenerationService {
         // Add items
         AtomicInteger counter = new AtomicInteger(1);
         BigDecimal totalAmount = BigDecimal.ZERO;
-        BigDecimal totalWeight = BigDecimal.ZERO;
         
         for (Map<String, Object> item : items) {
             addItemRow(table, item, counter.getAndIncrement());
             totalAmount = totalAmount.add(new BigDecimal(item.get("finalPrice").toString()));
-            totalWeight = totalWeight.add(toBigDecimal(item.get("weight")));
         }
         
         // Add total row
@@ -136,11 +134,6 @@ public class PdfGenerationService {
             .setBold()
             .setPadding(5));
         table.addCell(new Cell().add(new Paragraph(""))); // Empty cell for Qty
-        table.addCell(new Cell().add(new Paragraph(totalWeight.toString()))
-            .setBackgroundColor(PRIMARY_COLOR)
-            .setFontColor(ColorConstants.WHITE)
-            .setBold()
-            .setPadding(5));
         table.addCell(new Cell(1, 3).add(new Paragraph(""))); // Empty cells for Price, Discount, Tax%
         table.addCell(new Cell().add(new Paragraph(""))); // Empty cell for Tax
         table.addCell(new Cell().add(new Paragraph(totalAmount.toString()))
@@ -315,7 +308,6 @@ public class PdfGenerationService {
         table.addCell(new Cell().add(new Paragraph(String.valueOf(counter))));
         table.addCell(new Cell().add(new Paragraph(item.get("productName").toString())));
         table.addCell(new Cell().add(new Paragraph(item.get("quantity").toString())));
-        table.addCell(new Cell().add(new Paragraph(formatValue(item.get("weight")))));
         table.addCell(new Cell().add(new Paragraph(item.get("unitPrice").toString())));
         table.addCell(new Cell().add(new Paragraph(item.get("discountAmount").toString())));
         table.addCell(new Cell().add(new Paragraph(item.get("taxPercentage").toString())));
