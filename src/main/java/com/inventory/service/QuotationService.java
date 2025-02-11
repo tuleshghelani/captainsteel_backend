@@ -295,10 +295,10 @@ public class QuotationService {
     }
 
     private void calculateMMeasurements(QuotationItemRequestDto itemDto, Product product, UserMaster currentUser) {
-        if (product.getType() != ProductMainType.REGULAR || 
-            !"MM".equalsIgnoreCase(itemDto.getCalculationType())) {
-            throw new ValidationException("MM calculations are only valid for REGULAR products with MM calculation type");
-        }
+//        if (product.getType() != ProductMainType.REGULAR ||
+//            !"MM".equalsIgnoreCase(itemDto.getCalculationType())) {
+//            throw new ValidationException("MM calculations are only valid for REGULAR products with MM calculation type");
+//        }
 
         BigDecimal totalWeight = BigDecimal.ZERO;
         BigDecimal totalSqFeet = BigDecimal.ZERO;
