@@ -291,7 +291,7 @@ public class QuotationService {
         
         // Update item totals
         itemDto.setWeight(totalWeight);
-        itemDto.setQuantity(totalSqFeet);
+        itemDto.setQuantity(totalWeight);
     }
 
     private void calculateMMeasurements(QuotationItemRequestDto itemDto, Product product, UserMaster currentUser) {
@@ -336,7 +336,7 @@ public class QuotationService {
 
         // Update item totals
         itemDto.setWeight(totalWeight);
-        itemDto.setQuantity(totalSqFeet);
+        itemDto.setQuantity(totalWeight);
     }
 
     private QuotationItem createQuotationItem(QuotationItemRequestDto itemDto, Quotation quotation, UserMaster currentUser) {
@@ -511,7 +511,7 @@ public class QuotationService {
                 itemMap.put("unitPrice", item.getUnitPrice());
                 itemMap.put("discountPercentage", item.getDiscountPercentage());
                 itemMap.put("discountAmount", item.getDiscountAmount());
-                itemMap.put("discountPrice", item.getDiscountPrice());
+                itemMap.put("price", item.getDiscountPrice());
                 itemMap.put("taxPercentage", item.getTaxPercentage());
                 itemMap.put("taxAmount", item.getTaxAmount());
                 itemMap.put("finalPrice", item.getFinalPrice());
