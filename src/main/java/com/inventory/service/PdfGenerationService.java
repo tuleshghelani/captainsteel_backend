@@ -106,12 +106,12 @@ public class PdfGenerationService {
     }
     
     private void addItemsTable(Document document, List<Map<String, Object>> items) {
-        Table table = new Table(new float[]{2, 4, 2, 2, 2, 2, 2, 2})
+        Table table = new Table(new float[]{2, 4, 2, 2, 2, 2, 2, 2, 2})
             .useAllAvailableWidth()
             .setMarginTop(20);
             
         // Add headers
-        Stream.of("Sr.", "Product", "Qty", "Price", "Discount", "Tax %", "Tax", "Total")
+        Stream.of("Sr.", "Product", "Qty", "Weight", "Price", "Discount", "Tax %", "Tax", "Total")
               .forEach(title -> table.addHeaderCell(
                   new Cell().add(new Paragraph(title))
                            .setBackgroundColor(PRIMARY_COLOR)
@@ -122,18 +122,27 @@ public class PdfGenerationService {
         // Add items
         AtomicInteger counter = new AtomicInteger(1);
         BigDecimal totalAmount = BigDecimal.ZERO;
+        BigDecimal totalWeight = BigDecimal.ZERO;
         
         for (Map<String, Object> item : items) {
             addItemRow(table, item, counter.getAndIncrement());
             totalAmount = totalAmount.add(new BigDecimal(item.get("finalPrice").toString()));
+            totalWeight = totalWeight.add(toBigDecimal(item.get("weight")));
         }
         
         // Add total row
-        table.addCell(new Cell(1, 6).add(new Paragraph("Total Amount"))
+        table.addCell(new Cell(1, 2).add(new Paragraph("Total"))
             .setTextAlignment(TextAlignment.RIGHT)
             .setBold()
             .setPadding(5));
-        table.addCell(new Cell().add(new Paragraph(""))); // Empty cell for tax column
+        table.addCell(new Cell().add(new Paragraph(""))); // Empty cell for Qty
+        table.addCell(new Cell().add(new Paragraph(totalWeight.toString()))
+            .setBackgroundColor(PRIMARY_COLOR)
+            .setFontColor(ColorConstants.WHITE)
+            .setBold()
+            .setPadding(5));
+        table.addCell(new Cell(1, 3).add(new Paragraph(""))); // Empty cells for Price, Discount, Tax%
+        table.addCell(new Cell().add(new Paragraph(""))); // Empty cell for Tax
         table.addCell(new Cell().add(new Paragraph(totalAmount.toString()))
             .setBackgroundColor(PRIMARY_COLOR)
             .setFontColor(ColorConstants.WHITE)
@@ -194,6 +203,14 @@ public class PdfGenerationService {
                 createHeaderCell(title)
             ));
             
+        // Initialize totals
+        BigDecimal totalFeet = BigDecimal.ZERO;
+        BigDecimal totalInch = BigDecimal.ZERO;
+        Long totalNos = 0L;
+        BigDecimal totalRunningFeet = BigDecimal.ZERO;
+        BigDecimal totalSqFeet = BigDecimal.ZERO;
+        BigDecimal totalWeight = BigDecimal.ZERO;
+        
         // Add data rows
         for (Map<String, Object> calc : calculations) {
             table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("feet")))));
@@ -202,7 +219,23 @@ public class PdfGenerationService {
             table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("runningFeet")))));
             table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("sqFeet")))));
             table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("weight")))));
+            
+            // Accumulate totals
+            totalFeet = totalFeet.add(toBigDecimal(calc.get("feet")));
+            totalInch = totalInch.add(toBigDecimal(calc.get("inch")));
+            totalNos += toLong(calc.get("nos"));
+            totalRunningFeet = totalRunningFeet.add(toBigDecimal(calc.get("runningFeet")));
+            totalSqFeet = totalSqFeet.add(toBigDecimal(calc.get("sqFeet")));
+            totalWeight = totalWeight.add(toBigDecimal(calc.get("weight")));
         }
+        
+        // Add total row
+        table.addCell(createTotalCell(totalFeet.toString()));
+        table.addCell(createTotalCell(totalInch.toString()));
+        table.addCell(createTotalCell(String.valueOf(totalNos)));
+        table.addCell(createTotalCell(totalRunningFeet.toString()));
+        table.addCell(createTotalCell(totalSqFeet.toString()));
+        table.addCell(createTotalCell(totalWeight.toString()));
         
         return table;
     }
@@ -218,13 +251,31 @@ public class PdfGenerationService {
                 createHeaderCell(title)
             ));
             
+        // Initialize totals
+        BigDecimal totalMM = BigDecimal.ZERO;
+        Long totalNos = 0L;
+        BigDecimal totalRunningFeet = BigDecimal.ZERO;
+        BigDecimal totalWeight = BigDecimal.ZERO;
+        
         // Add data rows
         for (Map<String, Object> calc : calculations) {
             table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("mm")))));
             table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("nos")))));
             table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("runningFeet")))));
             table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("weight")))));
+            
+            // Accumulate totals
+            totalMM = totalMM.add(toBigDecimal(calc.get("mm")));
+            totalNos += toLong(calc.get("nos"));
+            totalRunningFeet = totalRunningFeet.add(toBigDecimal(calc.get("runningFeet")));
+            totalWeight = totalWeight.add(toBigDecimal(calc.get("weight")));
         }
+        
+        // Add total row
+        table.addCell(createTotalCell(totalMM.toString()));
+        table.addCell(createTotalCell(String.valueOf(totalNos)));
+        table.addCell(createTotalCell(totalRunningFeet.toString()));
+        table.addCell(createTotalCell(totalWeight.toString()));
         
         return table;
     }
@@ -237,14 +288,34 @@ public class PdfGenerationService {
             .setPadding(5);
     }
     
+    private Cell createTotalCell(String value) {
+        return new Cell()
+            .add(new Paragraph(value))
+            .setBackgroundColor(PRIMARY_COLOR)
+            .setFontColor(ColorConstants.WHITE)
+            .setBold()
+            .setPadding(5);
+    }
+    
     private String formatValue(Object value) {
         return value != null ? value.toString() : "0";
+    }
+    
+    private BigDecimal toBigDecimal(Object value) {
+        if (value == null) return BigDecimal.ZERO;
+        return new BigDecimal(value.toString());
+    }
+    
+    private Long toLong(Object value) {
+        if (value == null) return 0L;
+        return Long.parseLong(value.toString());
     }
     
     private void addItemRow(Table table, Map<String, Object> item, int counter) {
         table.addCell(new Cell().add(new Paragraph(String.valueOf(counter))));
         table.addCell(new Cell().add(new Paragraph(item.get("productName").toString())));
         table.addCell(new Cell().add(new Paragraph(item.get("quantity").toString())));
+        table.addCell(new Cell().add(new Paragraph(formatValue(item.get("weight")))));
         table.addCell(new Cell().add(new Paragraph(item.get("unitPrice").toString())));
         table.addCell(new Cell().add(new Paragraph(item.get("discountAmount").toString())));
         table.addCell(new Cell().add(new Paragraph(item.get("taxPercentage").toString())));
