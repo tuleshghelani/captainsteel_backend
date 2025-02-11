@@ -349,7 +349,7 @@ public class QuotationService {
         QuotationItem item = new QuotationItem();
         item.setQuotation(quotation);
         item.setProduct(product);
-        item.setQuantity(itemDto.getWeight());
+        item.setQuantity(itemDto.getQuantity());
         item.setWeight(itemDto.getWeight());
         item.setUnitPrice(itemDto.getUnitPrice());
         item.setDiscountPercentage(itemDto.getDiscountPercentage());
@@ -374,20 +374,23 @@ public class QuotationService {
         item = quotationItemRepository.save(item);
 
         // Save calculations if present
-        if (product.getType() == ProductMainType.REGULAR && itemDto.getCalculations() != null) {
-            saveCalculations(item, itemDto.getCalculations(), currentUser, quotation);
+        if ((product.getType() == ProductMainType.REGULAR || product.getType() == ProductMainType.POLY_CARBONATE) && itemDto.getCalculations() != null) {
+            List<QuotationItemCalculation> quotationItemCalculations = saveCalculations(item, itemDto.getCalculations(), currentUser, quotation);
+            System.out.printf("quotationItemCalculations : " + quotationItemCalculations);
         }
 
         return item;
     }
 
-    private void saveCalculations(QuotationItem item, List<QuotationItemCalculationDto> calculations, UserMaster currentUser, Quotation quotation) {
+    private List<QuotationItemCalculation> saveCalculations(QuotationItem item, List<QuotationItemCalculationDto> calculations, UserMaster currentUser, Quotation quotation) {
         List<QuotationItemCalculation> itemCalculations = calculations.stream()
                 .map(calc -> {
                     QuotationItemCalculation calcEntity = mapToCalculationEntity(calc, item, currentUser, quotation);
                     return quotationItemCalculationRepository.save(calcEntity);
                 })
                 .collect(Collectors.toList());
+
+        return itemCalculations;
     }
 
     private QuotationItemCalculation mapToCalculationEntity(QuotationItemCalculationDto dto, QuotationItem item, 
