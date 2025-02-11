@@ -1,5 +1,15 @@
 package com.inventory.service;
 
+import java.io.ByteArrayOutputStream;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+
 import com.inventory.exception.ValidationException;
 import com.itextpdf.kernel.colors.Color;
 import com.itextpdf.kernel.colors.ColorConstants;
@@ -13,17 +23,9 @@ import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.TextAlignment;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-
-import java.io.ByteArrayOutputStream;
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -139,6 +141,104 @@ public class PdfGenerationService {
             .setPadding(5));
         
         document.add(table);
+        
+        // Add calculation details tables for each item
+        for (Map<String, Object> item : items) {
+            if (shouldShowCalculationDetails(item)) {
+                addCalculationDetailsTable(document, item);
+            }
+        }
+    }
+    
+    private boolean shouldShowCalculationDetails(Map<String, Object> item) {
+        String productType = (String) item.get("productType");
+        System.out.println("item : " + item);
+        return "REGULAR".equals(productType) || "POLY_CARBONATE".equals(productType);
+    }
+    
+    private void addCalculationDetailsTable(Document document, Map<String, Object> item) {
+        document.add(new Paragraph("\nCalculation Details for " + item.get("productName"))
+            .setBold()
+            .setFontColor(PRIMARY_COLOR)
+            .setMarginTop(10));
+            
+        List<Map<String, Object>> calculations = (List<Map<String, Object>>) item.get("calculations");
+        if (calculations == null || calculations.isEmpty()) {
+            return;
+        }
+
+        String calculationType = (String) item.get("calculationType");
+        Table table;
+
+        System.out.println("calculationType : " + calculationType);
+        
+        if ("SQ_FEET".equals(calculationType)) {
+            table = createSqFeetCalculationTable(calculations);
+        } else if ("MM".equals(calculationType)) {
+            table = createMMCalculationTable(calculations);
+        } else {
+            return;
+        }
+        
+        document.add(table);
+    }
+    
+    private Table createSqFeetCalculationTable(List<Map<String, Object>> calculations) {
+        Table table = new Table(new float[]{2, 2, 2, 2, 2, 2})
+            .useAllAvailableWidth()
+            .setMarginTop(5);
+            
+        // Add headers
+        Stream.of("Feet", "Inch", "Nos", "Running Feet", "Sq.Feet", "Weight")
+            .forEach(title -> table.addHeaderCell(
+                createHeaderCell(title)
+            ));
+            
+        // Add data rows
+        for (Map<String, Object> calc : calculations) {
+            table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("feet")))));
+            table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("inch")))));
+            table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("nos")))));
+            table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("runningFeet")))));
+            table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("sqFeet")))));
+            table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("weight")))));
+        }
+        
+        return table;
+    }
+    
+    private Table createMMCalculationTable(List<Map<String, Object>> calculations) {
+        Table table = new Table(new float[]{3, 2, 3, 3})
+            .useAllAvailableWidth()
+            .setMarginTop(5);
+            
+        // Add headers
+        Stream.of("MM", "Nos", "R.Feet", "Weight")
+            .forEach(title -> table.addHeaderCell(
+                createHeaderCell(title)
+            ));
+            
+        // Add data rows
+        for (Map<String, Object> calc : calculations) {
+            table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("mm")))));
+            table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("nos")))));
+            table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("runningFeet")))));
+            table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("weight")))));
+        }
+        
+        return table;
+    }
+    
+    private Cell createHeaderCell(String title) {
+        return new Cell()
+            .add(new Paragraph(title))
+            .setBackgroundColor(PRIMARY_COLOR)
+            .setFontColor(ColorConstants.WHITE)
+            .setPadding(5);
+    }
+    
+    private String formatValue(Object value) {
+        return value != null ? value.toString() : "0";
     }
     
     private void addItemRow(Table table, Map<String, Object> item, int counter) {

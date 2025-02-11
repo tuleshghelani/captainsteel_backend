@@ -1,12 +1,19 @@
 package com.inventory.dao;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Repository;
+
 import com.inventory.dto.QuotationDto;
 import com.inventory.exception.ValidationException;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
-import org.springframework.stereotype.Repository;
-import java.util.*;
 
 @Repository
 public class QuotationDao {
@@ -138,7 +145,7 @@ public class QuotationDao {
                 qi.id as item_id, qi.quantity, qi.unit_price,
                 qi.discount_percentage, qi.discount_amount,
                 qi.tax_percentage, qi.tax_amount, qi.final_price,
-                p.id as product_id, p.name as product_name
+                p.id as product_id, p.name as product_name, p.type, qi.calculation_type
             FROM (select * from quotation q where q.client_id = :clientId and q.id = :quotationId) q
             LEFT JOIN (select * from customer c where c.client_id = :clientId) c ON q.customer_id = c.id
             LEFT JOIN (select * from quotation_items qi where qi.client_id = :clientId) qi ON q.id = qi.quotation_id
@@ -188,10 +195,46 @@ public class QuotationDao {
             item.put("finalPrice", row[17]);
             item.put("productId", row[18]);
             item.put("productName", row[19]);
+            item.put("productType", row[20]);
+            item.put("calculationType", row[21]);
             items.add(item);
+        }
+
+        // Get calculations for each item
+        for (Map<String, Object> item : items) {
+            Long itemId = (Long) item.get("id");
+            List<Map<String, Object>> calculations = getCalculationsForItem(itemId);
+            item.put("calculations", calculations);
         }
 
         quotation.put("items", items);
         return quotation;
+    }
+
+    private List<Map<String, Object>> getCalculationsForItem(Long itemId) {
+        String sql = """
+            SELECT 
+                qic.feet, qic.inch, qic.mm, qic.nos, 
+                qic.running_feet, qic.sq_feet, qic.weight
+            FROM quotation_item_calculations qic
+            WHERE qic.quotation_item_id = :itemId
+        """;
+        
+        Query query = entityManager.createNativeQuery(sql);
+        query.setParameter("itemId", itemId);
+        
+        List<Object[]> results = query.getResultList();
+        return results.stream().map(row -> {
+            Map<String, Object> calc = new HashMap<>();
+            int i = 0;
+            calc.put("feet", row[i++]);
+            calc.put("inch", row[i++]);
+            calc.put("mm", row[i++]);
+            calc.put("nos", row[i++]);
+            calc.put("runningFeet", row[i++]);
+            calc.put("sqFeet", row[i++]);
+            calc.put("weight", row[i++]);
+            return calc;
+        }).collect(Collectors.toList());
     }
 } 
