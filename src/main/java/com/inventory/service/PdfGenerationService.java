@@ -10,6 +10,7 @@ import java.util.stream.Stream;
 
 import com.itextpdf.io.image.ImageData;
 import com.itextpdf.io.image.ImageDataFactory;
+import com.itextpdf.layout.properties.AreaBreakType;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -27,6 +28,7 @@ import com.itextpdf.layout.element.Image;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.TextAlignment;
+import com.itextpdf.layout.element.AreaBreak;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,7 +51,8 @@ public class PdfGenerationService {
             addHeader(document, quotationData);
             addQuotationDetails(document, quotationData);
             addItemsTable(document, (List<Map<String, Object>>) quotationData.get("items"), quotationData);
-            addFooter(document, quotationData);
+            addBankDetailsAndTerms(document);
+//            addFooter(document, quotationData);
             
             document.close();
             return outputStream.toByteArray();
@@ -267,6 +270,7 @@ public class PdfGenerationService {
         document.add(new Paragraph("\nCalculation Details for " + item.get("productName"))
             .setBold()
             .setFontColor(TEXT_PRIMARY)
+            .setBold()
             .setMarginTop(10));
             
         List<Map<String, Object>> calculations = (List<Map<String, Object>>) item.get("calculations");
@@ -422,6 +426,66 @@ public class PdfGenerationService {
         table.addCell(new Cell().add(new Paragraph(item.get("taxPercentage").toString())));
         table.addCell(new Cell().add(new Paragraph(item.get("taxAmount").toString())));
         table.addCell(new Cell().add(new Paragraph(item.get("finalPrice").toString())));
+    }
+    
+    private void addBankDetailsAndTerms(Document document) {
+        // Start new page
+        document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
+        
+        // GST Number
+        document.add(new Paragraph("GST No: 24AALFC2707P1Z8")
+            .setFontColor(TEXT_PRIMARY)
+            .setFontSize(12)
+            .setMarginBottom(20));
+        
+        // Bank Details Section
+        document.add(new Paragraph("BANK DETAILS:")
+            .setFontColor(new DeviceRgb(41, 84, 153))  // Blue color
+            .setBold()
+            .setFontSize(14)
+            .setMarginBottom(10));
+        
+        document.add(new Paragraph("CENTRAL BANK OF INDIA")
+            .setFontColor(new DeviceRgb(230, 108, 1))  // Orange color
+            .setBold()
+            .setFontSize(12));
+            
+        Table bankTable = new Table(2).useAllAvailableWidth();
+        addBankDetail(bankTable, "A/C NO:", "3592903798");
+        addBankDetail(bankTable, "IFSC CODE:", "CBIN0280569");
+        addBankDetail(bankTable, "BRANCH:", "BHUPENDRAROAD,RAJKOT");
+        document.add(bankTable);
+        
+        // Terms and Conditions Section
+        document.add(new Paragraph("\nTERMS AND CONDITIONS:")
+            .setFontColor(new DeviceRgb(207, 89, 86))  // Red color
+            .setBold()
+            .setFontSize(14)
+            .setMarginTop(20)
+            .setMarginBottom(10));
+        
+        // Add terms
+        addTerm(document, "1.", "Customer will be billed after indicating acceptance of this quote.", PRIMARY_COLOR);
+        addTerm(document, "2.", "Payment 50% Advance And 50% before goods Dispatched.", PRIMARY_COLOR);
+        addTerm(document, "3.", "Transport Transaction Extra", PRIMARY_COLOR);
+        addTerm(document, "4.", "The Responsibility Of All the Material Will Be With That Company.\nThere Will Be No Responsibility Of The Distributor I.E. Captain Steel.", PRIMARY_COLOR);
+        addTerm(document, "5.", "SUBJECT TO GONDAL JURISDICTION.", PRIMARY_COLOR);
+        addTerm(document, "6.", "THIS QUOTATION IS VALID FOR TWO DAYS.", PRIMARY_COLOR);
+    }
+
+    private void addBankDetail(Table table, String label, String value) {
+        table.addCell(new Cell().add(new Paragraph(label))
+            .setBold()
+            .setBorder(Border.NO_BORDER));
+        table.addCell(new Cell().add(new Paragraph(value))
+            .setBorder(Border.NO_BORDER));
+    }
+
+    private void addTerm(Document document, String number, String text, Color color) {
+        document.add(new Paragraph(number + " " + text)
+            .setFontColor(color)
+            .setBold()
+            .setMarginBottom(5));
     }
     
     private void addFooter(Document document, Map<String, Object> data) {
