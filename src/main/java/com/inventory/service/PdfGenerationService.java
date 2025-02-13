@@ -266,7 +266,7 @@ public class PdfGenerationService {
     private void addCalculationDetailsTable(Document document, Map<String, Object> item) {
         document.add(new Paragraph("\nCalculation Details for " + item.get("productName"))
             .setBold()
-            .setFontColor(PRIMARY_COLOR)
+            .setFontColor(TEXT_PRIMARY)
             .setMarginTop(10));
             
         List<Map<String, Object>> calculations = (List<Map<String, Object>>) item.get("calculations");
@@ -291,89 +291,93 @@ public class PdfGenerationService {
     }
     
     private Table createSqFeetCalculationTable(List<Map<String, Object>> calculations) {
-        Table table = new Table(new float[]{2, 2, 2, 2, 2, 2})
+        Table table = new Table(new float[]{2, 2, 2})
             .useAllAvailableWidth()
             .setMarginTop(5);
-            
-        // Add headers
-        Stream.of("Feet", "Inch", "Nos", "Running Feet", "Sq.Feet", "Weight")
-            .forEach(title -> table.addHeaderCell(
-                createHeaderCell(title)
-            ));
-            
-        // Initialize totals
-        BigDecimal totalFeet = BigDecimal.ZERO;
-        BigDecimal totalInch = BigDecimal.ZERO;
-        Long totalNos = 0L;
-        BigDecimal totalRunningFeet = BigDecimal.ZERO;
-        BigDecimal totalSqFeet = BigDecimal.ZERO;
-        BigDecimal totalWeight = BigDecimal.ZERO;
         
-        // Add data rows
+        // Add headers with specific colors
+        Cell feetHeader = new Cell()
+            .add(new Paragraph("Feet"))
+            .setBackgroundColor(PRIMARY_COLOR)
+            .setFontColor(ColorConstants.WHITE)
+            .setPadding(5);
+
+        Cell inchHeader = new Cell()
+            .add(new Paragraph("Inch"))
+            .setBackgroundColor(PRIMARY_COLOR)
+            .setFontColor(ColorConstants.WHITE)
+            .setPadding(5);
+        
+        Cell nosHeader = new Cell()
+            .add(new Paragraph("Nos"))
+            .setBackgroundColor(PRIMARY_COLOR)
+            .setFontColor(ColorConstants.WHITE)
+            .setPadding(5);
+        
+        table.addHeaderCell(feetHeader);
+        table.addHeaderCell(inchHeader);
+        table.addHeaderCell(nosHeader);
+        
+        // Add data rows with matching background colors
         for (Map<String, Object> calc : calculations) {
-            table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("feet")))));
-            table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("inch")))));
-            table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("nos")))));
-            table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("runningFeet")))));
-            table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("sqFeet")))));
-            table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("weight")))));
-            
-            // Accumulate totals
-            totalFeet = totalFeet.add(toBigDecimal(calc.get("feet")));
-            totalInch = totalInch.add(toBigDecimal(calc.get("inch")));
-            totalNos += toLong(calc.get("nos"));
-            totalRunningFeet = totalRunningFeet.add(toBigDecimal(calc.get("runningFeet")));
-            totalSqFeet = totalSqFeet.add(toBigDecimal(calc.get("sqFeet")));
-            totalWeight = totalWeight.add(toBigDecimal(calc.get("weight")));
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(calc.get("feet"))))
+                .setBackgroundColor(new DeviceRgb(230, 185, 184)));
+                
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(calc.get("inch"))))
+                .setBackgroundColor(new DeviceRgb(141, 180, 227)));
+                
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(calc.get("nos"))))
+                .setBackgroundColor(new DeviceRgb(252, 213, 180)));
         }
-        
-        // Add total row
-        table.addCell(createTotalCell(totalFeet.toString()));
-        table.addCell(createTotalCell(totalInch.toString()));
-        table.addCell(createTotalCell(String.valueOf(totalNos)));
-        table.addCell(createTotalCell(totalRunningFeet.toString()));
-        table.addCell(createTotalCell(totalSqFeet.toString()));
-        table.addCell(createTotalCell(totalWeight.toString()));
         
         return table;
     }
     
     private Table createMMCalculationTable(List<Map<String, Object>> calculations) {
-        Table table = new Table(new float[]{3, 2, 3, 3})
+        Table table = new Table(new float[]{2, 2, 2})
             .useAllAvailableWidth()
             .setMarginTop(5);
-            
-        // Add headers
-        Stream.of("MM", "Nos", "R.Feet", "Weight")
-            .forEach(title -> table.addHeaderCell(
-                createHeaderCell(title)
-            ));
-            
-        // Initialize totals
-        BigDecimal totalMM = BigDecimal.ZERO;
-        Long totalNos = 0L;
-        BigDecimal totalRunningFeet = BigDecimal.ZERO;
-        BigDecimal totalWeight = BigDecimal.ZERO;
         
-        // Add data rows
+        // Add headers with specific colors
+        Cell mmHeader = new Cell()
+            .add(new Paragraph("MM"))
+            .setBackgroundColor(PRIMARY_COLOR)
+            .setFontColor(ColorConstants.WHITE)
+            .setPadding(5);
+        
+        Cell rFeetHeader = new Cell()
+            .add(new Paragraph("R.Feet"))
+            .setBackgroundColor(PRIMARY_COLOR)
+            .setFontColor(ColorConstants.WHITE)
+            .setPadding(5);
+        
+        Cell nosHeader = new Cell()
+            .add(new Paragraph("Nos"))
+            .setBackgroundColor(PRIMARY_COLOR)
+            .setFontColor(ColorConstants.WHITE)
+            .setPadding(5);
+        
+        table.addHeaderCell(mmHeader);
+        table.addHeaderCell(rFeetHeader);
+        table.addHeaderCell(nosHeader);
+        
+        // Add data rows with matching background colors
         for (Map<String, Object> calc : calculations) {
-            table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("mm")))));
-            table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("nos")))));
-            table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("runningFeet")))));
-            table.addCell(new Cell().add(new Paragraph(formatValue(calc.get("weight")))));
-            
-            // Accumulate totals
-            totalMM = totalMM.add(toBigDecimal(calc.get("mm")));
-            totalNos += toLong(calc.get("nos"));
-            totalRunningFeet = totalRunningFeet.add(toBigDecimal(calc.get("runningFeet")));
-            totalWeight = totalWeight.add(toBigDecimal(calc.get("weight")));
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(calc.get("mm"))))
+                .setBackgroundColor(new DeviceRgb(230, 185, 184)));
+                
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(calc.get("runningFeet"))))
+                .setBackgroundColor(new DeviceRgb(141, 180, 227)));
+                
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(calc.get("nos"))))
+                .setBackgroundColor(new DeviceRgb(252, 213, 180)));
         }
-        
-        // Add total row
-        table.addCell(createTotalCell(totalMM.toString()));
-        table.addCell(createTotalCell(String.valueOf(totalNos)));
-        table.addCell(createTotalCell(totalRunningFeet.toString()));
-        table.addCell(createTotalCell(totalWeight.toString()));
         
         return table;
     }
@@ -423,14 +427,6 @@ public class PdfGenerationService {
     private void addFooter(Document document, Map<String, Object> data) {
         document.add(new Paragraph("\n"));
         
-        // Terms and Conditions
-        document.add(new Paragraph("Terms & Conditions")
-            .setFontColor(PRIMARY_COLOR)
-            .setBold()
-            .setMarginTop(20));
-        document.add(new Paragraph(data.get("termsConditions").toString())
-            .setFontColor(TEXT_PRIMARY)
-            .setMarginTop(10));
             
         // Signatures
         Table signatures = new Table(2).useAllAvailableWidth().setMarginTop(50);
