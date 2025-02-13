@@ -112,16 +112,22 @@ public class QuotationService {
             
             List<QuotationItem> items = new ArrayList<>();
             BigDecimal totalAmount = BigDecimal.ZERO;
-            
+            BigDecimal taxAmount = BigDecimal.ZERO;
+            BigDecimal discountedPrice = BigDecimal.ZERO;
+
             for (QuotationItemRequestDto itemDto : request.getItems()) {
                 QuotationItem item = createQuotationItem(itemDto, quotation, currentUser);
                 items.add(item);
                 totalAmount = totalAmount.add(item.getFinalPrice());
+                taxAmount = taxAmount.add(item.getTaxAmount());
+                discountedPrice = discountedPrice.add(item.getDiscountPrice());
             }
             
             quotationItemRepository.saveAll(items);
             
             quotation.setTotalAmount(totalAmount);
+            quotation.setTaxAmount(taxAmount);
+            quotation.setDiscountedPrice(discountedPrice);
             quotationRepository.save(quotation);
             
             return ApiResponse.success("Quotation created successfully");
@@ -162,15 +168,21 @@ public class QuotationService {
             
             List<QuotationItem> items = new ArrayList<>();
             BigDecimal totalAmount = BigDecimal.ZERO;
+            BigDecimal taxAmount = BigDecimal.ZERO;
+            BigDecimal discountedPrice = BigDecimal.ZERO;
             
             for (QuotationItemRequestDto itemDto : request.getItems()) {
                 QuotationItem item = createQuotationItem(itemDto, quotation, currentUser);
                 items.add(item);
                 totalAmount = totalAmount.add(item.getFinalPrice());
+                taxAmount = taxAmount.add(item.getTaxAmount());
+                discountedPrice = discountedPrice.add(item.getDiscountPrice());
             }
             
             quotationItemRepository.saveAll(items);
             quotation.setTotalAmount(totalAmount);
+            quotation.setTaxAmount(taxAmount);
+            quotation.setDiscountedPrice(discountedPrice);
             quotationRepository.save(quotation);
             
             return ApiResponse.success("Quotation updated successfully");

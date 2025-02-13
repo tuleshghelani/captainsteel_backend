@@ -145,7 +145,8 @@ public class QuotationDao {
                 qi.id as item_id, qi.quantity, qi.unit_price,
                 qi.discount_percentage, qi.discount_amount,
                 qi.tax_percentage, qi.tax_amount, qi.final_price,
-                p.id as product_id, p.name as product_name, p.type, qi.calculation_type
+                p.id as product_id, p.name as product_name, p.type, qi.calculation_type,
+                qi.discount_price
             FROM (select * from quotation q where q.client_id = :clientId and q.id = :quotationId) q
             LEFT JOIN (select * from customer c where c.client_id = :clientId) c ON q.customer_id = c.id
             LEFT JOIN (select * from quotation_items qi where qi.client_id = :clientId) qi ON q.id = qi.quotation_id
@@ -198,6 +199,7 @@ public class QuotationDao {
             item.put("productName", row[20]);
             item.put("productType", row[21]);
             item.put("calculationType", row[22]);
+            item.put("discountPrice", row[23]);
             items.add(item);
         }
 

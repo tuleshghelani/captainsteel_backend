@@ -2,6 +2,7 @@ package com.inventory.service;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -47,7 +48,7 @@ public class PdfGenerationService {
             
             addHeader(document, quotationData);
             addQuotationDetails(document, quotationData);
-            addItemsTable(document, (List<Map<String, Object>>) quotationData.get("items"));
+            addItemsTable(document, (List<Map<String, Object>>) quotationData.get("items"), quotationData);
             addFooter(document, quotationData);
             
             document.close();
@@ -156,45 +157,98 @@ public class PdfGenerationService {
         }
     }
     
-    private void addItemsTable(Document document, List<Map<String, Object>> items) {
-        Table table = new Table(new float[]{2, 4, 2, 2, 2, 2, 2, 2})
+    private void addItemsTable(Document document, List<Map<String, Object>> items, Map<String, Object> quotationData) {
+        // Create table with 5 columns instead of 8
+        Table table = new Table(new float[]{2, 4, 2, 2, 2})
             .useAllAvailableWidth()
             .setMarginTop(20);
             
-        // Add headers
-        Stream.of("Sr.", "Product", "Qty", "Price", "Discount", "Tax %", "Tax", "Total")
-              .forEach(title -> table.addHeaderCell(
-                  new Cell().add(new Paragraph(title))
-                           .setBackgroundColor(PRIMARY_COLOR)
-                           .setFontColor(ColorConstants.WHITE)
-                           .setPadding(5)
-              ));
-              
+        // Add simplified headers
+        Stream.of("Sr. No.", "ITEM NAME", "QUANTITY", "PRICE", "TOTAL AMOUNT")
+            .forEach(title -> table.addHeaderCell(
+                new Cell().add(new Paragraph(title))
+                        .setBackgroundColor(PRIMARY_COLOR)
+                        .setFontColor(ColorConstants.WHITE)
+                        .setPadding(5)
+            ));
+            
         // Add items
         AtomicInteger counter = new AtomicInteger(1);
         BigDecimal totalAmount = BigDecimal.ZERO;
         
         for (Map<String, Object> item : items) {
-            addItemRow(table, item, counter.getAndIncrement());
-            totalAmount = totalAmount.add(new BigDecimal(item.get("finalPrice").toString()));
+            table.addCell(new Cell().add(new Paragraph(String.valueOf(counter.getAndIncrement()))));
+            table.addCell(new Cell().add(new Paragraph(item.get("productName").toString())));
+            table.addCell(new Cell().add(new Paragraph(item.get("quantity").toString())));
+            table.addCell(new Cell().add(new Paragraph(item.get("unitPrice").toString())));
+            table.addCell(new Cell().add(new Paragraph(item.get("discountPrice").toString())));
+            
+            totalAmount = totalAmount.add(new BigDecimal(item.get("discountPrice").toString()));
         }
-        
-        // Add total row
-        table.addCell(new Cell(1, 2).add(new Paragraph("Total"))
-            .setTextAlignment(TextAlignment.RIGHT)
-            .setBold()
-            .setPadding(5));
-        table.addCell(new Cell().add(new Paragraph(""))); // Empty cell for Qty
-        table.addCell(new Cell(1, 3).add(new Paragraph(""))); // Empty cells for Price, Discount, Tax%
-        table.addCell(new Cell().add(new Paragraph(""))); // Empty cell for Tax
-        table.addCell(new Cell().add(new Paragraph(totalAmount.toString()))
-            .setBackgroundColor(PRIMARY_COLOR)
-            .setFontColor(ColorConstants.WHITE)
-            .setBold()
-            .setPadding(5));
         
         document.add(table);
         
+        // Create summary table with 2 columns
+        Table summaryTable = new Table(new float[]{3, 1})
+            .useAllAvailableWidth()
+            .setMarginTop(10);
+        
+        // Add empty cell on left side
+        Cell leftCell = new Cell()
+            // .add(new Paragraph("SGST 9% CGST 9%"))
+            .setBorder(Border.NO_BORDER)
+            .setTextAlignment(TextAlignment.LEFT)
+            .setFontSize(10);
+        
+        // Create right-side table for totals
+        Table totalsTable = new Table(2)
+            .useAllAvailableWidth();
+        
+        // Add total rows with borders
+        Cell totalLabelCell = new Cell()
+            .add(new Paragraph("TOTAL"))
+            .setBorder(Border.NO_BORDER);
+        Cell totalValueCell = new Cell()
+            .add(new Paragraph(totalAmount.toString() + "/-"))
+            .setBorder(Border.NO_BORDER)
+            .setTextAlignment(TextAlignment.RIGHT);
+        totalsTable.addCell(totalLabelCell);
+        totalsTable.addCell(totalValueCell);
+        
+        // Calculate and add GST
+        BigDecimal gstAmount = totalAmount.multiply(BigDecimal.valueOf(18))
+                .divide(BigDecimal.valueOf(100), 0, BigDecimal.ROUND_HALF_UP);
+        Cell gstLabelCell = new Cell()
+            .add(new Paragraph("GST 18 % (SGST 9% CGST 9%)"))
+            .setBorder(Border.NO_BORDER);
+        Cell gstValueCell = new Cell()
+            .add(new Paragraph(gstAmount.toString() + "/-"))
+            .setBorder(Border.NO_BORDER)
+            .setTextAlignment(TextAlignment.RIGHT);
+        totalsTable.addCell(gstLabelCell);
+        totalsTable.addCell(gstValueCell);
+        
+        // Add grand total
+        BigDecimal grandTotal = totalAmount.add(gstAmount);
+        Cell grandTotalLabelCell = new Cell()
+            .add(new Paragraph("GRAND TOTAL"))
+            .setBorder(Border.NO_BORDER)
+            .setBold();
+        Cell grandTotalValueCell = new Cell()
+            .add(new Paragraph(grandTotal.toString() + "/-"))
+            .setBorder(Border.NO_BORDER)
+            .setTextAlignment(TextAlignment.RIGHT)
+            .setBold();
+        totalsTable.addCell(grandTotalLabelCell);
+        totalsTable.addCell(grandTotalValueCell);
+        
+        // Add the tables to the main summary table
+        summaryTable.addCell(leftCell);
+        Cell rightCell = new Cell().add(totalsTable).setBorder(Border.NO_BORDER);
+        summaryTable.addCell(rightCell);
+        
+        document.add(summaryTable);
+
         // Add calculation details tables for each item
         for (Map<String, Object> item : items) {
             if (shouldShowCalculationDetails(item)) {
@@ -202,7 +256,7 @@ public class PdfGenerationService {
             }
         }
     }
-    
+
     private boolean shouldShowCalculationDetails(Map<String, Object> item) {
         String productType = (String) item.get("productType");
         System.out.println("item : " + item);

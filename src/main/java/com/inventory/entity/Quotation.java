@@ -69,6 +69,12 @@ public class Quotation {
     
     @Column(name = "total_amount", precision = 19, scale = 2)
     private BigDecimal totalAmount = BigDecimal.ZERO;
+
+    @Column(name = "tax_amount", precision = 19, scale = 2)
+    private BigDecimal taxAmount = BigDecimal.ZERO;
+
+    @Column(name = "discounted_price", precision = 19, scale = 2)
+    private BigDecimal discountedPrice = BigDecimal.ZERO;
     
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
