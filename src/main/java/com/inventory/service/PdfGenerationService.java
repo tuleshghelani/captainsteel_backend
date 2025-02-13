@@ -48,11 +48,19 @@ public class PdfGenerationService {
             Document document = new Document(pdf, PageSize.A4);
             document.setMargins(36, 36, 36, 36);
             
+            // Add content
             addHeader(document, quotationData);
+            addPageFooter(pdf, document, 1);
+            
             addQuotationDetails(document, quotationData);
             addItemsTable(document, (List<Map<String, Object>>) quotationData.get("items"), quotationData);
+            addPageFooter(pdf, document, 2);
+            
             addBankDetailsAndTerms(document);
-//            addFooter(document, quotationData);
+            addPageFooter(pdf, document, 3);
+            
+            addLastPage(document);
+            addPageFooter(pdf, document, 4);
             
             document.close();
             return outputStream.toByteArray();
@@ -465,12 +473,12 @@ public class PdfGenerationService {
             .setMarginBottom(10));
         
         // Add terms
-        addTerm(document, "1.", "Customer will be billed after indicating acceptance of this quote.", PRIMARY_COLOR);
-        addTerm(document, "2.", "Payment 50% Advance And 50% before goods Dispatched.", PRIMARY_COLOR);
-        addTerm(document, "3.", "Transport Transaction Extra", PRIMARY_COLOR);
-        addTerm(document, "4.", "The Responsibility Of All the Material Will Be With That Company.\nThere Will Be No Responsibility Of The Distributor I.E. Captain Steel.", PRIMARY_COLOR);
-        addTerm(document, "5.", "SUBJECT TO GONDAL JURISDICTION.", PRIMARY_COLOR);
-        addTerm(document, "6.", "THIS QUOTATION IS VALID FOR TWO DAYS.", PRIMARY_COLOR);
+        addTerm(document, "1.", "Customer will be billed after indicating acceptance of this quote.", new DeviceRgb(66, 133, 244));
+        addTerm(document, "2.", "Payment 50% Advance And 50% before goods Dispatched.", new DeviceRgb(66, 133, 244));
+        addTerm(document, "3.", "Transport Transaction Extra", new DeviceRgb(66, 133, 244));
+        addTerm(document, "4.", "The Responsibility Of All the Material Will Be With That Company.\nThere Will Be No Responsibility Of The Distributor I.E. Captain Steel.", new DeviceRgb(66, 133, 244));
+        addTerm(document, "5.", "SUBJECT TO GONDAL JURISDICTION.", new DeviceRgb(66, 133, 244));
+        addTerm(document, "6.", "THIS QUOTATION IS VALID FOR TWO DAYS.", new DeviceRgb(66, 133, 244));
     }
 
     private void addBankDetail(Table table, String label, String value) {
@@ -488,14 +496,62 @@ public class PdfGenerationService {
             .setMarginBottom(5));
     }
     
-    private void addFooter(Document document, Map<String, Object> data) {
-        document.add(new Paragraph("\n"));
+    private void addLastPage(Document document) {
+        // Start new page
+        document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
         
+        try {
+            // Load and add the image
+            ImageData imageData = ImageDataFactory.create("src/main/resources/quotation/Quotation_last_page.jpg");
+            Image img = new Image(imageData);
             
-        // Signatures
-        Table signatures = new Table(2).useAllAvailableWidth().setMarginTop(50);
-        signatures.addCell(new Cell().add(new Paragraph("For Company")).setBorder(Border.NO_BORDER));
-        signatures.addCell(new Cell().add(new Paragraph("For Customer")).setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.RIGHT));
-        document.add(signatures);
+            // Get page dimensions
+            float pageWidth = document.getPdfDocument().getDefaultPageSize().getWidth();
+            float pageHeight = document.getPdfDocument().getDefaultPageSize().getHeight();
+            
+            // Set image to fill the entire page
+            img.setFixedPosition(0, 0);  // Start from top-left corner
+            img.scaleToFit(pageWidth, pageHeight);
+            img.setMargins(0, 0, 0, 0);  // Remove all margins
+            
+            document.add(img);
+        } catch (Exception e) {
+            log.error("Error loading last page image", e);
+            e.printStackTrace();
+        }
+    }
+
+    private void addPageFooter(PdfDocument pdfDoc, Document document, int pageNumber) {
+        float footerY = 20;  // Distance from bottom
+        float pageWidth = pdfDoc.getDefaultPageSize().getWidth();
+        
+        // Create HR line table
+        Table lineTable = new Table(1)
+            .useAllAvailableWidth()
+            .setFixedPosition(36, footerY + 15, pageWidth - 72);  // Position above footer text
+        
+        lineTable.addCell(new Cell()
+            .setHeight(0.5f)
+            .setBackgroundColor(TEXT_PRIMARY)
+            .setBorder(Border.NO_BORDER));
+        
+        // Create footer table with single column for centered content
+        Table footerTable = new Table(1)
+            .useAllAvailableWidth()
+            .setFixedPosition(36, footerY, pageWidth - 72);
+        
+        // Contact information cell (center-aligned)
+        Cell contactCell = new Cell()
+            .add(new Paragraph("CAPTAIN STEEL [ CONTECT NO.9879109091 / 8980392009 / 7574879091 / 9879109121 ]")
+                .setFontSize(8)
+                .setFontColor(TEXT_PRIMARY))
+            .setBorder(Border.NO_BORDER)
+            .setTextAlignment(TextAlignment.CENTER);
+        
+        footerTable.addCell(contactCell);
+        
+        // Add both tables to document
+        document.add(lineTable);
+        document.add(footerTable);
     }
 } 
