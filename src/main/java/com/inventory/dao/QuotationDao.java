@@ -141,7 +141,7 @@ public class QuotationDao {
             SELECT 
                 q.id, q.quote_number, q.quote_date, q.valid_until,
                 q.total_amount, q.status, q.remarks, q.terms_conditions,
-                c.id as customer_id, q.customer_name,
+                c.id as customer_id, q.customer_name, q.contact_number,
                 qi.id as item_id, qi.quantity, qi.unit_price,
                 qi.discount_percentage, qi.discount_amount,
                 qi.tax_percentage, qi.tax_amount, qi.final_price,
@@ -181,22 +181,23 @@ public class QuotationDao {
         quotation.put("termsConditions", firstRow[7]);
         quotation.put("customerId", firstRow[8]);
         quotation.put("customerName", firstRow[9]);
+        quotation.put("contactNumber", firstRow[10]);
 
         // Process items
         for (Object[] row : results) {
             Map<String, Object> item = new HashMap<>();
-            item.put("id", row[10]);
-            item.put("quantity", row[11]);
-            item.put("unitPrice", row[12]);
-            item.put("discountPercentage", row[13]);
-            item.put("discountAmount", row[14]);
-            item.put("taxPercentage", row[15]);
-            item.put("taxAmount", row[16]);
-            item.put("finalPrice", row[17]);
-            item.put("productId", row[18]);
-            item.put("productName", row[19]);
-            item.put("productType", row[20]);
-            item.put("calculationType", row[21]);
+            item.put("id", row[11]);
+            item.put("quantity", row[12]);
+            item.put("unitPrice", row[13]);
+            item.put("discountPercentage", row[14]);
+            item.put("discountAmount", row[15]);
+            item.put("taxPercentage", row[16]);
+            item.put("taxAmount", row[17]);
+            item.put("finalPrice", row[18]);
+            item.put("productId", row[19]);
+            item.put("productName", row[20]);
+            item.put("productType", row[21]);
+            item.put("calculationType", row[22]);
             items.add(item);
         }
 

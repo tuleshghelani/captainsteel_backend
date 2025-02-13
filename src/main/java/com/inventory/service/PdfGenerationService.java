@@ -7,6 +7,8 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
+import com.itextpdf.io.image.ImageData;
+import com.itextpdf.io.image.ImageDataFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +22,7 @@ import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.element.Cell;
+import com.itextpdf.layout.element.Image;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.TextAlignment;
@@ -56,25 +59,72 @@ public class PdfGenerationService {
     }
     
     private void addHeader(Document document, Map<String, Object> data) {
+        // Company name with border
+        Table nameTable = new Table(1).useAllAvailableWidth();
+        Cell nameCell = new Cell()
+            .add(new Paragraph("CAPTAIN STEEL")
+                .setFontSize(36)
+                .setBold()
+                .setFontColor(new DeviceRgb(0, 0, 0)))  // Black color
+            .setBorder(Border.NO_BORDER)
+            .setMarginBottom(30); // Add margin below company name
+        nameTable.addCell(nameCell);
+        document.add(nameTable);
+
+        // Logo and details in separate table
         Table header = new Table(2).useAllAvailableWidth();
         
-        // Company Logo and Details
+        // Left side - Details
+        Cell detailsCell = new Cell();
+        detailsCell.add(new Paragraph("Address :- Survey No.39/2, Plot No.4, Nr.MaekwellbSpining Mill,")
+                        .setFontSize(10))
+                   .add(new Paragraph("Sadak Pipliya, National Highway, Ta. Gondal, Dist. Rajkot.")
+                        .setFontSize(10))
+                   .add(new Paragraph("E-mail: captainsteel39@gmail.com")
+                        .setFontSize(10))
+                   .add(new Paragraph("Mo.No. 96627 12222 / 89803 92009")
+                        .setFontSize(10))
+                   .add(new Paragraph("GST NO.24AALFC2707P1Z8")
+                        .setFontSize(11)
+                        .setBold()
+                        .setFontColor(PRIMARY_COLOR))
+                   .setBorder(Border.NO_BORDER)
+                   .setTextAlignment(TextAlignment.LEFT);
+        
+        // Right side - Logo image
         Cell logoCell = new Cell();
-        logoCell.add(new Paragraph("Company Logo"))
-               .setFontColor(PRIMARY_COLOR)
-               .setFontSize(24)
-               .setBorder(Border.NO_BORDER);
+        try {
+            ImageData imageData = ImageDataFactory.create("src/main/resources/quotation/Title.jpg");
+            Image img = new Image(imageData);
+            img.setWidth(200);
+            img.setHeight(100);
+            logoCell.add(img);
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("Error loading logo image", e);
+        }
+        logoCell.setBorder(Border.NO_BORDER)
+               .setTextAlignment(TextAlignment.RIGHT);
         
-        Cell companyDetails = new Cell();
-        companyDetails.add(new Paragraph("Captain Steel"))
-                     .add(new Paragraph("Pipaliya, Rajkot"))
-                     .add(new Paragraph("Phone: 123456789"))
-                     .setBorder(Border.NO_BORDER)
-                     .setTextAlignment(TextAlignment.RIGHT);
-        
+        header.addCell(detailsCell);
         header.addCell(logoCell);
-        header.addCell(companyDetails);
         document.add(header);
+        
+        // Add horizontal line
+        Table line = new Table(1).useAllAvailableWidth();
+        line.addCell(new Cell()
+            .setHeight(1)
+            .setBackgroundColor(PRIMARY_COLOR)
+            .setBorder(Border.NO_BORDER));
+        document.add(line);
+        
+        // Add Quotation text
+        document.add(new Paragraph("Quotation")
+            .setTextAlignment(TextAlignment.CENTER)
+            .setFontSize(24)
+            .setBold()
+            .setFontColor(PRIMARY_COLOR)
+            .setMarginTop(10));
     }
     
     private void addQuotationDetails(Document document, Map<String, Object> data) {
@@ -90,6 +140,7 @@ public class PdfGenerationService {
                     .add(new Paragraph("Quote Number: " + data.get("quoteNumber")))
                    .add(new Paragraph("Quote Date: " + data.get("quoteDate")))
                    .add(new Paragraph("Valid Until: " + data.get("validUntil")))
+                   .add(new Paragraph("Mobile No. : " + (data.get("contactNumber") != null ? data.get("contactNumber") : "")))
                    .setBorder(Border.NO_BORDER);
     
         
