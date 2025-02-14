@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
-import com.inventory.entity.Client;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

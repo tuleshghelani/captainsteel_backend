@@ -26,4 +26,5 @@ public class QuotationItemRequestDto {
     private BigDecimal discountPercentage = BigDecimal.ZERO;
     private List<QuotationItemCalculationDto> calculations;
     private BigDecimal finalPrice;
+    private BigDecimal loadingCharge;
 } 

@@ -73,6 +73,9 @@ public class QuotationItem {
     @Column(name = "final_price", precision = 19, scale = 2, columnDefinition = "NUMERIC(19, 2) DEFAULT 0.00")
     private BigDecimal finalPrice = BigDecimal.ZERO;
     
+    @Column(name = "loading_charge", precision = 17, scale = 2, columnDefinition = "NUMERIC(17, 2) DEFAULT 0.00"    )
+    private BigDecimal loadingCharge = BigDecimal.ZERO;
+    
     @Column(name = "calculation_type")
     private String calculationType;
     

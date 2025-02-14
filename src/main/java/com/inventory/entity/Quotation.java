@@ -76,6 +76,9 @@ public class Quotation {
     @Column(name = "discounted_price", precision = 19, scale = 2)
     private BigDecimal discountedPrice = BigDecimal.ZERO;
     
+    @Column(name = "loading_charge", precision = 17, scale = 2, columnDefinition = "NUMERIC(17, 2) DEFAULT 0.00"    )
+    private BigDecimal loadingCharge = BigDecimal.ZERO;
+    
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
     private QuotationStatus status = QuotationStatus.Q;

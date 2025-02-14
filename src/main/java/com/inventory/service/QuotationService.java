@@ -114,6 +114,7 @@ public class QuotationService {
             BigDecimal totalAmount = BigDecimal.ZERO;
             BigDecimal taxAmount = BigDecimal.ZERO;
             BigDecimal discountedPrice = BigDecimal.ZERO;
+            BigDecimal loadingCharge = BigDecimal.ZERO;
 
             for (QuotationItemRequestDto itemDto : request.getItems()) {
                 QuotationItem item = createQuotationItem(itemDto, quotation, currentUser);
@@ -121,6 +122,7 @@ public class QuotationService {
                 totalAmount = totalAmount.add(item.getFinalPrice());
                 taxAmount = taxAmount.add(item.getTaxAmount());
                 discountedPrice = discountedPrice.add(item.getDiscountPrice());
+                loadingCharge = loadingCharge.add(item.getLoadingCharge());
             }
             
             quotationItemRepository.saveAll(items);
@@ -128,6 +130,7 @@ public class QuotationService {
             quotation.setTotalAmount(totalAmount);
             quotation.setTaxAmount(taxAmount);
             quotation.setDiscountedPrice(discountedPrice);
+            quotation.setLoadingCharge(loadingCharge);
             quotationRepository.save(quotation);
             
             return ApiResponse.success("Quotation created successfully");
@@ -170,6 +173,7 @@ public class QuotationService {
             BigDecimal totalAmount = BigDecimal.ZERO;
             BigDecimal taxAmount = BigDecimal.ZERO;
             BigDecimal discountedPrice = BigDecimal.ZERO;
+            BigDecimal loadingCharge = BigDecimal.ZERO;
             
             for (QuotationItemRequestDto itemDto : request.getItems()) {
                 QuotationItem item = createQuotationItem(itemDto, quotation, currentUser);
@@ -177,12 +181,14 @@ public class QuotationService {
                 totalAmount = totalAmount.add(item.getFinalPrice());
                 taxAmount = taxAmount.add(item.getTaxAmount());
                 discountedPrice = discountedPrice.add(item.getDiscountPrice());
+                loadingCharge = loadingCharge.add(item.getLoadingCharge());
             }
             
             quotationItemRepository.saveAll(items);
             quotation.setTotalAmount(totalAmount);
             quotation.setTaxAmount(taxAmount);
             quotation.setDiscountedPrice(discountedPrice);
+            quotation.setLoadingCharge(loadingCharge);
             quotationRepository.save(quotation);
             
             return ApiResponse.success("Quotation updated successfully");
@@ -284,7 +290,7 @@ public class QuotationService {
             // Calculate running feet without intermediate rounding
             BigDecimal runningFeet = totalInches
                 .multiply(BigDecimal.valueOf(calc.getNos()))
-                .divide(INCHES_IN_FOOT, 4, RoundingMode.HALF_UP);  // Use 4 decimal places for intermediate calculation
+                .divide(INCHES_IN_FOOT, 3, RoundingMode.HALF_UP);  // Use 4 decimal places for intermediate calculation
                 
             // Calculate sq feet and weight
 //            BigDecimal sqFeet = runningFeet.multiply(SQ_FEET_MULTIPLIER)
@@ -301,7 +307,7 @@ public class QuotationService {
             BigDecimal weight = calculateWeight(runningFeet, product);
             
             // Update calculation object
-            calc.setRunningFeet(runningFeet.setScale(4, RoundingMode.HALF_UP));
+            calc.setRunningFeet(runningFeet.setScale(3, RoundingMode.HALF_UP));
             calc.setSqFeet(sqFeet);
 
             if(Objects.equals(product.getType(), ProductMainType.REGULAR)) {
@@ -317,6 +323,7 @@ public class QuotationService {
         if(Objects.equals(product.getType(), ProductMainType.REGULAR)) {
             itemDto.setWeight(totalWeight);
             itemDto.setQuantity(totalWeight);
+            itemDto.setLoadingCharge(totalWeight.multiply(BigDecimal.valueOf(0.1)).setScale(2, RoundingMode.HALF_UP));
         } else if (Objects.equals(product.getType(), ProductMainType.POLY_CARBONATE)) {
             itemDto.setQuantity(totalSqFeet);
             itemDto.setWeight(BigDecimal.ZERO);
@@ -361,7 +368,7 @@ public class QuotationService {
             BigDecimal weight = calculateWeight(runningFeet, product);
 
             // Update calculation object
-            calc.setRunningFeet(runningFeet.setScale(4, RoundingMode.HALF_UP));
+            calc.setRunningFeet(runningFeet.setScale(3, RoundingMode.HALF_UP));
             calc.setSqFeet(sqFeet);
 
 
@@ -378,6 +385,7 @@ public class QuotationService {
         if(Objects.equals(product.getType(), ProductMainType.REGULAR)) {
             itemDto.setWeight(totalWeight);
             itemDto.setQuantity(totalWeight);
+            itemDto.setLoadingCharge(totalWeight.multiply(BigDecimal.valueOf(0.1)).setScale(2, RoundingMode.HALF_UP));
         } else if (Objects.equals(product.getType(), ProductMainType.POLY_CARBONATE)) {
             itemDto.setQuantity(totalSqFeet);
             itemDto.setWeight(BigDecimal.ZERO);
@@ -400,6 +408,7 @@ public class QuotationService {
         item.setDiscountPercentage(itemDto.getDiscountPercentage());
         item.setTaxPercentage(itemDto.getTaxPercentage());
         item.setCalculationType(itemDto.getCalculationType());
+        item.setLoadingCharge(itemDto.getLoadingCharge());
 
         // Calculate price components
         BigDecimal subTotal = itemDto.getUnitPrice().multiply(itemDto.getQuantity())
@@ -412,7 +421,14 @@ public class QuotationService {
         item.setDiscountAmount(discountAmount);
         item.setDiscountPrice(afterDiscount);
         item.setTaxAmount(taxAmount);
-        item.setFinalPrice(afterDiscount.add(taxAmount));
+        
+        // Add loading charge to final price for REGULAR type products
+        if (product.getType() == ProductMainType.REGULAR) {
+            BigDecimal loadingCharge = item.getLoadingCharge() != null ? item.getLoadingCharge() : BigDecimal.ZERO;
+            item.setFinalPrice(afterDiscount.add(taxAmount).add(loadingCharge));
+        } else {
+            item.setFinalPrice(afterDiscount.add(taxAmount));
+        }
         item.setClient(currentUser.getClient());
 
         // Save the item first
@@ -561,6 +577,7 @@ public class QuotationService {
                 itemMap.put("taxAmount", item.getTaxAmount());
                 itemMap.put("finalPrice", item.getFinalPrice());
                 itemMap.put("calculationType", item.getCalculationType());
+                itemMap.put("loadingCharge", item.getLoadingCharge());
                 
                 // Add calculations for this item
                 List<Map<String, Object>> itemCalculations = calculations.stream()
