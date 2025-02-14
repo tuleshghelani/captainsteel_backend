@@ -287,23 +287,40 @@ public class QuotationService {
                 .divide(INCHES_IN_FOOT, 4, RoundingMode.HALF_UP);  // Use 4 decimal places for intermediate calculation
                 
             // Calculate sq feet and weight
-            BigDecimal sqFeet = runningFeet.multiply(SQ_FEET_MULTIPLIER)
-                .setScale(2, RoundingMode.HALF_UP);  // Final rounding to 2 decimal places
+//            BigDecimal sqFeet = runningFeet.multiply(SQ_FEET_MULTIPLIER)
+//                .setScale(2, RoundingMode.HALF_UP);  // Final rounding to 2 decimal places
+            BigDecimal sqFeet = BigDecimal.ZERO;
+
+            if(Objects.equals(product.getType(), ProductMainType.REGULAR)) {
+                sqFeet = runningFeet.multiply(SQ_FEET_MULTIPLIER)
+                        .setScale(2, RoundingMode.HALF_UP);
+            } else if (Objects.equals(product.getType(), ProductMainType.POLY_CARBONATE)) {
+                BigDecimal multiplier = getPolyCarbonateMultiplier(product.getPolyCarbonateType());
+                sqFeet = runningFeet.multiply(multiplier).setScale(3, RoundingMode.HALF_UP);
+            }
             BigDecimal weight = calculateWeight(runningFeet, product);
             
             // Update calculation object
             calc.setRunningFeet(runningFeet.setScale(4, RoundingMode.HALF_UP));
             calc.setSqFeet(sqFeet);
-            calc.setWeight(weight);
 
-            // Accumulate totals
-            totalWeight = totalWeight.add(weight);
+            if(Objects.equals(product.getType(), ProductMainType.REGULAR)) {
+                calc.setWeight(weight);
+
+                // Accumulate totals
+                totalWeight = totalWeight.add(weight);
+            }
             totalSqFeet = totalSqFeet.add(sqFeet);
         }
         
         // Update item totals
-        itemDto.setWeight(totalWeight);
-        itemDto.setQuantity(totalWeight);
+        if(Objects.equals(product.getType(), ProductMainType.REGULAR)) {
+            itemDto.setWeight(totalWeight);
+            itemDto.setQuantity(totalWeight);
+        } else if (Objects.equals(product.getType(), ProductMainType.POLY_CARBONATE)) {
+            itemDto.setQuantity(totalSqFeet);
+            itemDto.setWeight(BigDecimal.ZERO);
+        }
     }
 
     private void calculateMMeasurements(QuotationItemRequestDto itemDto, Product product, UserMaster currentUser) {
@@ -330,8 +347,15 @@ public class QuotationService {
                 .divide(MM_TO_FEET_CONVERSION, 4, RoundingMode.HALF_UP);
 
             // Calculate sq feet
-            BigDecimal sqFeet = runningFeet.multiply(SQ_FEET_MULTIPLIER)
-                .setScale(2, RoundingMode.HALF_UP);
+            BigDecimal sqFeet = BigDecimal.ZERO;
+
+            if(Objects.equals(product.getType(), ProductMainType.REGULAR)) {
+                sqFeet = runningFeet.multiply(SQ_FEET_MULTIPLIER)
+                        .setScale(2, RoundingMode.HALF_UP);
+            } else if (Objects.equals(product.getType(), ProductMainType.POLY_CARBONATE)) {
+                BigDecimal multiplier = getPolyCarbonateMultiplier(product.getPolyCarbonateType());
+                sqFeet = runningFeet.multiply(multiplier).setScale(3, RoundingMode.HALF_UP);
+            }
 
             // Calculate weight
             BigDecimal weight = calculateWeight(runningFeet, product);
@@ -339,16 +363,25 @@ public class QuotationService {
             // Update calculation object
             calc.setRunningFeet(runningFeet.setScale(4, RoundingMode.HALF_UP));
             calc.setSqFeet(sqFeet);
-            calc.setWeight(weight);
 
-            // Accumulate totals
-            totalWeight = totalWeight.add(weight);
+
+            if(Objects.equals(product.getType(), ProductMainType.REGULAR)) {
+                calc.setWeight(weight);
+
+                // Accumulate totals
+                totalWeight = totalWeight.add(weight);
+            }
             totalSqFeet = totalSqFeet.add(sqFeet);
         }
 
         // Update item totals
-        itemDto.setWeight(totalWeight);
-        itemDto.setQuantity(totalWeight);
+        if(Objects.equals(product.getType(), ProductMainType.REGULAR)) {
+            itemDto.setWeight(totalWeight);
+            itemDto.setQuantity(totalWeight);
+        } else if (Objects.equals(product.getType(), ProductMainType.POLY_CARBONATE)) {
+            itemDto.setQuantity(totalSqFeet);
+            itemDto.setWeight(BigDecimal.ZERO);
+        }
     }
 
     private QuotationItem createQuotationItem(QuotationItemRequestDto itemDto, Quotation quotation, UserMaster currentUser) {
