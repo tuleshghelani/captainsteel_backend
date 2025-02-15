@@ -29,6 +29,7 @@ import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.element.AreaBreak;
+import com.itextpdf.layout.element.Text;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -189,7 +190,7 @@ public class PdfGenerationService {
         
         for (Map<String, Object> item : items) {
             table.addCell(new Cell().add(new Paragraph(String.valueOf(counter.getAndIncrement()))));
-            table.addCell(new Cell().add(new Paragraph(item.get("productName").toString())));
+            table.addCell(new Cell().add(convertHtmlToParagraph(item.get("productName").toString())));
             table.addCell(new Cell().add(new Paragraph(item.get("quantity").toString())));
             table.addCell(new Cell().add(new Paragraph(item.get("unitPrice").toString())));
             table.addCell(new Cell().add(new Paragraph(item.get("discountPrice").toString())));
@@ -553,5 +554,49 @@ public class PdfGenerationService {
         // Add both tables to document
         document.add(lineTable);
         document.add(footerTable);
+    }
+
+    // Helper method to convert HTML to formatted paragraph
+    private Paragraph convertHtmlToParagraph(String html) {
+        Paragraph paragraph = new Paragraph();
+        
+        // Remove any null or empty strings
+        if (html == null || html.trim().isEmpty()) {
+            return paragraph;
+        }
+
+        // First handle HTML tags
+        String[] parts = html.split("(<b>|</b>)");
+        boolean isBold = false;
+
+        for (String part : parts) {
+            if (!part.trim().isEmpty()) {
+                // Handle spacing between words
+                String formattedPart = part;
+//                part.replaceAll("(?<=\\w)(?=[A-Z])", " ")  // Add space between camelCase
+//                        .replaceAll("_", " ")                      // Replace underscores with spaces
+//                        .replaceAll("\\s+", " ")                   // Normalize multiple spaces
+//                        .trim(); // Remove leading/trailing spaces
+                
+                Text text = new Text(formattedPart);
+                if (isBold) {
+                    text.setBold();
+                }
+                paragraph.add(text);
+                
+                // Add a space between parts if not the last part
+//                if (isBold && !isLastPart(parts, part)) {
+//                    paragraph.add(new Text(" "));
+//                }
+                
+                isBold = !isBold;
+            }
+        }
+        
+        return paragraph;
+    }
+
+    private boolean isLastPart(String[] parts, String currentPart) {
+        return currentPart.equals(parts[parts.length - 1]);
     }
 } 

@@ -49,7 +49,7 @@ public class Product {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(name = "name", nullable = false, length = 256)
+    @Column(name = "name", nullable = false, length = 512)
     private String name;
     
     @ManyToOne(fetch = FetchType.LAZY)
