@@ -15,10 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.Map;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +24,7 @@ public class ProductService {
     private final CategoryRepository categoryRepository;
     private final ProductDao productDao;
     private final UtilityService utilityService;
+    private final ProductQuantityService productQuantityService;
 
     @Transactional(rollbackFor = Exception.class)
     public ApiResponse<?> create(ProductDto dto) {
@@ -72,13 +70,16 @@ public class ProductService {
                 .orElseThrow(() -> new ValidationException("Product not found"));
 
             Optional<Product> productByName = productRepository.findByNameAndIdNotIn(dto.getName().trim(), Collections.singletonList(product.getId()));
-            if(!productByName.isEmpty()) {
+            if (productByName.isPresent()) {
                 throw new ValidationException("Product name already exists");
             }
             UserMaster currentUser = utilityService.getCurrentLoggedInUser();
-            if(product.getClient().getId() != currentUser.getClient().getId()) {
+            if (!Objects.equals(product.getClient().getId(), currentUser.getClient().getId())) {
                 throw new ValidationException("You are not authorized to update this product");
             }
+            
+            BigDecimal oldRemainingQuantity = product.getRemainingQuantity() != null ? 
+                product.getRemainingQuantity() : BigDecimal.ZERO;
             
             product.setName(dto.getName().trim());
             product.setCategory(categoryRepository.findById(dto.getCategoryId())
@@ -92,6 +93,20 @@ public class ProductService {
             product.setType(dto.getType() != null ? dto.getType() : null);
             product.setPolyCarbonateType(dto.getType() == ProductMainType.POLY_CARBONATE ? dto.getPolyCarbonateType() : null);
             product.setClient(currentUser.getClient());
+
+            if (dto.getRemainingQuantity() != null) {
+                BigDecimal quantityChange = dto.getRemainingQuantity().subtract(oldRemainingQuantity);
+                if (quantityChange.compareTo(BigDecimal.ZERO) != 0) {
+                    boolean isPurchase = quantityChange.compareTo(BigDecimal.ZERO) > 0;
+                    productQuantityService.updateProductQuantity(
+                        product.getId(),
+                        quantityChange.abs(),
+                        isPurchase,
+                        !isPurchase,
+                        null
+                    );
+                }
+            }
 
             productRepository.save(product);
             return ApiResponse.success("Product updated successfully");

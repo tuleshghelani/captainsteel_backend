@@ -87,6 +87,8 @@ public class PurchaseService {
     //            );
             }
             
+            // Round the total amount
+            totalAmount = totalAmount.setScale(0, BigDecimal.ROUND_HALF_UP);
             purchase.setTotalPurchaseAmount(totalAmount);
             purchase.setCoilNumbers(coilNumbers);
             purchase = purchaseRepository.save(purchase);
@@ -278,6 +280,8 @@ public class PurchaseService {
             totalAmount = totalAmount.add(item.getFinalPrice());
         }
         
+        // Round the total amount
+        totalAmount = totalAmount.setScale(0, BigDecimal.ROUND_HALF_UP);
         existingPurchase.setTotalPurchaseAmount(totalAmount);
         purchaseRepository.save(existingPurchase);
         

@@ -1,5 +1,6 @@
 package com.inventory.dao;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -181,7 +182,7 @@ public class PurchaseDao {
                 p.created_at, p.updated_at, p.customer_id, p.created_by,
                 pi.id as item_id, pi.quantity, pi.unit_price, pi.discount_percentage,
                 pi.discount_amount, pi.final_price, 
-                pi.product_id
+                pi.product_id, pi.coil_number, pi.remarks
             FROM (SELECT * FROM purchase WHERE id = :purchaseId AND client_id = :clientId) p
             LEFT JOIN (SELECT * FROM purchase_items WHERE purchase_id = :purchaseId) pi ON p.id = pi.purchase_id
             WHERE p.id = :purchaseId
@@ -203,13 +204,13 @@ public class PurchaseDao {
         Map<String, Object> response = new HashMap<>();
         Object[] firstRow = results.get(0);
 
-        // Set purchase details
+        // Set purchase details with null checks
         response.put("id", firstRow[0]);
-        response.put("invoiceNumber", firstRow[1]);
-        response.put("purchaseDate", firstRow[2]);
-        response.put("totalAmount", firstRow[3]);
-        response.put("createdAt", firstRow[4]);
-        response.put("updatedAt", firstRow[5]);
+        response.put("invoiceNumber", firstRow[1] != null ? firstRow[1] : "");
+        response.put("purchaseDate", firstRow[2] != null ? firstRow[2] : "");
+        response.put("totalAmount", firstRow[3] != null ? firstRow[3] : BigDecimal.ZERO);
+        response.put("createdAt", firstRow[4] != null ? firstRow[4] : "");
+        response.put("updatedAt", firstRow[5] != null ? firstRow[5] : "");
         response.put("customerId", firstRow[6]);
         response.put("createdBy", firstRow[7]);
 
@@ -219,12 +220,14 @@ public class PurchaseDao {
             if (row[8] != null) { // if item exists
                 items.add(Map.of(
                     "id", row[8],
-                    "quantity", row[9],
-                    "unitPrice", row[10],
-                    "discountPercentage", row[11],
-                    "discountAmount", row[12],
-                    "finalPrice", row[13],
-                    "productId", row[15]
+                    "quantity", row[9] != null ? row[9] : 0,
+                    "unitPrice", row[10] != null ? row[10] : BigDecimal.ZERO,
+                    "discountPercentage", row[11] != null ? row[11] : 0,
+                    "discountAmount", row[12] != null ? row[12] : BigDecimal.ZERO,
+                    "finalPrice", row[13] != null ? row[13] : BigDecimal.ZERO,
+                    "productId", row[14],
+                    "coilNumber", row[15] != null ? row[15] : "",
+                    "remarks", row[16] != null ? row[16] : ""
                 ));
             }
         }

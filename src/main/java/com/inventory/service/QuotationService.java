@@ -126,7 +126,8 @@ public class QuotationService {
             }
             
             quotationItemRepository.saveAll(items);
-            
+
+            totalAmount = totalAmount.setScale(0, BigDecimal.ROUND_HALF_UP);
             quotation.setTotalAmount(totalAmount);
             quotation.setTaxAmount(taxAmount);
             quotation.setDiscountedPrice(discountedPrice);
@@ -185,6 +186,8 @@ public class QuotationService {
             }
             
             quotationItemRepository.saveAll(items);
+
+            totalAmount = totalAmount.setScale(0, BigDecimal.ROUND_HALF_UP);
             quotation.setTotalAmount(totalAmount);
             quotation.setTaxAmount(taxAmount);
             quotation.setDiscountedPrice(discountedPrice);
