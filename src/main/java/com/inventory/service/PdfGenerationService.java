@@ -109,11 +109,7 @@ public class PdfGenerationService {
         // Right side - Logo image
         Cell logoCell = new Cell();
         try {
-            InputStream imageStream = getClass().getClassLoader().getResourceAsStream("quotation/Title.jpg");
-            if (imageStream == null) {
-                throw new FileNotFoundException("Image not found: quotation/Title.jpg");
-            }
-            ImageData imageData = ImageDataFactory.create(imageStream.readAllBytes());
+            ImageData imageData = ImageDataFactory.create("src/main/resources/quotation/Title.jpg");
             Image img = new Image(imageData);
             img.setWidth(200);
             img.setHeight(100);
@@ -221,17 +217,6 @@ public class PdfGenerationService {
         // Create right-side table for totals
         Table totalsTable = new Table(2)
             .useAllAvailableWidth();
-        
-        // Add total rows with borders
-        Cell totalLoading = new Cell()
-            .add(new Paragraph("Loading Charge"))
-            .setBorder(Border.NO_BORDER);
-        Cell totalLoadingValueCell = new Cell()
-            .add(new Paragraph(quotationData.get("loadingCharge").toString()))
-            .setBorder(Border.NO_BORDER)
-            .setTextAlignment(TextAlignment.RIGHT);
-        totalsTable.addCell(totalLoading);
-        totalsTable.addCell(totalLoadingValueCell);
 
         // Add total rows with borders
         Cell totalLabelCell = new Cell()
@@ -243,6 +228,17 @@ public class PdfGenerationService {
                 .setTextAlignment(TextAlignment.RIGHT);
         totalsTable.addCell(totalLabelCell);
         totalsTable.addCell(totalValueCell);
+        
+        // Add loading charge rows with borders
+        Cell totalLoading = new Cell()
+            .add(new Paragraph("Loading Charge"))
+            .setBorder(Border.NO_BORDER);
+        Cell totalLoadingValueCell = new Cell()
+            .add(new Paragraph(quotationData.get("loadingCharge").toString()))
+            .setBorder(Border.NO_BORDER)
+            .setTextAlignment(TextAlignment.RIGHT);
+        totalsTable.addCell(totalLoading);
+        totalsTable.addCell(totalLoadingValueCell);
         
         // Calculate and add GST
         BigDecimal gstAmount = totalAmount.multiply(BigDecimal.valueOf(18))
@@ -293,10 +289,12 @@ public class PdfGenerationService {
     }
     
     private void addCalculationDetailsTable(Document document, Map<String, Object> item) {
-        document.add(new Paragraph("\nCalculation Details for " + item.get("productName"))
-            .setBold()
+        String productNameHtml = item.get("productName").toString();
+        Paragraph productNameParagraph = convertHtmlToParagraph(productNameHtml);
+        
+        document.add(new Paragraph("\nCalculation Details for : ")
+            .add(productNameParagraph)
             .setFontColor(TEXT_PRIMARY)
-            .setBold()
             .setMarginTop(10));
             
         List<Map<String, Object>> calculations = (List<Map<String, Object>>) item.get("calculations");
