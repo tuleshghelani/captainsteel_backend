@@ -217,19 +217,30 @@ public class PdfGenerationService {
             .useAllAvailableWidth();
         
         // Add total rows with borders
-        Cell totalLabelCell = new Cell()
-            .add(new Paragraph("TOTAL"))
+        Cell totalLoading = new Cell()
+            .add(new Paragraph("Loading Charge"))
             .setBorder(Border.NO_BORDER);
-        Cell totalValueCell = new Cell()
-            .add(new Paragraph(totalAmount.toString() + "/-"))
+        Cell totalLoadingValueCell = new Cell()
+            .add(new Paragraph(quotationData.get("loadingCharge").toString()))
             .setBorder(Border.NO_BORDER)
             .setTextAlignment(TextAlignment.RIGHT);
+        totalsTable.addCell(totalLoading);
+        totalsTable.addCell(totalLoadingValueCell);
+
+        // Add total rows with borders
+        Cell totalLabelCell = new Cell()
+                .add(new Paragraph("TOTAL"))
+                .setBorder(Border.NO_BORDER);
+        Cell totalValueCell = new Cell()
+                .add(new Paragraph(totalAmount.toString() + "/-"))
+                .setBorder(Border.NO_BORDER)
+                .setTextAlignment(TextAlignment.RIGHT);
         totalsTable.addCell(totalLabelCell);
         totalsTable.addCell(totalValueCell);
         
         // Calculate and add GST
         BigDecimal gstAmount = totalAmount.multiply(BigDecimal.valueOf(18))
-                .divide(BigDecimal.valueOf(100), 0, BigDecimal.ROUND_HALF_UP);
+                .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
         Cell gstLabelCell = new Cell()
             .add(new Paragraph("GST 18 % (SGST 9% CGST 9%)"))
             .setBorder(Border.NO_BORDER);
@@ -241,7 +252,7 @@ public class PdfGenerationService {
         totalsTable.addCell(gstValueCell);
         
         // Add grand total
-        BigDecimal grandTotal = totalAmount.add(gstAmount);
+        BigDecimal grandTotal = ((BigDecimal) quotationData.get("totalAmount")).setScale(0, RoundingMode.HALF_UP);;
         Cell grandTotalLabelCell = new Cell()
             .add(new Paragraph("GRAND TOTAL"))
             .setBorder(Border.NO_BORDER)

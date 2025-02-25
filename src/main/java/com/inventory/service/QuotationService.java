@@ -127,7 +127,7 @@ public class QuotationService {
             
             quotationItemRepository.saveAll(items);
 
-            totalAmount = totalAmount.setScale(0, BigDecimal.ROUND_HALF_UP);
+            totalAmount = totalAmount.setScale(0, RoundingMode.HALF_UP);
             quotation.setTotalAmount(totalAmount);
             quotation.setTaxAmount(taxAmount);
             quotation.setDiscountedPrice(discountedPrice);
@@ -187,7 +187,7 @@ public class QuotationService {
             
             quotationItemRepository.saveAll(items);
 
-            totalAmount = totalAmount.setScale(0, BigDecimal.ROUND_HALF_UP);
+            totalAmount = totalAmount.setScale(0, RoundingMode.HALF_UP);
             quotation.setTotalAmount(totalAmount);
             quotation.setTaxAmount(taxAmount);
             quotation.setDiscountedPrice(discountedPrice);
@@ -476,7 +476,7 @@ public class QuotationService {
     private BigDecimal calculatePercentageAmount(BigDecimal base, BigDecimal percentage) {
         return percentage != null ? 
             base.multiply(percentage)
-                .divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP) : 
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP) : 
             BigDecimal.ZERO;
     }
 

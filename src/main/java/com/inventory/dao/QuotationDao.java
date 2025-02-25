@@ -141,7 +141,7 @@ public class QuotationDao {
             SELECT 
                 q.id, q.quote_number, q.quote_date, q.valid_until,
                 q.total_amount, q.status, q.remarks, q.terms_conditions,
-                c.id as customer_id, q.customer_name, q.contact_number,
+                c.id as customer_id, q.customer_name, q.contact_number, q.loading_charge,
                 qi.id as item_id, qi.quantity, qi.unit_price,
                 qi.discount_percentage, qi.discount_amount,
                 qi.tax_percentage, qi.tax_amount, qi.final_price,
@@ -183,23 +183,24 @@ public class QuotationDao {
         quotation.put("customerId", firstRow[8]);
         quotation.put("customerName", firstRow[9]);
         quotation.put("contactNumber", firstRow[10]);
+        quotation.put("loadingCharge", firstRow[11]);
 
         // Process items
         for (Object[] row : results) {
             Map<String, Object> item = new HashMap<>();
-            item.put("id", row[11]);
-            item.put("quantity", row[12]);
-            item.put("unitPrice", row[13]);
-            item.put("discountPercentage", row[14]);
-            item.put("discountAmount", row[15]);
-            item.put("taxPercentage", row[16]);
-            item.put("taxAmount", row[17]);
-            item.put("finalPrice", row[18]);
-            item.put("productId", row[19]);
-            item.put("productName", row[20]);
-            item.put("productType", row[21]);
-            item.put("calculationType", row[22]);
-            item.put("discountPrice", row[23]);
+            item.put("id", row[12]);
+            item.put("quantity", row[13]);
+            item.put("unitPrice", row[14]);
+            item.put("discountPercentage", row[15]);
+            item.put("discountAmount", row[16]);
+            item.put("taxPercentage", row[17]);
+            item.put("taxAmount", row[18]);
+            item.put("finalPrice", row[19]);
+            item.put("productId", row[20]);
+            item.put("productName", row[21]);
+            item.put("productType", row[22]);
+            item.put("calculationType", row[23]);
+            item.put("discountPrice", row[24]);
             items.add(item);
         }
 

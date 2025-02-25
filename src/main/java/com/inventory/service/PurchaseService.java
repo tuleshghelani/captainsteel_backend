@@ -22,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -88,7 +89,7 @@ public class PurchaseService {
             }
             
             // Round the total amount
-            totalAmount = totalAmount.setScale(0, BigDecimal.ROUND_HALF_UP);
+            totalAmount = totalAmount.setScale(0, RoundingMode.HALF_UP);
             purchase.setTotalPurchaseAmount(totalAmount);
             purchase.setCoilNumbers(coilNumbers);
             purchase = purchaseRepository.save(purchase);
@@ -118,19 +119,19 @@ public class PurchaseService {
         if (dto.getCoilNumber() != null && !dto.getCoilNumber().isEmpty()) {
             item.setCoilNumber(dto.getCoilNumber().toLowerCase());
         }
-        item.setUnitPrice(dto.getUnitPrice().setScale(2, BigDecimal.ROUND_HALF_UP));
+        item.setUnitPrice(dto.getUnitPrice().setScale(2, RoundingMode.HALF_UP));
 //        item.setDiscountPercentage(dto.getDiscountPercentage());
         
         // Calculate amounts with 2 decimal places
         BigDecimal subTotal = dto.getUnitPrice()
             .multiply((dto.getQuantity()))
-            .setScale(2, BigDecimal.ROUND_HALF_UP);
+            .setScale(2, RoundingMode.HALF_UP);
             
         BigDecimal discountAmount = calculateDiscountAmount(subTotal, dto.getDiscountPercentage())
-            .setScale(2, BigDecimal.ROUND_HALF_UP);
+            .setScale(2, RoundingMode.HALF_UP);
         
 //        item.setDiscountAmount(discountAmount);
-        item.setFinalPrice(subTotal.subtract(discountAmount).setScale(2, BigDecimal.ROUND_HALF_UP));
+        item.setFinalPrice(subTotal.subtract(discountAmount).setScale(2, RoundingMode.HALF_UP));
 //        item.setRemainingQuantity(dto.getQuantity());
         item.setClient(purchase.getClient());
         
@@ -140,7 +141,7 @@ public class PurchaseService {
     private BigDecimal calculateDiscountAmount(BigDecimal base, BigDecimal percentage) {
         return percentage != null ? 
             base.multiply(percentage)
-                .divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP) : 
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP) : 
             BigDecimal.ZERO;
     }
     
@@ -281,7 +282,7 @@ public class PurchaseService {
         }
         
         // Round the total amount
-        totalAmount = totalAmount.setScale(0, BigDecimal.ROUND_HALF_UP);
+        totalAmount = totalAmount.setScale(0, RoundingMode.HALF_UP);
         existingPurchase.setTotalPurchaseAmount(totalAmount);
         purchaseRepository.save(existingPurchase);
         
