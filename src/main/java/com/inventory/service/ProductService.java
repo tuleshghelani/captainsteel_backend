@@ -46,6 +46,7 @@ public class ProductService {
             product.setSaleAmount(dto.getSaleAmount() != null ? dto.getSaleAmount() : BigDecimal.valueOf(0));
             product.setMinimumStock(dto.getMinimumStock());
             product.setStatus(dto.getStatus().trim());
+            product.setRemainingQuantity(dto.getRemainingQuantity());
             product.setWeight(dto.getWeight() != null ? dto.getWeight() : BigDecimal.valueOf(0));
             product.setType(dto.getType() != null ? dto.getType() : null);
             product.setPolyCarbonateType(dto.getType() == ProductMainType.POLY_CARBONATE ? dto.getPolyCarbonateType() : null);
