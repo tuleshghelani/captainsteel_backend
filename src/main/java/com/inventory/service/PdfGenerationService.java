@@ -1,6 +1,8 @@
 package com.inventory.service;
 
 import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
@@ -107,7 +109,11 @@ public class PdfGenerationService {
         // Right side - Logo image
         Cell logoCell = new Cell();
         try {
-            ImageData imageData = ImageDataFactory.create("src/main/resources/quotation/Title.jpg");
+            InputStream imageStream = getClass().getClassLoader().getResourceAsStream("quotation/Title.jpg");
+            if (imageStream == null) {
+                throw new FileNotFoundException("Image not found: quotation/Title.jpg");
+            }
+            ImageData imageData = ImageDataFactory.create(imageStream.readAllBytes());
             Image img = new Image(imageData);
             img.setWidth(200);
             img.setHeight(100);
@@ -513,8 +519,11 @@ public class PdfGenerationService {
         document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
         
         try {
-            // Load and add the image
-            ImageData imageData = ImageDataFactory.create("src/main/resources/quotation/Quotation_last_page.jpg");
+            InputStream imageStream = getClass().getClassLoader().getResourceAsStream("quotation/Quotation_last_page.jpg");
+            if (imageStream == null) {
+                throw new FileNotFoundException("Image not found: quotation/Quotation_last_page.jpg");
+            }
+            ImageData imageData = ImageDataFactory.create(imageStream.readAllBytes());
             Image img = new Image(imageData);
             
             // Get page dimensions
