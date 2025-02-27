@@ -85,6 +85,6 @@ public class Purchase {
         foreignKey = @ForeignKey(name = "fk_purchase_client_id_client_id"))
     private Client client;
     
-    @OneToMany(mappedBy = "purchase", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<PurchaseItem> purchaseItems = new ArrayList<>();
+//    @OneToMany(mappedBy = "purchase", cascade = CascadeType.ALL, orphanRemoval = true)
+//    private List<PurchaseItem> purchaseItems = new ArrayList<>();
 }
