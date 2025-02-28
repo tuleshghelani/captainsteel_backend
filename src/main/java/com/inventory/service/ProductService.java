@@ -25,6 +25,7 @@ public class ProductService {
     private final ProductDao productDao;
     private final UtilityService utilityService;
     private final ProductQuantityService productQuantityService;
+    private final ProductPdfService productPdfService;
 
     @Transactional(rollbackFor = Exception.class)
     public ApiResponse<?> create(ProductDto dto) {
@@ -200,5 +201,25 @@ public class ProductService {
         dto.setClientId(product.getClient().getId());
         dto.setPolyCarbonateType(product.getPolyCarbonateType());
         return dto;
+    }
+
+    public byte[] exportProductsPdf(ProductDto productDto) {
+        try {
+            UserMaster currentUser = utilityService.getCurrentLoggedInUser();
+            productDto.setClientId(currentUser.getClient().getId());
+            
+            // Remove pagination
+            productDto.setPage(0);
+            productDto.setSize(Integer.MAX_VALUE);
+            
+            Map<String, Object> result = productDao.searchProducts(productDto);
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> products = (List<Map<String, Object>>) result.get("content");
+            
+            return productPdfService.generateProductListPdf(products);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new ValidationException("Failed to export products to PDF: " + e.getMessage());
+        }
     }
 }
