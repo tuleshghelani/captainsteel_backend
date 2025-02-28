@@ -88,16 +88,16 @@ public class ProductQuantityService {
     }
     
     private void handleBlockUnblock(Product product, BigDecimal quantityChange, boolean isBlock) {
-        if (isBlock && product.getRemainingQuantity().compareTo(quantityChange) < 0) {
-            throw new ValidationException("Insufficient stock for product: " + product.getName());
-        }
+//        if (isBlock && product.getRemainingQuantity().compareTo(quantityChange) < 0) {
+//            throw new ValidationException("Insufficient stock for product: " + product.getName());
+//        }
         
         BigDecimal newBlockedQuantity = product.getBlockedQuantity().add(isBlock ? quantityChange : quantityChange.negate());
         BigDecimal newRemainingQuantity = product.getRemainingQuantity().add(isBlock ? quantityChange.negate() : quantityChange);
         
-        if (newBlockedQuantity.compareTo(BigDecimal.ZERO) < 0) {
-            throw new ValidationException("Operation would result in negative blocked quantity for product: " + product.getName());
-        }
+//        if (newBlockedQuantity.compareTo(BigDecimal.ZERO) < 0) {
+//            throw new ValidationException("Operation would result in negative blocked quantity for product: " + product.getName());
+//        }
         
         validateNonNegativeQuantity(product, newRemainingQuantity, null);
         
@@ -106,12 +106,12 @@ public class ProductQuantityService {
     }
     
     private void validateNonNegativeQuantity(Product product, BigDecimal remaining, BigDecimal totalRemaining) {
-        if (remaining != null && remaining.compareTo(BigDecimal.ZERO) < 0) {
-            throw new ValidationException("Operation would result in negative stock for product: " + product.getName());
-        }
-        if (totalRemaining != null && totalRemaining.compareTo(BigDecimal.ZERO) < 0) {
-            throw new ValidationException("Operation would result in negative total stock for product: " + product.getName());
-        }
+//        if (remaining != null && remaining.compareTo(BigDecimal.ZERO) < 0) {
+//            throw new ValidationException("Operation would result in negative stock for product: " + product.getName());
+//        }
+//        if (totalRemaining != null && totalRemaining.compareTo(BigDecimal.ZERO) < 0) {
+//            throw new ValidationException("Operation would result in negative total stock for product: " + product.getName());
+//        }
     }
     
     private void logQuantityUpdate(Product product, BigDecimal quantityChange, Boolean isPurchase, Boolean isSale, Boolean isBlock) {
