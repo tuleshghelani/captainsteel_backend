@@ -66,6 +66,7 @@ public class QuotationService {
     private final PdfGenerationService pdfGenerationService;
     private final ProductQuantityService productQuantityService;
     private final QuotationItemCalculationRepository quotationItemCalculationRepository;
+    private final DispatchSlipPdfService dispatchSlipPdfService;
 
     @Transactional(rollbackFor = Exception.class)
     public ApiResponse<?> createQuotation(QuotationRequestDto request) {
@@ -715,5 +716,20 @@ public class QuotationService {
             case FULL_SHEET -> FULL_SHEET_MULTIPLIER;
             default -> throw new ValidationException("Invalid poly_carbonate_type");
         };
+    }
+
+    public byte[] generateDispatchSlipPdf(QuotationDto request) {
+        try {
+            UserMaster currentUser = utilityService.getCurrentLoggedInUser();
+            request.setClientId(currentUser.getClient().getId());
+            Map<String, Object> quotationData = quotationDao.getQuotationDetail(request);
+            return dispatchSlipPdfService.generateDispatchSlipPdf(quotationData);
+        } catch (ValidationException ve) {
+            log.error("Error generating dispatch slip PDF", ve);
+            throw ve;
+        } catch (Exception e) {
+            log.error("Error generating dispatch slip PDF", e);
+            throw new ValidationException("Failed to generate dispatch slip PDF: " + e.getMessage());
+        }
     }
 } 

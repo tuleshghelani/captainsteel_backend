@@ -56,6 +56,18 @@ public class QuotationController {
         return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
     }
     
+    @PostMapping("/generate-dispatch-slip")
+    public ResponseEntity<byte[]> generateDispatchSlipPdf(@RequestBody QuotationDto request) {
+        log.debug("Received dispatch slip PDF generation request for ID: {}", request.getId());
+        byte[] pdfBytes = quotationService.generateDispatchSlipPdf(request);
+        
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDispositionFormData("filename", "dispatch-slip.pdf");
+        
+        return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+    }
+    
     @PutMapping("/update-status")
     public ResponseEntity<ApiResponse<?>> updateQuotationStatus(@RequestBody QuotationStatusUpdateDto request) {
         log.debug("Received quotation status update request for ID: {}", request.getId());
