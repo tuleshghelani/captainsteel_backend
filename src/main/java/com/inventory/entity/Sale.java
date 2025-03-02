@@ -36,7 +36,7 @@ public class Sale {
     private Date saleDate;
 
     @Column(name = "total_sale_amount", precision = 19, scale = 2, columnDefinition = "decimal(19,2) DEFAULT 0")
-    private BigDecimal totalsaleAmount;
+    private BigDecimal totalSaleAmount;
     
     @Column(name = "invoice_number")
     private String invoiceNumber;

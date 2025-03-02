@@ -2,6 +2,7 @@ package com.inventory.service;
 
 import com.inventory.entity.Purchase;
 import com.inventory.entity.PurchaseItem;
+import com.inventory.entity.SaleItem;
 import com.inventory.dao.PurchaseDao;
 import com.inventory.entity.UserMaster;
 import lombok.RequiredArgsConstructor;
@@ -24,10 +25,10 @@ public class BatchProcessingService {
     private static final int BATCH_SIZE = 100;
     
     @Transactional
-    public void processPurchaseItems(List<PurchaseItem> items) {
+    public void processInventoryItems(List<?> items, boolean isPurchase) {
         // Process items in batches of 100
         for (int i = 0; i < items.size(); i += BATCH_SIZE) {
-            List<PurchaseItem> batch = items.subList(
+            List<?> batch = items.subList(
                 i, 
                 Math.min(i + BATCH_SIZE, items.size())
             );
@@ -35,16 +36,27 @@ public class BatchProcessingService {
             CompletableFuture.runAsync(() -> {
                 batch.forEach(item -> {
                     try {
-                        productQuantityService.updateProductQuantity(
-                            item.getProduct().getId(),
-                            item.getQuantity(),
-                            true,  // true for purchase,
-                            false,
-                            null
-                        );
+                        if (item instanceof PurchaseItem purchaseItem) {
+                            productQuantityService.updateProductQuantity(
+                                purchaseItem.getProduct().getId(),
+                                purchaseItem.getQuantity(),
+                                isPurchase,  // true for purchase, false for sale
+                                false,
+                                null
+                            );
+                        } else if (item instanceof SaleItem saleItem) {
+                            productQuantityService.updateProductQuantity(
+                                saleItem.getProduct().getId(),
+                                saleItem.getQuantity(),
+                                isPurchase,  // true for purchase, false for sale
+                                false,
+                                null
+                            );
+                        }
                     } catch (Exception e) {
-                        log.error("Error processing purchase item: {}", e.getMessage(), e);
-                        throw new RuntimeException("Failed to process purchase item", e);
+                        String itemType = isPurchase ? "purchase" : "sale";
+                        log.error("Error processing {} item: {}", itemType, e.getMessage(), e);
+                        throw new RuntimeException("Failed to process " + itemType + " item", e);
                     }
                 });
             }).exceptionally(throwable -> {
@@ -52,6 +64,18 @@ public class BatchProcessingService {
                 return null;
             });
         }
+    }
+    
+    // For backward compatibility
+    @Transactional
+    public void processPurchaseItems(List<PurchaseItem> items) {
+        processInventoryItems(items, true);
+    }
+    
+    // New method for sale items
+    @Transactional
+    public void processSaleItems(List<SaleItem> items) {
+        processInventoryItems(items, false);
     }
     
     @Transactional(readOnly = true)
