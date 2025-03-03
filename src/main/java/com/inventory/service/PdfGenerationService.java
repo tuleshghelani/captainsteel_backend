@@ -44,6 +44,9 @@ public class PdfGenerationService {
     private static final Color TEXT_PRIMARY = new DeviceRgb(44, 62, 80);
     private static final Color BORDER_COLOR = new DeviceRgb(222, 226, 230);
     
+    private static final BigDecimal SQ_FEET_TO_METER = BigDecimal.valueOf(10.764);
+    private static final BigDecimal MM_TO_METER = BigDecimal.valueOf(1000);
+    
     public byte[] generateQuotationPdf(Map<String, Object> quotationData) {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         
@@ -319,35 +322,27 @@ public class PdfGenerationService {
     }
     
     private Table createSqFeetCalculationTable(List<Map<String, Object>> calculations) {
-        Table table = new Table(new float[]{2, 2, 2})
+        Table table = new Table(new float[]{2, 2, 2, 2})
             .useAllAvailableWidth()
             .setMarginTop(5);
         
         // Add headers with specific colors
-        Cell feetHeader = new Cell()
-            .add(new Paragraph("Feet"))
-            .setBackgroundColor(PRIMARY_COLOR)
-            .setFontColor(ColorConstants.WHITE)
-            .setPadding(5);
-
-        Cell inchHeader = new Cell()
-            .add(new Paragraph("Inch"))
-            .setBackgroundColor(PRIMARY_COLOR)
-            .setFontColor(ColorConstants.WHITE)
-            .setPadding(5);
-        
-        Cell nosHeader = new Cell()
-            .add(new Paragraph("Nos"))
-            .setBackgroundColor(PRIMARY_COLOR)
-            .setFontColor(ColorConstants.WHITE)
-            .setPadding(5);
-        
-        table.addHeaderCell(feetHeader);
-        table.addHeaderCell(inchHeader);
-        table.addHeaderCell(nosHeader);
+        Stream.of("Feet", "Inch", "Nos", "Meter")
+            .forEach(title -> {
+                Cell header = new Cell()
+                    .add(new Paragraph(title))
+                    .setBackgroundColor(PRIMARY_COLOR)
+                    .setFontColor(ColorConstants.WHITE)
+                    .setPadding(5);
+                table.addHeaderCell(header);
+            });
         
         // Add data rows with matching background colors
         for (Map<String, Object> calc : calculations) {
+            // Calculate meter from sq feet
+            BigDecimal sqFeet = toBigDecimal(calc.get("sqFeet"));
+            BigDecimal meter = sqFeet.divide(SQ_FEET_TO_METER, 4, RoundingMode.HALF_UP);
+            
             table.addCell(new Cell()
                 .add(new Paragraph(formatValue(calc.get("feet"))))
                 .setBackgroundColor(new DeviceRgb(230, 185, 184)));
@@ -359,41 +354,37 @@ public class PdfGenerationService {
             table.addCell(new Cell()
                 .add(new Paragraph(formatValue(calc.get("nos"))))
                 .setBackgroundColor(new DeviceRgb(252, 213, 180)));
+                
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(meter)))
+                .setBackgroundColor(new DeviceRgb(169, 208, 142)));
         }
         
         return table;
     }
     
     private Table createMMCalculationTable(List<Map<String, Object>> calculations) {
-        Table table = new Table(new float[]{2, 2, 2})
+        Table table = new Table(new float[]{2, 2, 2, 2})
             .useAllAvailableWidth()
             .setMarginTop(5);
         
         // Add headers with specific colors
-        Cell mmHeader = new Cell()
-            .add(new Paragraph("MM"))
-            .setBackgroundColor(PRIMARY_COLOR)
-            .setFontColor(ColorConstants.WHITE)
-            .setPadding(5);
-        
-        Cell rFeetHeader = new Cell()
-            .add(new Paragraph("R.Feet"))
-            .setBackgroundColor(PRIMARY_COLOR)
-            .setFontColor(ColorConstants.WHITE)
-            .setPadding(5);
-        
-        Cell nosHeader = new Cell()
-            .add(new Paragraph("Nos"))
-            .setBackgroundColor(PRIMARY_COLOR)
-            .setFontColor(ColorConstants.WHITE)
-            .setPadding(5);
-        
-        table.addHeaderCell(mmHeader);
-        table.addHeaderCell(rFeetHeader);
-        table.addHeaderCell(nosHeader);
+        Stream.of("MM", "R.Feet", "Nos", "Meter")
+            .forEach(title -> {
+                Cell header = new Cell()
+                    .add(new Paragraph(title))
+                    .setBackgroundColor(PRIMARY_COLOR)
+                    .setFontColor(ColorConstants.WHITE)
+                    .setPadding(5);
+                table.addHeaderCell(header);
+            });
         
         // Add data rows with matching background colors
         for (Map<String, Object> calc : calculations) {
+            // Calculate meter from MM
+            BigDecimal mm = toBigDecimal(calc.get("mm"));
+            BigDecimal meter = mm.divide(MM_TO_METER, 4, RoundingMode.HALF_UP);
+            
             table.addCell(new Cell()
                 .add(new Paragraph(formatValue(calc.get("mm"))))
                 .setBackgroundColor(new DeviceRgb(230, 185, 184)));
@@ -405,6 +396,10 @@ public class PdfGenerationService {
             table.addCell(new Cell()
                 .add(new Paragraph(formatValue(calc.get("nos"))))
                 .setBackgroundColor(new DeviceRgb(252, 213, 180)));
+                
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(meter)))
+                .setBackgroundColor(new DeviceRgb(169, 208, 142)));
         }
         
         return table;
@@ -494,7 +489,6 @@ public class PdfGenerationService {
         addTerm(document, "3.", "Transport Transaction Extra", new DeviceRgb(66, 133, 244));
         addTerm(document, "4.", "The Responsibility Of All the Material Will Be With That Company.\nThere Will Be No Responsibility Of The Distributor I.E. Captain Steel.", new DeviceRgb(66, 133, 244));
         addTerm(document, "5.", "SUBJECT TO GONDAL JURISDICTION.", new DeviceRgb(66, 133, 244));
-        addTerm(document, "6.", "THIS QUOTATION IS VALID FOR TWO DAYS.", new DeviceRgb(66, 133, 244));
     }
 
     private void addBankDetail(Table table, String label, String value) {

@@ -68,4 +68,7 @@ public class QuotationItemCalculation {
     @JoinColumn(name = "client_id", nullable = false,
             foreignKey = @ForeignKey(name = "fk_quotation_item_calculations_client_id_client_id"))
     private Client client;
+
+    @Column(name = "meter", precision = 10, scale = 3, columnDefinition = "numeric(10,4) ")
+    private BigDecimal meter = BigDecimal.ZERO;
 } 

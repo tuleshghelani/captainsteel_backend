@@ -56,6 +56,9 @@ public class QuotationService {
     private static final BigDecimal DOUBLE_MULTIPLIER = BigDecimal.valueOf(2.0);
     private static final BigDecimal FULL_SHEET_MULTIPLIER = BigDecimal.valueOf(4.0);
     
+    private static final BigDecimal SQ_FEET_TO_METER = BigDecimal.valueOf(10.764);
+    private static final BigDecimal MM_TO_METER = BigDecimal.valueOf(1000);
+    
     private final QuotationRepository quotationRepository;
     private final QuotationItemRepository quotationItemRepository;
     private final CustomerRepository customerRepository;
@@ -321,6 +324,10 @@ public class QuotationService {
                 totalWeight = totalWeight.add(weight);
             }
             totalSqFeet = totalSqFeet.add(sqFeet);
+
+            // Calculate meter from sq feet instead of running feet
+            BigDecimal meter = sqFeet.divide(SQ_FEET_TO_METER, 4, RoundingMode.HALF_UP);
+            calc.setMeter(meter);
         }
         
         // Update item totals
@@ -383,6 +390,10 @@ public class QuotationService {
                 totalWeight = totalWeight.add(weight);
             }
             totalSqFeet = totalSqFeet.add(sqFeet);
+
+            // Calculate meter
+            BigDecimal meter = calc.getMm().divide(MM_TO_METER, 4, RoundingMode.HALF_UP);
+            calc.setMeter(meter);
         }
 
         // Update item totals
@@ -642,29 +653,8 @@ public class QuotationService {
             QuotationStatus newStatus = QuotationStatus.valueOf(request.getStatus());
             QuotationStatus currentStatus = quotation.getStatus();
 
-            // Validate status transition
-            if (currentStatus == QuotationStatus.Q) {
-                if (!Arrays.asList(QuotationStatus.A, QuotationStatus.D).contains(newStatus)) {
-                    throw new ValidationException("Quote can only be Accepted or Declined");
-                }
-            } else if (Arrays.asList(QuotationStatus.A, QuotationStatus.D).contains(currentStatus)) {
-                if (!Arrays.asList(QuotationStatus.A, QuotationStatus.D).contains(newStatus)) {
-                    throw new ValidationException("Invalid status transition");
-                }
-            } else {
-                throw new ValidationException("Current status cannot be updated");
-            }
-
-            // Handle product quantities based on status change
-            if (currentStatus != newStatus) {
-                if (newStatus == QuotationStatus.A) {
-                    // Block quantities when accepting
-                    updateProductQuantities(quotation, true);
-                } else if (currentStatus == QuotationStatus.A) {
-                    // Unblock quantities when moving from Accepted to any other status
-                    updateProductQuantities(quotation, false);
-                }
-            }
+            validateStatusTransition(currentStatus, newStatus);
+            handleProductQuantities(quotation, currentStatus, newStatus);
 
             quotation.setStatus(newStatus);
             quotation.setUpdatedAt(OffsetDateTime.now());
@@ -675,6 +665,52 @@ public class QuotationService {
         } catch (Exception e) {
             log.error("Error updating quotation status", e);
             throw new ValidationException("Failed to update quotation status: " + e.getMessage());
+        }
+    }
+
+    private void validateStatusTransition(QuotationStatus currentStatus, QuotationStatus newStatus) {
+        switch (currentStatus) {
+            case Q:
+                if (!Arrays.asList(QuotationStatus.A, QuotationStatus.D).contains(newStatus)) {
+                    throw new ValidationException("Quote can only be Accepted or Declined");
+                }
+                break;
+            case A:
+                if (!Arrays.asList(QuotationStatus.D, QuotationStatus.P).contains(newStatus)) {
+                    throw new ValidationException("Accepted quote can only be changed to Processing or Declined");
+                }
+                break;
+            case P:
+                if (newStatus != QuotationStatus.C) {
+                    throw new ValidationException("Processing quote can only be Completed");
+                }
+                break;
+            case D:
+                if (newStatus != QuotationStatus.A) {
+                    throw new ValidationException("Declined quote can only be changed to Accepted");
+                }
+                break;
+            case C:
+                throw new ValidationException("Current status cannot be updated");
+            default:
+                throw new ValidationException("Invalid current status");
+        }
+    }
+
+    private void handleProductQuantities(Quotation quotation, QuotationStatus currentStatus, QuotationStatus newStatus) {
+        if (currentStatus == newStatus) {
+            return;
+        }
+
+        if (currentStatus == QuotationStatus.Q && newStatus == QuotationStatus.A) {
+            // Block quantities when accepting
+            updateProductQuantities(quotation, true);
+        } else if (currentStatus == QuotationStatus.A && newStatus == QuotationStatus.D) {
+            // Unblock quantities when declining
+            updateProductQuantities(quotation, false);
+        } else if (currentStatus == QuotationStatus.P && newStatus == QuotationStatus.C) {
+            // Move quantities from blocked to used (subtract from blocked)
+            updateProductQuantities(quotation, false);
         }
     }
 

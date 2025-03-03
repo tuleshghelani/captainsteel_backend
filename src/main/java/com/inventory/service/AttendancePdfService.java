@@ -48,7 +48,9 @@ public class AttendancePdfService {
     private static final DeviceRgb SUPPORTING = new DeviceRgb(144, 164, 174);    // #90a4ae
     
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd-MM-yyyy");
-    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
+    private static final ZoneId IST = ZoneId.of("Asia/Kolkata");
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm")
+        .withZone(IST);
     
     // Cache for managing concurrent PDF generations with request tracking
     private final ConcurrentHashMap<String, PdfGenerationStatus> processingRequests = new ConcurrentHashMap<>();
@@ -226,7 +228,7 @@ public class AttendancePdfService {
         if (dateObj instanceof java.sql.Date) {
             attendanceDate = ((java.sql.Date) dateObj).toLocalDate();
         } else if (dateObj instanceof Instant) {
-            attendanceDate = ((Instant) dateObj).atZone(ZoneId.systemDefault()).toLocalDate();
+            attendanceDate = ((Instant) dateObj).atZone(IST).toLocalDate();
         } else {
             throw new ValidationException("Unsupported date type: " + dateObj.getClass());
         }
@@ -237,32 +239,33 @@ public class AttendancePdfService {
             .setPadding(5)
             .setTextAlignment(TextAlignment.LEFT)
             .setMinHeight(25f)
-            .setVerticalAlignment(VerticalAlignment.MIDDLE); // Center vertically
+            .setVerticalAlignment(VerticalAlignment.MIDDLE);
         
         table.addCell(dateCell);
         
-        // Add start time - Handle Instant to LocalDateTime conversion
+        // Add start time with IST
         Object startTimeObj = record.get("start_date_time");
-        LocalDateTime startDateTime;
+        String startTime;
         if (startTimeObj instanceof java.sql.Timestamp) {
-            startDateTime = ((java.sql.Timestamp) startTimeObj).toLocalDateTime();
+            startTime = TIME_FORMATTER.format(((java.sql.Timestamp) startTimeObj).toInstant());
         } else if (startTimeObj instanceof Instant) {
-            startDateTime = ((Instant) startTimeObj).atZone(ZoneId.systemDefault()).toLocalDateTime();
+            startTime = TIME_FORMATTER.format((TemporalAccessor) startTimeObj);
         } else {
             throw new ValidationException("Unsupported time type: " + startTimeObj.getClass());
         }
-        table.addCell(createCell(TIME_FORMATTER.format(startDateTime)));
+        table.addCell(createCell(startTime));
 
+        // Add end time with IST
         Object endTimeObj = record.get("end_date_time");
-        LocalDateTime endDateTime;
+        String endTime;
         if (endTimeObj instanceof java.sql.Timestamp) {
-            endDateTime = ((java.sql.Timestamp) endTimeObj).toLocalDateTime();
+            endTime = TIME_FORMATTER.format(((java.sql.Timestamp) endTimeObj).toInstant());
         } else if (endTimeObj instanceof Instant) {
-            endDateTime = ((Instant) endTimeObj).atZone(ZoneId.systemDefault()).toLocalDateTime();
+            endTime = TIME_FORMATTER.format((TemporalAccessor) endTimeObj);
         } else {
             throw new ValidationException("Unsupported time type: " + endTimeObj.getClass());
         }
-        table.addCell(createCell(TIME_FORMATTER.format(endDateTime)));
+        table.addCell(createCell(endTime));
 
         BigDecimal regularHours = (BigDecimal) record.get("regular_hours");
         BigDecimal regularPay = (BigDecimal) record.get("regular_pay");

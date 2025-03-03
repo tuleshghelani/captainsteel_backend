@@ -181,7 +181,144 @@ public class DispatchSlipPdfService {
 
         document.add(table);
 
+        // Add calculation details tables for each item
+        for (Map<String, Object> item : items) {
+                if (shouldShowCalculationDetails(item)) {
+                        addCalculationDetailsTable(document, item);
+                }
+        }
+    }
 
+    private boolean shouldShowCalculationDetails(Map<String, Object> item) {
+        String productType = (String) item.get("productType");
+        System.out.println("item : " + item);
+        return "REGULAR".equals(productType) || "POLY_CARBONATE".equals(productType);
+    }
+    
+    private void addCalculationDetailsTable(Document document, Map<String, Object> item) {
+        String productNameHtml = item.get("productName").toString();
+        Paragraph productNameParagraph = convertHtmlToParagraph(productNameHtml);
+        
+        document.add(new Paragraph("\nCalculation Details for : ")
+            .add(productNameParagraph)
+            .setFontColor(TEXT_PRIMARY)
+            .setMarginTop(10));
+            
+        List<Map<String, Object>> calculations = (List<Map<String, Object>>) item.get("calculations");
+        if (calculations == null || calculations.isEmpty()) {
+            return;
+        }
+
+        String calculationType = (String) item.get("calculationType");
+        Table table;
+
+        System.out.println("calculationType : " + calculationType);
+        
+        if ("SQ_FEET".equals(calculationType)) {
+            table = createSqFeetCalculationTable(calculations);
+        } else if ("MM".equals(calculationType)) {
+            table = createMMCalculationTable(calculations);
+        } else {
+            return;
+        }
+        
+        document.add(table);
+    }
+    
+    private Table createSqFeetCalculationTable(List<Map<String, Object>> calculations) {
+        Table table = new Table(new float[]{2, 2, 2})
+            .useAllAvailableWidth()
+            .setMarginTop(5);
+        
+        // Add headers with specific colors
+        Cell feetHeader = new Cell()
+            .add(new Paragraph("Feet"))
+            .setBackgroundColor(PRIMARY_COLOR)
+            .setFontColor(ColorConstants.WHITE)
+            .setPadding(5);
+
+        Cell inchHeader = new Cell()
+            .add(new Paragraph("Inch"))
+            .setBackgroundColor(PRIMARY_COLOR)
+            .setFontColor(ColorConstants.WHITE)
+            .setPadding(5);
+        
+        Cell nosHeader = new Cell()
+            .add(new Paragraph("Nos"))
+            .setBackgroundColor(PRIMARY_COLOR)
+            .setFontColor(ColorConstants.WHITE)
+            .setPadding(5);
+        
+        table.addHeaderCell(feetHeader);
+        table.addHeaderCell(inchHeader);
+        table.addHeaderCell(nosHeader);
+        
+        // Add data rows with matching background colors
+        for (Map<String, Object> calc : calculations) {
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(calc.get("feet"))))
+                .setBackgroundColor(new DeviceRgb(230, 185, 184)));
+                
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(calc.get("inch"))))
+                .setBackgroundColor(new DeviceRgb(141, 180, 227)));
+                
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(calc.get("nos"))))
+                .setBackgroundColor(new DeviceRgb(252, 213, 180)));
+        }
+        
+        return table;
+    }
+    
+    private Table createMMCalculationTable(List<Map<String, Object>> calculations) {
+        Table table = new Table(new float[]{2, 2, 2})
+            .useAllAvailableWidth()
+            .setMarginTop(5);
+        
+        // Add headers with specific colors
+        Cell mmHeader = new Cell()
+            .add(new Paragraph("MM"))
+            .setBackgroundColor(PRIMARY_COLOR)
+            .setFontColor(ColorConstants.WHITE)
+            .setPadding(5);
+        
+        Cell rFeetHeader = new Cell()
+            .add(new Paragraph("R.Feet"))
+            .setBackgroundColor(PRIMARY_COLOR)
+            .setFontColor(ColorConstants.WHITE)
+            .setPadding(5);
+        
+        Cell nosHeader = new Cell()
+            .add(new Paragraph("Nos"))
+            .setBackgroundColor(PRIMARY_COLOR)
+            .setFontColor(ColorConstants.WHITE)
+            .setPadding(5);
+        
+        table.addHeaderCell(mmHeader);
+        table.addHeaderCell(rFeetHeader);
+        table.addHeaderCell(nosHeader);
+        
+        // Add data rows with matching background colors
+        for (Map<String, Object> calc : calculations) {
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(calc.get("mm"))))
+                .setBackgroundColor(new DeviceRgb(230, 185, 184)));
+                
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(calc.get("runningFeet"))))
+                .setBackgroundColor(new DeviceRgb(141, 180, 227)));
+                
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(calc.get("nos"))))
+                .setBackgroundColor(new DeviceRgb(252, 213, 180)));
+        }
+        
+        return table;
+    }
+
+    private String formatValue(Object value) {
+        return value != null ? value.toString() : "0";
     }
 
     private void addPageFooter(PdfDocument pdfDoc, Document document, int pageNumber) {

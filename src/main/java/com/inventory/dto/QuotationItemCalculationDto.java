@@ -24,5 +24,6 @@ public class QuotationItemCalculationDto {
     private BigDecimal runningFeet;
     private BigDecimal sqFeet;
     private BigDecimal weight;
+    private BigDecimal meter;
     private Long clientId;
 } 
