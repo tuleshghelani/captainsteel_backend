@@ -27,6 +27,8 @@ public class ProductDto {
     private BigDecimal weight;
     private ProductMainType type;
     private BigDecimal remainingQuantity;
+    private BigDecimal blockedQuantity;
+    private BigDecimal totalRemainingQuantity;
     private Long clientId;
     private Integer page = 0;
     private Integer size = 10;

@@ -80,9 +80,7 @@ public class ProductService {
                 throw new ValidationException("You are not authorized to update this product");
             }
             
-            BigDecimal oldRemainingQuantity = product.getRemainingQuantity() != null ? 
-                product.getRemainingQuantity() : BigDecimal.ZERO;
-            
+            // Update basic product information
             product.setName(dto.getName().trim());
             product.setCategory(categoryRepository.findById(dto.getCategoryId())
                 .orElseThrow(() -> new ValidationException("Category not found")));
@@ -96,18 +94,15 @@ public class ProductService {
             product.setPolyCarbonateType(dto.getType() == ProductMainType.POLY_CARBONATE ? dto.getPolyCarbonateType() : null);
             product.setClient(currentUser.getClient());
 
-            if (dto.getRemainingQuantity() != null) {
-                BigDecimal quantityChange = dto.getRemainingQuantity().subtract(oldRemainingQuantity);
-                if (quantityChange.compareTo(BigDecimal.ZERO) != 0) {
-                    boolean isPurchase = quantityChange.compareTo(BigDecimal.ZERO) > 0;
-                    productQuantityService.updateProductQuantity(
-                        product.getId(),
-                        quantityChange.abs(),
-                        isPurchase,
-                        !isPurchase,
-                        null
-                    );
-                }
+            // Handle quantity updates using the new method
+            dto.setTotalRemainingQuantity(product.getRemainingQuantity().subtract(product.getBlockedQuantity()));
+            if (dto.getRemainingQuantity() != null || dto.getBlockedQuantity() != null || dto.getTotalRemainingQuantity() != null) {
+                productQuantityService.setProductQuantities(
+                    product.getId(),
+                    dto.getRemainingQuantity(),
+                    dto.getBlockedQuantity(),
+                    dto.getTotalRemainingQuantity()
+                );
             }
 
             productRepository.save(product);

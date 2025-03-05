@@ -119,4 +119,95 @@ public class ProductQuantityService {
             product.getId(), quantityChange, isPurchase, isSale, isBlock, 
             product.getRemainingQuantity(), product.getBlockedQuantity());
     }
+
+   
+    @Transactional
+    public void setProductQuantities(
+        Long productId,
+        BigDecimal remainingQuantity,
+        BigDecimal blockedQuantity,
+        BigDecimal totalRemainingQuantity
+    ) {
+        Lock lock = getProductLock(productId);
+        lock.lock();
+        try {
+            Product product = getAndValidateProduct(productId);
+            
+            // Store original values for logging
+            BigDecimal originalRemaining = product.getRemainingQuantity();
+            BigDecimal originalBlocked = product.getBlockedQuantity();
+            BigDecimal originalTotal = product.getTotalRemainingQuantity();
+            
+            // Update quantities if provided
+            if (remainingQuantity != null) {
+                product.setRemainingQuantity(remainingQuantity);
+            }
+            
+            if (blockedQuantity != null) {
+                product.setBlockedQuantity(blockedQuantity);
+            }
+            
+            if (totalRemainingQuantity != null) {
+                product.setTotalRemainingQuantity(totalRemainingQuantity);
+            } else {
+                // Calculate total remaining quantity if not provided
+                product.setTotalRemainingQuantity(
+                    product.getRemainingQuantity().subtract(product.getBlockedQuantity())
+                );
+            }
+            
+            // Validate the new quantities
+            validateQuantities(product);
+            
+            // Save the updated product
+            productRepository.save(product);
+            
+            // Log the quantity changes
+            log.info("Product {} quantities updated directly. Changes: " +
+                    "Remaining: {} -> {}, " +
+                    "Blocked: {} -> {}, " +
+                    "Total: {} -> {}",
+                product.getId(),
+                originalRemaining, product.getRemainingQuantity(),
+                originalBlocked, product.getBlockedQuantity(),
+                originalTotal, product.getTotalRemainingQuantity()
+            );
+            
+        } catch (Exception e) {
+            log.error("Error setting product quantities: {}", e.getMessage(), e);
+            throw e;
+        } finally {
+            lock.unlock();
+        }
+    }
+    
+    /**
+     * Validates the product quantities to ensure they are consistent
+     */
+    private void validateQuantities(Product product) {
+        // Ensure quantities are not null
+        if (product.getRemainingQuantity() == null) {
+            product.setRemainingQuantity(BigDecimal.ZERO);
+        }
+        if (product.getBlockedQuantity() == null) {
+            product.setBlockedQuantity(BigDecimal.ZERO);
+        }
+        if (product.getTotalRemainingQuantity() == null) {
+            product.setTotalRemainingQuantity(BigDecimal.ZERO);
+        }
+        
+        // Validate that blocked quantity is not greater than remaining quantity
+        // if (product.getBlockedQuantity().compareTo(product.getRemainingQuantity()) > 0) {
+        //     throw new ValidationException(
+        //         String.format("Blocked quantity (%s) cannot be greater than remaining quantity (%s)",
+        //             product.getBlockedQuantity(), product.getRemainingQuantity())
+        //     );
+        // }
+        
+        // Validate that total remaining quantity matches the calculation
+        BigDecimal expectedTotal = product.getRemainingQuantity().subtract(product.getBlockedQuantity());
+        if (product.getTotalRemainingQuantity().compareTo(expectedTotal) != 0) {
+            product.setTotalRemainingQuantity(expectedTotal);
+        }
+    }
 }
