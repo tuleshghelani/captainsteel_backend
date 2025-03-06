@@ -100,6 +100,12 @@ public class PurchaseDao {
                 """);
             params.put("coilNumber", "[\"" + dto.getCoilNumber().trim().toLowerCase() + "\"]");
         }
+        if(!Objects.isNull(dto.getCustomerId())) {
+            sql.append("""
+                AND p.customer_id = :customerId
+                """);
+            params.put("customerId", dto.getCustomerId());
+        }
 
         // if(!Objects.isNull(dto.getcoilNumber()) && !dto.getcoilNumber().isEmpty()) {
         //     sql.append("""

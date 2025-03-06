@@ -22,6 +22,7 @@ public class SaleDto {
     private Long id;
     private String name;
     private String search;
+    private Long customerId;
     private Long categoryId;
     private String description;
     private BigDecimal purchaseAmount;
@@ -50,4 +51,5 @@ public class SaleDto {
     private BigDecimal discountPrice;
     private Date startDate;
     private Date endDate;
+    private Boolean isBlack;
 }

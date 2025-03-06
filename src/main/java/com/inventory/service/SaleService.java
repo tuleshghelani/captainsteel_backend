@@ -47,6 +47,7 @@ public class SaleService {
             sale.setCustomer(customerRepository.findById(request.getCustomerId())
                 .orElseThrow(() -> new ValidationException("Customer not found")));
             sale.setSaleDate(request.getSaleDate());
+            sale.setIsBlack(request.getIsBlack());
             sale.setInvoiceNumber(request.getInvoiceNumber());
             sale.setNumberOfItems(request.getProducts().size());
             sale.setClient(currentUser.getClient());

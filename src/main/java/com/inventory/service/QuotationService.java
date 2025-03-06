@@ -159,6 +159,11 @@ public class QuotationService {
             if (!quotation.getClient().getId().equals(currentUser.getClient().getId())) {
                 throw new ValidationException("Unauthorized access to quotation");
             }
+
+            if(quotation.getStatus() == QuotationStatus.A || quotation.getStatus() == QuotationStatus.P ||
+                quotation.getStatus() == QuotationStatus.C) {
+                throw new ValidationException("Quotation is already accepted, processed or completed");
+            }
             
             if(request.getCustomerId() != null){
                 Customer customer = customerRepository.findById(request.getCustomerId())

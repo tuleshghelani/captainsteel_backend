@@ -47,6 +47,9 @@ public class Sale {
     @Column(name = "coil_numbers", columnDefinition = "jsonb default '[]'")
     @Type(value = com.vladmihalcea.hibernate.type.json.JsonType.class)
     private List<String> coilNumbers = new ArrayList<>();
+
+    @Column(name = "is_black", columnDefinition = "bool default false")
+    private Boolean isBlack = false;
     
     @Column(length = 29, columnDefinition = "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP")
     private OffsetDateTime createdAt = OffsetDateTime.now();

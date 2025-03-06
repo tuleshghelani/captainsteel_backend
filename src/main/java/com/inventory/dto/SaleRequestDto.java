@@ -2,7 +2,6 @@ package com.inventory.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.inventory.entity.Sale;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -24,4 +23,5 @@ public class SaleRequestDto {
     private String invoiceNumber;
     private List<SaleItemDto> products;
     private List<String> coilNumbers;
+    private Boolean isBlack;
 }

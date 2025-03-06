@@ -112,7 +112,7 @@ public class PdfGenerationService {
         // Right side - Logo image
         Cell logoCell = new Cell();
         try {
-            ImageData imageData = ImageDataFactory.create("src/main/resources/quotation/Title.jpg");
+            ImageData imageData = ImageDataFactory.create("quotation/Title.jpg");
             Image img = new Image(imageData);
             img.setWidth(200);
             img.setHeight(100);
@@ -196,7 +196,8 @@ public class PdfGenerationService {
         for (Map<String, Object> item : items) {
             table.addCell(new Cell().add(new Paragraph(String.valueOf(counter.getAndIncrement()))));
             table.addCell(new Cell().add(convertHtmlToParagraph(item.get("productName").toString())));
-            table.addCell(new Cell().add(new Paragraph(item.get("quantity").toString())));
+            String measurement = item.get("measurement") != null ? item.get("measurement").toString() : "";
+            table.addCell(new Cell().add(new Paragraph(item.get("quantity").toString() + " " + measurement)));
             table.addCell(new Cell().add(new Paragraph(item.get("unitPrice").toString())));
             table.addCell(new Cell().add(new Paragraph(item.get("discountPrice").toString())));
             
@@ -322,12 +323,12 @@ public class PdfGenerationService {
     }
     
     private Table createSqFeetCalculationTable(List<Map<String, Object>> calculations) {
-        Table table = new Table(new float[]{2, 2, 2, 2})
+        Table table = new Table(new float[]{2, 2, 2, 2, 2})
             .useAllAvailableWidth()
             .setMarginTop(5);
         
         // Add headers with specific colors
-        Stream.of("Feet", "Inch", "Nos", "Meter")
+        Stream.of("Feet", "Inch", "Nos", "Meter", "Sq.Feet")
             .forEach(title -> {
                 Cell header = new Cell()
                     .add(new Paragraph(title))
@@ -339,7 +340,6 @@ public class PdfGenerationService {
         
         // Add data rows with matching background colors
         for (Map<String, Object> calc : calculations) {
-            // Calculate meter from sq feet
             BigDecimal sqFeet = toBigDecimal(calc.get("sqFeet"));
             BigDecimal meter = sqFeet.divide(SQ_FEET_TO_METER, 4, RoundingMode.HALF_UP);
             
@@ -358,18 +358,22 @@ public class PdfGenerationService {
             table.addCell(new Cell()
                 .add(new Paragraph(formatValue(meter)))
                 .setBackgroundColor(new DeviceRgb(169, 208, 142)));
+                
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(sqFeet)))
+                .setBackgroundColor(new DeviceRgb(187, 173, 219))); 
         }
         
         return table;
     }
     
     private Table createMMCalculationTable(List<Map<String, Object>> calculations) {
-        Table table = new Table(new float[]{2, 2, 2, 2})
+        Table table = new Table(new float[]{2, 2, 2, 2, 2})
             .useAllAvailableWidth()
             .setMarginTop(5);
         
         // Add headers with specific colors
-        Stream.of("MM", "R.Feet", "Nos", "Meter")
+        Stream.of("MM", "R.Feet", "Nos", "Meter", "Sq.Feet")
             .forEach(title -> {
                 Cell header = new Cell()
                     .add(new Paragraph(title))
@@ -381,9 +385,9 @@ public class PdfGenerationService {
         
         // Add data rows with matching background colors
         for (Map<String, Object> calc : calculations) {
-            // Calculate meter from MM
             BigDecimal mm = toBigDecimal(calc.get("mm"));
             BigDecimal meter = mm.divide(MM_TO_METER, 4, RoundingMode.HALF_UP);
+            BigDecimal sqFeet = toBigDecimal(calc.get("sqFeet"));
             
             table.addCell(new Cell()
                 .add(new Paragraph(formatValue(calc.get("mm"))))
@@ -400,6 +404,10 @@ public class PdfGenerationService {
             table.addCell(new Cell()
                 .add(new Paragraph(formatValue(meter)))
                 .setBackgroundColor(new DeviceRgb(169, 208, 142)));
+                
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(sqFeet)))
+                .setBackgroundColor(new DeviceRgb(187, 173, 219)));  
         }
         
         return table;
