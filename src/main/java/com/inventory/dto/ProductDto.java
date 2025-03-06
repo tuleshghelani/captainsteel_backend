@@ -24,6 +24,7 @@ public class ProductDto {
     private BigDecimal saleAmount;
     private BigDecimal minimumStock;
     private String status;
+    private String measurement;
     private BigDecimal weight;
     private ProductMainType type;
     private BigDecimal remainingQuantity;

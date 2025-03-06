@@ -52,7 +52,7 @@ public class QuotationService {
     private static final int WEIGHT_SCALE = 3;
     private static final RoundingMode WEIGHT_ROUNDING = RoundingMode.HALF_UP;
     
-    private static final BigDecimal SINGLE_MULTIPLIER = BigDecimal.valueOf(1.6);
+    private static final BigDecimal SINGLE_MULTIPLIER = BigDecimal.valueOf(1.16);
     private static final BigDecimal DOUBLE_MULTIPLIER = BigDecimal.valueOf(2.0);
     private static final BigDecimal FULL_SHEET_MULTIPLIER = BigDecimal.valueOf(4.0);
     

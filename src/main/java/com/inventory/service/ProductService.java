@@ -10,9 +10,13 @@ import com.inventory.repository.ProductRepository;
 import com.inventory.repository.CategoryRepository;
 import com.inventory.dao.ProductDao;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -26,6 +30,7 @@ public class ProductService {
     private final UtilityService utilityService;
     private final ProductQuantityService productQuantityService;
     private final ProductPdfService productPdfService;
+    private static final Logger log = LoggerFactory.getLogger(ProductService.class);
 
     @Transactional(rollbackFor = Exception.class)
     public ApiResponse<?> create(ProductDto dto) {
@@ -47,6 +52,7 @@ public class ProductService {
             product.setSaleAmount(dto.getSaleAmount() != null ? dto.getSaleAmount() : BigDecimal.valueOf(0));
             product.setMinimumStock(dto.getMinimumStock());
             product.setStatus(dto.getStatus().trim());
+            product.setMeasurement(dto.getMeasurement().trim());
             product.setRemainingQuantity(dto.getRemainingQuantity());
             product.setWeight(dto.getWeight() != null ? dto.getWeight() : BigDecimal.valueOf(0));
             product.setType(dto.getType() != null ? dto.getType() : null);
@@ -89,6 +95,7 @@ public class ProductService {
             product.setSaleAmount(dto.getSaleAmount() != null ? dto.getSaleAmount() : BigDecimal.valueOf(0));
             product.setMinimumStock(dto.getMinimumStock());
             product.setStatus(dto.getStatus().trim());
+            product.setMeasurement(dto.getMeasurement().trim());
             product.setWeight(dto.getWeight() != null ? dto.getWeight() : BigDecimal.valueOf(0));
             product.setType(dto.getType() != null ? dto.getType() : null);
             product.setPolyCarbonateType(dto.getType() == ProductMainType.POLY_CARBONATE ? dto.getPolyCarbonateType() : null);
@@ -144,18 +151,23 @@ public class ProductService {
     public ApiResponse<?> delete(Long id) {
         try {
             Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ValidationException("Product not found"));
+                .orElseThrow(() -> new ValidationException("Product not found", HttpStatus.UNPROCESSABLE_ENTITY));
             UserMaster currentUser = utilityService.getCurrentLoggedInUser();
             if(product.getClient().getId() != currentUser.getClient().getId()) {
-                throw new ValidationException("You are not authorized to delete this product");
+                throw new ValidationException("You are not authorized to delete this product", HttpStatus.UNPROCESSABLE_ENTITY);
             }
-            productRepository.delete(product);
-            return ApiResponse.success("Product deleted successfully");
+            try {
+                productRepository.delete(product);
+                return ApiResponse.success("Product deleted successfully");
+            } catch (DataIntegrityViolationException e) {
+                e.printStackTrace();
+                throw new ValidationException("Cannot delete product. There are purchase, sale, or quotation records associated with this product.", HttpStatus.UNPROCESSABLE_ENTITY);
+            }
         } catch (ValidationException e) {
             throw e;
         } catch (Exception e) {
-            e.printStackTrace();
-            throw new ValidationException("Failed to delete product");
+            log.error("Error deleting product", e);
+            throw new ValidationException("Failed to delete product: " + e.getMessage(), HttpStatus.UNPROCESSABLE_ENTITY);
         }
     }
 

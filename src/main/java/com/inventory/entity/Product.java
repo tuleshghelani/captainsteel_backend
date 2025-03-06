@@ -77,6 +77,9 @@ public class Product {
 
     @Column(name = "weight", precision = 8, scale = 3, columnDefinition = "numeric(8,3) ")
     private BigDecimal weight = BigDecimal.valueOf(0.00);
+    
+    @Column(name = "measurement", columnDefinition = "varchar(32) ")
+    private String measurement;
 
     @Column(name = "type")
     @Enumerated(EnumType.STRING)

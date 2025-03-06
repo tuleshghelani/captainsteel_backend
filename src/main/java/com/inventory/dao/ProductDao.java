@@ -31,7 +31,8 @@ public class ProductDao {
                 p.sale_amount,
                 p.type,
                 p.weight,
-                p.poly_carbonate_type
+                p.poly_carbonate_type,
+                p.measurement
             FROM product p
             WHERE 1=1
         """);
@@ -80,6 +81,8 @@ public class ProductDao {
                 product.put("type", row[index++]);
                 product.put("weight", row[index++]);
                 product.put("polyCarbonateType", row[index++]);
+                product.put("measurement", row[index++]);
+
 
                 products.add(product);
             }
@@ -127,7 +130,8 @@ public class ProductDao {
                 p.total_remaining_quantity,
                 p.weight,
                 p.type,
-                p.poly_carbonate_type
+                p.poly_carbonate_type,
+                p.measurement
             FROM product p
             LEFT JOIN category c ON p.category_id = c.id
             WHERE 1=1
@@ -199,6 +203,7 @@ public class ProductDao {
                 product.put("weight", row[index++]);
                 product.put("type", row[index++]);
                 product.put("polyCarbonateType", row[index++]);
+                product.put("measurement", row[index++]);
                 products.add(product);
             }
         }
@@ -231,7 +236,8 @@ public class ProductDao {
                 p.total_remaining_quantity,
                 p.weight,
                 p.type,
-                p.poly_carbonate_type
+                p.poly_carbonate_type,
+                p.measurement
             FROM product p
             LEFT JOIN category c ON p.category_id = c.id
             WHERE 1=1
@@ -272,6 +278,7 @@ public class ProductDao {
                 product.put("weight", row[index++]);
                 product.put("type", row[index++]);
                 product.put("polyCarbonateType", row[index++]);
+                product.put("measurement", row[index++]);
                 products.add(product);
             }
         }
