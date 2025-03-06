@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -766,6 +767,50 @@ public class QuotationService {
         } catch (Exception e) {
             log.error("Error generating dispatch slip PDF", e);
             throw new ValidationException("Failed to generate dispatch slip PDF: " + e.getMessage());
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public ApiResponse<?> deleteQuotation(QuotationRequestDto request) {
+        try {
+            UserMaster currentUser = utilityService.getCurrentLoggedInUser();
+            Quotation quotation = quotationRepository.findById(request.getQuotationId())
+                .orElseThrow(() -> new ValidationException("Quotation not found", HttpStatus.UNPROCESSABLE_ENTITY));
+
+            if (!quotation.getClient().getId().equals(currentUser.getClient().getId())) {
+                throw new ValidationException("You are not authorized to delete this quotation", HttpStatus.UNPROCESSABLE_ENTITY);
+            }
+
+            // Validate status
+            if (!Arrays.asList(QuotationStatus.Q, QuotationStatus.D).contains(quotation.getStatus())) {
+                throw new ValidationException("Only quotations with status 'Quote' or 'Declined' can be deleted", HttpStatus.UNPROCESSABLE_ENTITY);
+            }
+
+            // If quotation is in Accepted status and has blocked quantities, unblock them
+//            if (quotation.getStatus() == QuotationStatus.A || quotation.getStatus() == QuotationStatus.P ||
+//                 quotation.getStatus() == QuotationStatus.C) {
+//                List<QuotationItem> items = quotationItemRepository.findByQuotationId(quotation.getId());
+//                for (QuotationItem item : items) {
+//                    productQuantityService.updateProductQuantity(
+//                        item.getProduct().getId(),
+//                        item.getQuantity(),
+//                        false,
+//                        false,
+//                        null
+//                    );
+//                }
+//            }
+
+            quotationItemCalculationRepository.deleteByQuotationId(quotation.getId());
+            quotationItemRepository.deleteByQuotationId(quotation.getId());
+            quotationRepository.delete(quotation);
+
+            return ApiResponse.success("Quotation deleted successfully");
+        } catch (ValidationException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error deleting quotation", e);
+            throw new ValidationException("Failed to delete quotation: " + e.getMessage(), HttpStatus.UNPROCESSABLE_ENTITY);
         }
     }
 } 

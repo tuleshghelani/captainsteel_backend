@@ -73,4 +73,10 @@ public class QuotationController {
         log.debug("Received quotation status update request for ID: {}", request.getId());
         return ResponseEntity.ok(quotationService.updateQuotationStatus(request));
     }
+    
+    @PostMapping("/delete")
+    public ResponseEntity<ApiResponse<?>> deleteQuotation(@RequestBody QuotationRequestDto request) {
+        log.debug("Received quotation delete request for ID: {}", request.getQuotationId());
+        return ResponseEntity.ok(quotationService.deleteQuotation(request));
+    }
 } 
