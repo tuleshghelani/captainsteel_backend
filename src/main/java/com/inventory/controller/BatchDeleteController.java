@@ -1,8 +1,8 @@
 package com.inventory.controller;
 
+import com.inventory.dto.ApiResponse;
 import com.inventory.dto.request.BatchDeleteRequestDto;
 import com.inventory.service.BatchDeletionService;
-import com.inventory.dto.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
