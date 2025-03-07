@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.inventory.entity.Quotation;
 import org.springframework.stereotype.Repository;
 
 import com.inventory.dto.QuotationDto;
@@ -14,6 +15,8 @@ import com.inventory.exception.ValidationException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
+
+import java.time.LocalDate;
 
 @Repository
 public class QuotationDao {
@@ -241,5 +244,20 @@ public class QuotationDao {
             calc.put("weight", row[i++]);
             return calc;
         }).collect(Collectors.toList());
+    }
+
+    public List<Quotation> findByClientIdAndDateRange(Long clientId, LocalDate startDate, LocalDate endDate) {
+        String sql = """
+            SELECT * FROM quotation q 
+            WHERE q.client_id = :clientId 
+            AND q.quote_date BETWEEN :startDate AND :endDate
+        """;
+
+        Query query = entityManager.createNativeQuery(sql, Quotation.class);
+        query.setParameter("clientId", clientId);
+        query.setParameter("startDate", startDate);
+        query.setParameter("endDate", endDate);
+
+        return query.getResultList();
     }
 } 

@@ -200,4 +200,19 @@ public class SaleDao {
 
         return response;
     }
+
+    public List<Sale> findByClientIdAndDateRange(Long clientId, LocalDateTime startDate, LocalDateTime endDate) {
+        String sql = """
+            SELECT * FROM sale s 
+            WHERE s.client_id = :clientId 
+            AND s.sale_date BETWEEN :startDate AND :endDate
+        """;
+
+        Query query = entityManager.createNativeQuery(sql, Sale.class);
+        query.setParameter("clientId", clientId);
+        query.setParameter("startDate", startDate);
+        query.setParameter("endDate", endDate);
+
+        return query.getResultList();
+    }
 }

@@ -41,7 +41,7 @@ import lombok.Setter;
         @Index(name = "idx_product_status", columnList = "status"),
         @Index(name = "idx_product_remaining_quantity", columnList = "remaining_quantity"),
         @Index(name = "idx_product_category_id", columnList = "category_id"),
-        @Index(name = "idx_product_client_id", columnList = "client_id")
+        @Index(name = "idx_product_client_id", columnList = "client_id"),
     }
 )
 public class Product {

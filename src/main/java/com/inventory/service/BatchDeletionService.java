@@ -1,5 +1,8 @@
 package com.inventory.service;
 
+import com.inventory.dao.PurchaseDao;
+import com.inventory.dao.QuotationDao;
+import com.inventory.dao.SaleDao;
 import com.inventory.dto.ApiResponse;
 import com.inventory.dto.request.BatchDeleteRequestDto;
 import com.inventory.entity.Purchase;
@@ -47,6 +50,9 @@ public class BatchDeletionService {
     private final QuotationItemCalculationRepository quotationItemCalculationRepository;
     private final UtilityService utilityService;
     private final ProductQuantityService productQuantityService;
+    private final PurchaseDao purchaseDao;
+    private final SaleDao saleDao;
+    private final QuotationDao quotationDao;
 
     @Transactional(rollbackFor = Exception.class)
     public ApiResponse<?> deleteRecords(BatchDeleteRequestDto request) {
@@ -66,6 +72,7 @@ public class BatchDeletionService {
 
             return ApiResponse.success("Records deleted successfully", deletionCounts);
         } catch (Exception e) {
+            e.printStackTrace();
             log.error("Error in batch deletion: ", e);
             throw new ValidationException("Failed to delete records: " + e.getMessage());
         }
@@ -84,8 +91,8 @@ public class BatchDeletionService {
     }
 
     private int deletePurchases(BatchDeleteRequestDto request, UserMaster currentUser) {
-        List<Purchase> purchases = purchaseRepository.findByClientIdAndDateRange(
-            currentUser.getClient().getId(),
+        List<Purchase> purchases = purchaseDao.findByClientIdAndDateRange(
+                currentUser.getClient().getId(),
             request.getStartDate().atStartOfDay(),
             request.getEndDate().plusDays(1).atStartOfDay()
         );
@@ -99,10 +106,10 @@ public class BatchDeletionService {
     }
 
     private int deleteSales(BatchDeleteRequestDto request, UserMaster currentUser) {
-        List<Sale> sales = saleRepository.findByClientIdAndDateRange(
+        List<Sale> sales = saleDao.findByClientIdAndDateRange(
             currentUser.getClient().getId(),
             request.getStartDate().atStartOfDay(),
-            request.getEndDate().plusDays(1).atStartOfDay()
+            request.getEndDate().atStartOfDay()
         );
 
         for (Sale sale : sales) {
@@ -114,7 +121,7 @@ public class BatchDeletionService {
     }
 
     private int deleteQuotations(BatchDeleteRequestDto request, UserMaster currentUser) {
-        List<Quotation> quotations = quotationRepository.findByClientIdAndDateRange(
+        List<Quotation> quotations = quotationDao.findByClientIdAndDateRange(
             currentUser.getClient().getId(),
             request.getStartDate(),
             request.getEndDate()
@@ -133,7 +140,7 @@ public class BatchDeletionService {
         List<Attendance> attendances = attendanceRepository.findByClientIdAndDateRange(
             currentUser.getClient().getId(),
             request.getStartDate().atStartOfDay().atOffset(ZoneOffset.UTC),
-            request.getEndDate().plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC)
+            request.getEndDate().atStartOfDay().atOffset(ZoneOffset.UTC)
         );
         
         attendanceRepository.deleteAll(attendances);

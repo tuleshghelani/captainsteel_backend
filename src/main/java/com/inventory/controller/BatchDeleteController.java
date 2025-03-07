@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 public class BatchDeleteController {
     private final BatchDeletionService batchDeletionService;
     
-    @DeleteMapping("/delete")
+    @PostMapping("/delete")
     public ResponseEntity<ApiResponse<?>> batchDelete(@RequestBody BatchDeleteRequestDto request) {
         return ResponseEntity.ok(batchDeletionService.deleteRecords(request));
     }

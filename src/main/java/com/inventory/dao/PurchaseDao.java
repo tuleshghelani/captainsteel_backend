@@ -241,4 +241,19 @@ public class PurchaseDao {
 
         return response;
     }
+
+    public List<Purchase> findByClientIdAndDateRange(Long clientId, LocalDateTime startDate, LocalDateTime endDate) {
+        String sql = """
+            SELECT * FROM purchase p 
+            WHERE p.client_id = :clientId 
+            AND p.purchase_date BETWEEN :startDate AND :endDate
+        """;
+
+        Query query = entityManager.createNativeQuery(sql, Purchase.class);
+        query.setParameter("clientId", clientId);
+        query.setParameter("startDate", startDate);
+        query.setParameter("endDate", endDate);
+
+        return query.getResultList();
+    }
 }
