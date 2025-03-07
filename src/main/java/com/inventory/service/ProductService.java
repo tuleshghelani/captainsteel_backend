@@ -76,14 +76,15 @@ public class ProductService {
         try {
             Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ValidationException("Product not found"));
-
-            Optional<Product> productByName = productRepository.findByNameAndIdNotIn(dto.getName().trim(), Collections.singletonList(product.getId()));
-            if (productByName.isPresent()) {
-                throw new ValidationException("Product name already exists");
-            }
             UserMaster currentUser = utilityService.getCurrentLoggedInUser();
             if (!Objects.equals(product.getClient().getId(), currentUser.getClient().getId())) {
                 throw new ValidationException("You are not authorized to update this product");
+            }
+
+            Optional<Product> productByName = productRepository.findByNameAndIdNotInAndClient_Id(
+                    dto.getName().trim(), Collections.singletonList(product.getId()), currentUser.getClient().getId());
+            if (productByName.isPresent()) {
+                throw new ValidationException("Product name already exists");
             }
             
             // Update basic product information
