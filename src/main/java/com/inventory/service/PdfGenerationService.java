@@ -112,7 +112,11 @@ public class PdfGenerationService {
         // Right side - Logo image
         Cell logoCell = new Cell();
         try {
-            ImageData imageData = ImageDataFactory.create("quotation/Title.jpg");
+            InputStream imageStream = getClass().getClassLoader().getResourceAsStream("quotation/Title.jpg");
+            if (imageStream == null) {
+                throw new FileNotFoundException("Image not found: quotation/Title.jpg");
+            }
+            ImageData imageData = ImageDataFactory.create(imageStream.readAllBytes());
             Image img = new Image(imageData);
             img.setWidth(200);
             img.setHeight(100);
@@ -195,9 +199,13 @@ public class PdfGenerationService {
         
         for (Map<String, Object> item : items) {
             table.addCell(new Cell().add(new Paragraph(String.valueOf(counter.getAndIncrement()))));
-            table.addCell(new Cell().add(convertHtmlToParagraph(item.get("productName").toString())));
-            String measurement = item.get("measurement") != null ? item.get("measurement").toString() : "";
-            table.addCell(new Cell().add(new Paragraph(item.get("quantity").toString() + " " + measurement)));
+            table.addCell(new Cell().add(convertHtmlToParagraph(item, true)));
+            String measurement = item.get("measurement") != null ? item.get("measurement").toString().trim() : "";
+            
+            // Add "approx." prefix for kg measurements
+            String displayMeasurement = measurement.toLowerCase().equals("kg") ? "\n " + measurement + "(approx.)" : "\n" + measurement;
+            
+            table.addCell(new Cell().add(new Paragraph(item.get("quantity").toString() + " " + displayMeasurement)));
             table.addCell(new Cell().add(new Paragraph(item.get("unitPrice").toString())));
             table.addCell(new Cell().add(new Paragraph(item.get("discountPrice").toString())));
             
@@ -294,7 +302,7 @@ public class PdfGenerationService {
     
     private void addCalculationDetailsTable(Document document, Map<String, Object> item) {
         String productNameHtml = item.get("productName").toString();
-        Paragraph productNameParagraph = convertHtmlToParagraph(productNameHtml);
+        Paragraph productNameParagraph = convertHtmlToParagraph(item, false);
         
         document.add(new Paragraph("\nCalculation Details for : ")
             .add(productNameParagraph)
@@ -328,7 +336,7 @@ public class PdfGenerationService {
             .setMarginTop(5);
         
         // Add headers with specific colors
-        Stream.of("Feet", "Inch", "Nos", "Meter", "Sq.Feet")
+        Stream.of("Feet", "Inch", "Nos", "Sq. Meter", "Sq.Feet")
             .forEach(title -> {
                 Cell header = new Cell()
                     .add(new Paragraph(title))
@@ -373,7 +381,7 @@ public class PdfGenerationService {
             .setMarginTop(5);
         
         // Add headers with specific colors
-        Stream.of("MM", "R.Feet", "Nos", "Meter", "Sq.Feet")
+        Stream.of("MM", "R.Feet", "Nos", "Sq. Meter", "Sq.Feet")
             .forEach(title -> {
                 Cell header = new Cell()
                     .add(new Paragraph(title))
@@ -577,8 +585,9 @@ public class PdfGenerationService {
     }
 
     // Helper method to convert HTML to formatted paragraph
-    private Paragraph convertHtmlToParagraph(String html) {
+    private Paragraph convertHtmlToParagraph(Map<String, Object> item, boolean isPrintImage) {
         Paragraph paragraph = new Paragraph();
+        String html = item.get("productName").toString();
         
         // Remove any null or empty strings
         if (html == null || html.trim().isEmpty()) {
@@ -591,32 +600,48 @@ public class PdfGenerationService {
 
         for (String part : parts) {
             if (!part.trim().isEmpty()) {
-                // Handle spacing between words
-                String formattedPart = part;
-//                part.replaceAll("(?<=\\w)(?=[A-Z])", " ")  // Add space between camelCase
-//                        .replaceAll("_", " ")                      // Replace underscores with spaces
-//                        .replaceAll("\\s+", " ")                   // Normalize multiple spaces
-//                        .trim(); // Remove leading/trailing spaces
-                
-                Text text = new Text(formattedPart);
+                Text text = new Text(part);
                 if (isBold) {
                     text.setBold();
                 }
                 paragraph.add(text);
-                
-                // Add a space between parts if not the last part
-//                if (isBold && !isLastPart(parts, part)) {
-//                    paragraph.add(new Text(" "));
-//                }
-                
                 isBold = !isBold;
+            }
+        }
+
+        if(isPrintImage) {
+            // Add polycarbonate type image if applicable
+            String polyCarbonateType = (String) item.get("polyCarbonateType");
+            if (polyCarbonateType != null) {
+                String imagePath = getPolyCarbonateImagePath(polyCarbonateType);
+                if (imagePath != null) {
+                    try {
+                        paragraph.add(new Text("\n"));
+                        InputStream imageStream = getClass().getClassLoader().getResourceAsStream(imagePath);
+                        if (imageStream != null) {
+                            ImageData imageData = ImageDataFactory.create(imageStream.readAllBytes());
+                            Image img = new Image(imageData);
+                            img.setWidth(100);
+                            img.setHeight(20);
+                            paragraph.add(img);
+                            imageStream.close(); // Close the stream
+                        }
+                    } catch (Exception e) {
+                        log.error("Error loading polycarbonate image: " + imagePath, e);
+                    }
+                }
             }
         }
         
         return paragraph;
     }
 
-    private boolean isLastPart(String[] parts, String currentPart) {
-        return currentPart.equals(parts[parts.length - 1]);
+    private String getPolyCarbonateImagePath(String polyCarbonateType) {
+        return switch (polyCarbonateType.toUpperCase()) {
+            case "SINGLE" -> "quotation/single.jpg";
+            case "DOUBLE" -> "quotation/double.jpg";
+            case "FULL_SHEET" -> "quotation/full_sheet.jpg";
+            default -> null;
+        };
     }
 } 
