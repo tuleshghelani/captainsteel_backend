@@ -417,6 +417,9 @@ public class QuotationService {
         Product product = productRepository.findById(itemDto.getProductId())
                 .orElseThrow(() -> new ValidationException("Product not found"));
 
+        if(!Objects.equals(product.getClient().getId(), currentUser.getClient().getId())) {
+            throw new ValidationException("Product is not available for you");
+        }
         // Validate and process item based on product type
         validateAndProcessItem(itemDto, product, currentUser);
 
