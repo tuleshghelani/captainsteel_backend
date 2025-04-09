@@ -3,8 +3,13 @@ package com.inventory.entity;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
+import com.inventory.enums.PolyCarbonateType;
+import com.inventory.enums.ProductMainType;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
@@ -36,7 +41,7 @@ import lombok.Setter;
         @Index(name = "idx_product_status", columnList = "status"),
         @Index(name = "idx_product_remaining_quantity", columnList = "remaining_quantity"),
         @Index(name = "idx_product_category_id", columnList = "category_id"),
-        @Index(name = "idx_product_client_id", columnList = "client_id")
+        @Index(name = "idx_product_client_id", columnList = "client_id"),
     }
 )
 public class Product {
@@ -44,7 +49,7 @@ public class Product {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(name = "name", nullable = false, length = 256)
+    @Column(name = "name", nullable = false, length = 512)
     private String name;
     
     @ManyToOne(fetch = FetchType.LAZY)
@@ -70,14 +75,28 @@ public class Product {
     @Column(name = "status", nullable = false, length = 2)
     private String status = "A";
 
-    @Column(name = "remaining_quantity", columnDefinition = "bigint DEFAULT 0")
-    private Long remainingQuantity = 0L;
+    @Column(name = "weight", precision = 8, scale = 3, columnDefinition = "numeric(8,3) ")
+    private BigDecimal weight = BigDecimal.valueOf(0.00);
+    
+    @Column(name = "measurement", columnDefinition = "varchar(32) ")
+    private String measurement;
 
-    @Column(name = "blocked_quantity", columnDefinition = "bigint DEFAULT 0")
-    private Long blockedQuantity = 0L;
+    @Column(name = "type")
+    @Enumerated(EnumType.STRING)
+    private ProductMainType type;
 
-    @Column(name = "total_remaining_quantity", columnDefinition = "bigint DEFAULT 0")
-    private Long totalRemainingQuantity = 0L;
+    @Column(name = "poly_carbonate_type")
+    @Enumerated(EnumType.STRING)
+    private PolyCarbonateType polyCarbonateType;
+
+    @Column(name = "remaining_quantity", columnDefinition = "numeric(15,3) ")
+    private BigDecimal remainingQuantity = BigDecimal.ZERO;
+
+    @Column(name = "blocked_quantity", columnDefinition = "numeric(15,3) ")
+    private BigDecimal blockedQuantity = BigDecimal.ZERO;
+
+    @Column(name = "total_remaining_quantity", columnDefinition = "numeric(15,3) ")
+    private BigDecimal totalRemainingQuantity = BigDecimal.ZERO;
     
     @Column(name = "description")
     private String description;

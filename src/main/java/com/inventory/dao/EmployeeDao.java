@@ -1,17 +1,19 @@
 package com.inventory.dao;
 
-import com.inventory.dto.EmployeeDto;
-import com.inventory.exception.ValidationException;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.Query;
-import org.springframework.stereotype.Repository;
-import org.springframework.util.StringUtils;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.springframework.stereotype.Repository;
+import org.springframework.util.StringUtils;
+
+import com.inventory.dto.EmployeeDto;
+import com.inventory.exception.ValidationException;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.Query;
 
 @Repository
 public class EmployeeDao {
@@ -102,11 +104,17 @@ public class EmployeeDao {
                 e.id,
                 e.name,
                 e.mobile_number,
+                e.aadhar_number,
                 e.email,
                 e.address,
                 e.designation,
                 e.department,
-                e.status
+                e.status,
+                e.wage_type,
+                e.regular_hours,
+                e.start_time,
+                e.regular_pay,
+                e.overtime_pay
             FROM employee e
             WHERE e.id = :employeeId
         """;
@@ -121,15 +129,21 @@ public class EmployeeDao {
         }
         
         Map<String, Object> employee = new HashMap<>();
-        employee.put("id", result[0]);
-        employee.put("name", result[1]);
-        employee.put("mobileNumber", result[2]);
-        employee.put("email", result[3]);
-        employee.put("address", result[4]);
-        employee.put("designation", result[5]);
-        employee.put("department", result[6]);
-        employee.put("status", result[7]);
-        
+        int index = 0;
+        employee.put("id", result[index++]);
+        employee.put("name", result[index++]);
+        employee.put("mobileNumber", result[index++]);
+        employee.put("aadharNumber", result[index++]);
+        employee.put("email", result[index++]);
+        employee.put("address", result[index++]);
+        employee.put("designation", result[index++]);
+        employee.put("department", result[index++]);
+        employee.put("status", result[index++]);
+        employee.put("wageType", result[index++]);
+        employee.put("regularHours", result[index++]);
+        employee.put("startTime", result[index++]);
+        employee.put("regularPay", result[index++]);
+        employee.put("overtimePay", result[index++]);
         return employee;
     }
 

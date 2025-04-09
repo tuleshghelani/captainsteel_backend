@@ -115,7 +115,9 @@ public class CustomerDao {
         sql.append("""
             SELECT 
                 c.id,
-                c.name
+                c.name,
+                c.address,
+                c.mobile
             FROM customer c
             WHERE c.status = 'A' AND c.client_id = :clientId
         """);
@@ -142,6 +144,8 @@ public class CustomerDao {
             Map<String, Object> customer = new HashMap<>();
             customer.put("id", row[0]);
             customer.put("name", row[1]);
+            customer.put("address", row[2]);
+            customer.put("mobile", row[3]);
             customers.add(customer);
         }
         

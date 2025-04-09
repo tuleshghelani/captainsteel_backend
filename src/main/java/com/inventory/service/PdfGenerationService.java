@@ -1,5 +1,21 @@
 package com.inventory.service;
 
+import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
+
+import com.itextpdf.io.image.ImageData;
+import com.itextpdf.io.image.ImageDataFactory;
+import com.itextpdf.layout.properties.AreaBreakType;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+
 import com.inventory.exception.ValidationException;
 import com.itextpdf.kernel.colors.Color;
 import com.itextpdf.kernel.colors.ColorConstants;
@@ -10,20 +26,15 @@ import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.element.Cell;
+import com.itextpdf.layout.element.Image;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.TextAlignment;
+import com.itextpdf.layout.element.AreaBreak;
+import com.itextpdf.layout.element.Text;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-
-import java.io.ByteArrayOutputStream;
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +44,9 @@ public class PdfGenerationService {
     private static final Color TEXT_PRIMARY = new DeviceRgb(44, 62, 80);
     private static final Color BORDER_COLOR = new DeviceRgb(222, 226, 230);
     
+    private static final BigDecimal SQ_FEET_TO_METER = BigDecimal.valueOf(10.764);
+    private static final BigDecimal MM_TO_METER = BigDecimal.valueOf(1000);
+    
     public byte[] generateQuotationPdf(Map<String, Object> quotationData) {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         
@@ -40,10 +54,19 @@ public class PdfGenerationService {
             Document document = new Document(pdf, PageSize.A4);
             document.setMargins(36, 36, 36, 36);
             
+            // Add content
             addHeader(document, quotationData);
+            addPageFooter(pdf, document, 1);
+            
             addQuotationDetails(document, quotationData);
-            addItemsTable(document, (List<Map<String, Object>>) quotationData.get("items"));
-            addFooter(document, quotationData);
+            addItemsTable(document, (List<Map<String, Object>>) quotationData.get("items"), quotationData);
+            addPageFooter(pdf, document, 2);
+            
+            addBankDetailsAndTerms(document);
+            addPageFooter(pdf, document, 3);
+            
+            addLastPage(document);
+            addPageFooter(pdf, document, 4);
             
             document.close();
             return outputStream.toByteArray();
@@ -54,25 +77,76 @@ public class PdfGenerationService {
     }
     
     private void addHeader(Document document, Map<String, Object> data) {
+        // Company name with border
+        Table nameTable = new Table(1).useAllAvailableWidth();
+        Cell nameCell = new Cell()
+            .add(new Paragraph("CAPTAIN STEEL")
+                .setFontSize(36)
+                .setBold()
+                .setFontColor(new DeviceRgb(0, 0, 0)))  // Black color
+            .setBorder(Border.NO_BORDER)
+            .setMarginBottom(30); // Add margin below company name
+        nameTable.addCell(nameCell);
+        document.add(nameTable);
+
+        // Logo and details in separate table
         Table header = new Table(2).useAllAvailableWidth();
         
-        // Company Logo and Details
+        // Left side - Details
+        Cell detailsCell = new Cell();
+        detailsCell.add(new Paragraph("Address :- Survey No.39/2, Plot No.4, Nr.MaekwellbSpining Mill,")
+                        .setFontSize(10))
+                   .add(new Paragraph("Sadak Pipliya, National Highway, Ta. Gondal, Dist. Rajkot.")
+                        .setFontSize(10))
+                   .add(new Paragraph("E-mail: captainsteel39@gmail.com")
+                        .setFontSize(10))
+                   .add(new Paragraph("Mo.No. 96627 12222 / 89803 92009")
+                        .setFontSize(10))
+                   .add(new Paragraph("GST NO.24AALFC2707P1Z8")
+                        .setFontSize(11)
+                        .setBold()
+                        .setFontColor(PRIMARY_COLOR))
+                   .setBorder(Border.NO_BORDER)
+                   .setTextAlignment(TextAlignment.LEFT);
+        
+        // Right side - Logo image
         Cell logoCell = new Cell();
-        logoCell.add(new Paragraph("Company Logo"))
-               .setFontColor(PRIMARY_COLOR)
-               .setFontSize(24)
-               .setBorder(Border.NO_BORDER);
+        try {
+            InputStream imageStream = getClass().getClassLoader().getResourceAsStream("quotation/Title.jpg");
+            if (imageStream == null) {
+                throw new FileNotFoundException("Image not found: quotation/Title.jpg");
+            }
+            ImageData imageData = ImageDataFactory.create(imageStream.readAllBytes());
+            Image img = new Image(imageData);
+            img.setWidth(200);
+            img.setHeight(100);
+            logoCell.add(img);
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("Error loading logo image", e);
+        }
+        logoCell.setBorder(Border.NO_BORDER)
+               .setTextAlignment(TextAlignment.RIGHT);
         
-        Cell companyDetails = new Cell();
-        companyDetails.add(new Paragraph("Captain Steel"))
-                     .add(new Paragraph("Pipaliya, Rajkot"))
-                     .add(new Paragraph("Phone: 123456789"))
-                     .setBorder(Border.NO_BORDER)
-                     .setTextAlignment(TextAlignment.RIGHT);
-        
+        header.addCell(detailsCell);
         header.addCell(logoCell);
-        header.addCell(companyDetails);
         document.add(header);
+        
+        // Add horizontal line
+        Table line = new Table(1).useAllAvailableWidth();
+        line.addCell(new Cell()
+            .setHeight(1)
+            .setBackgroundColor(PRIMARY_COLOR)
+            .setBorder(Border.NO_BORDER));
+        document.add(line);
+        
+        // Add Quotation text
+        document.add(new Paragraph("Quotation")
+            .setTextAlignment(TextAlignment.CENTER)
+            .setFontSize(24)
+            .setBold()
+            .setFontColor(PRIMARY_COLOR)
+            .setMarginTop(10));
     }
     
     private void addQuotationDetails(Document document, Map<String, Object> data) {
@@ -88,6 +162,7 @@ public class PdfGenerationService {
                     .add(new Paragraph("Quote Number: " + data.get("quoteNumber")))
                    .add(new Paragraph("Quote Date: " + data.get("quoteDate")))
                    .add(new Paragraph("Valid Until: " + data.get("validUntil")))
+                   .add(new Paragraph("Mobile No. : " + (data.get("contactNumber") != null ? data.get("contactNumber") : "")))
                    .setBorder(Border.NO_BORDER);
     
         
@@ -103,42 +178,278 @@ public class PdfGenerationService {
         }
     }
     
-    private void addItemsTable(Document document, List<Map<String, Object>> items) {
-        Table table = new Table(new float[]{2, 4, 2, 2, 2, 2, 2, 2})
+    private void addItemsTable(Document document, List<Map<String, Object>> items, Map<String, Object> quotationData) {
+        // Create table with 5 columns instead of 8
+        Table table = new Table(new float[]{2, 4, 2, 2, 2})
             .useAllAvailableWidth()
             .setMarginTop(20);
             
-        // Add headers
-        Stream.of("Sr.", "Product", "Qty", "Price", "Discount", "Tax %", "Tax", "Total")
-              .forEach(title -> table.addHeaderCell(
-                  new Cell().add(new Paragraph(title))
-                           .setBackgroundColor(PRIMARY_COLOR)
-                           .setFontColor(ColorConstants.WHITE)
-                           .setPadding(5)
-              ));
-              
+        // Add simplified headers
+        Stream.of("Sr. No.", "ITEM NAME", "QUANTITY", "PRICE", "TOTAL AMOUNT")
+            .forEach(title -> table.addHeaderCell(
+                new Cell().add(new Paragraph(title))
+                        .setBackgroundColor(PRIMARY_COLOR)
+                        .setFontColor(ColorConstants.WHITE)
+                        .setPadding(5)
+            ));
+            
         // Add items
         AtomicInteger counter = new AtomicInteger(1);
         BigDecimal totalAmount = BigDecimal.ZERO;
         
         for (Map<String, Object> item : items) {
-            addItemRow(table, item, counter.getAndIncrement());
-            totalAmount = totalAmount.add(new BigDecimal(item.get("finalPrice").toString()));
+            table.addCell(new Cell().add(new Paragraph(String.valueOf(counter.getAndIncrement()))));
+            table.addCell(new Cell().add(convertHtmlToParagraph(item, true)));
+            String measurement = item.get("measurement") != null ? item.get("measurement").toString().trim() : "";
+            
+            // Add "approx." prefix for kg measurements
+            String displayMeasurement = measurement.toLowerCase().equals("kg") ? "\n " + measurement + "(approx.)" : "\n" + measurement;
+            
+            table.addCell(new Cell().add(new Paragraph(item.get("quantity").toString() + " " + displayMeasurement)));
+            table.addCell(new Cell().add(new Paragraph(item.get("unitPrice").toString())));
+            table.addCell(new Cell().add(new Paragraph(item.get("discountPrice").toString())));
+            
+            totalAmount = totalAmount.add(new BigDecimal(item.get("discountPrice").toString()));
         }
         
-        // Add total row
-        table.addCell(new Cell(1, 6).add(new Paragraph("Total Amount"))
+        document.add(table);
+        
+        // Create summary table with 2 columns
+        Table summaryTable = new Table(new float[]{3, 1})
+            .useAllAvailableWidth()
+            .setMarginTop(10);
+        
+        // Add empty cell on left side
+        Cell leftCell = new Cell()
+            // .add(new Paragraph("SGST 9% CGST 9%"))
+            .setBorder(Border.NO_BORDER)
+            .setTextAlignment(TextAlignment.LEFT)
+            .setFontSize(10);
+        
+        // Create right-side table for totals
+        Table totalsTable = new Table(2)
+            .useAllAvailableWidth();
+
+        // Add total rows with borders
+        Cell totalLabelCell = new Cell()
+                .add(new Paragraph("TOTAL"))
+                .setBorder(Border.NO_BORDER);
+        Cell totalValueCell = new Cell()
+                .add(new Paragraph(totalAmount.toString() + "/-"))
+                .setBorder(Border.NO_BORDER)
+                .setTextAlignment(TextAlignment.RIGHT);
+        totalsTable.addCell(totalLabelCell);
+        totalsTable.addCell(totalValueCell);
+        
+        // Add loading charge rows with borders
+        Cell totalLoading = new Cell()
+            .add(new Paragraph("Loading Charge"))
+            .setBorder(Border.NO_BORDER);
+        Cell totalLoadingValueCell = new Cell()
+            .add(new Paragraph(quotationData.get("loadingCharge").toString()))
+            .setBorder(Border.NO_BORDER)
+            .setTextAlignment(TextAlignment.RIGHT);
+        totalsTable.addCell(totalLoading);
+        totalsTable.addCell(totalLoadingValueCell);
+        
+        // Calculate and add GST
+        BigDecimal gstAmount = totalAmount.multiply(BigDecimal.valueOf(18))
+                .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+        Cell gstLabelCell = new Cell()
+            .add(new Paragraph("GST 18 % (SGST 9% CGST 9%)"))
+            .setBorder(Border.NO_BORDER);
+        Cell gstValueCell = new Cell()
+            .add(new Paragraph(gstAmount.toString() + "/-"))
+            .setBorder(Border.NO_BORDER)
+            .setTextAlignment(TextAlignment.RIGHT);
+        totalsTable.addCell(gstLabelCell);
+        totalsTable.addCell(gstValueCell);
+        
+        // Add grand total
+        BigDecimal grandTotal = ((BigDecimal) quotationData.get("totalAmount")).setScale(0, RoundingMode.HALF_UP);;
+        Cell grandTotalLabelCell = new Cell()
+            .add(new Paragraph("GRAND TOTAL"))
+            .setBorder(Border.NO_BORDER)
+            .setBold();
+        Cell grandTotalValueCell = new Cell()
+            .add(new Paragraph(grandTotal.toString() + "/-"))
+            .setBorder(Border.NO_BORDER)
             .setTextAlignment(TextAlignment.RIGHT)
-            .setBold()
-            .setPadding(5));
-        table.addCell(new Cell().add(new Paragraph(""))); // Empty cell for tax column
-        table.addCell(new Cell().add(new Paragraph(totalAmount.toString()))
+            .setBold();
+        totalsTable.addCell(grandTotalLabelCell);
+        totalsTable.addCell(grandTotalValueCell);
+        
+        // Add the tables to the main summary table
+        summaryTable.addCell(leftCell);
+        Cell rightCell = new Cell().add(totalsTable).setBorder(Border.NO_BORDER);
+        summaryTable.addCell(rightCell);
+        
+        document.add(summaryTable);
+
+        // Add calculation details tables for each item
+        for (Map<String, Object> item : items) {
+            if (shouldShowCalculationDetails(item)) {
+                addCalculationDetailsTable(document, item);
+            }
+        }
+    }
+
+    private boolean shouldShowCalculationDetails(Map<String, Object> item) {
+        String productType = (String) item.get("productType");
+        System.out.println("item : " + item);
+        return "REGULAR".equals(productType) || "POLY_CARBONATE".equals(productType);
+    }
+    
+    private void addCalculationDetailsTable(Document document, Map<String, Object> item) {
+        String productNameHtml = item.get("productName").toString();
+        Paragraph productNameParagraph = convertHtmlToParagraph(item, false);
+        
+        document.add(new Paragraph("\nCalculation Details for : ")
+            .add(productNameParagraph)
+            .setFontColor(TEXT_PRIMARY)
+            .setMarginTop(10));
+            
+        List<Map<String, Object>> calculations = (List<Map<String, Object>>) item.get("calculations");
+        if (calculations == null || calculations.isEmpty()) {
+            return;
+        }
+
+        String calculationType = (String) item.get("calculationType");
+        Table table;
+
+        System.out.println("calculationType : " + calculationType);
+        
+        if ("SQ_FEET".equals(calculationType)) {
+            table = createSqFeetCalculationTable(calculations);
+        } else if ("MM".equals(calculationType)) {
+            table = createMMCalculationTable(calculations);
+        } else {
+            return;
+        }
+        
+        document.add(table);
+    }
+    
+    private Table createSqFeetCalculationTable(List<Map<String, Object>> calculations) {
+        Table table = new Table(new float[]{2, 2, 2, 2, 2})
+            .useAllAvailableWidth()
+            .setMarginTop(5);
+        
+        // Add headers with specific colors
+        Stream.of("Feet", "Inch", "Nos", "Sq. Meter", "Sq.Feet")
+            .forEach(title -> {
+                Cell header = new Cell()
+                    .add(new Paragraph(title))
+                    .setBackgroundColor(PRIMARY_COLOR)
+                    .setFontColor(ColorConstants.WHITE)
+                    .setPadding(5);
+                table.addHeaderCell(header);
+            });
+        
+        // Add data rows with matching background colors
+        for (Map<String, Object> calc : calculations) {
+            BigDecimal sqFeet = toBigDecimal(calc.get("sqFeet"));
+            BigDecimal meter = sqFeet.divide(SQ_FEET_TO_METER, 4, RoundingMode.HALF_UP);
+            
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(calc.get("feet"))))
+                .setBackgroundColor(new DeviceRgb(230, 185, 184)));
+                
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(calc.get("inch"))))
+                .setBackgroundColor(new DeviceRgb(141, 180, 227)));
+                
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(calc.get("nos"))))
+                .setBackgroundColor(new DeviceRgb(252, 213, 180)));
+                
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(meter)))
+                .setBackgroundColor(new DeviceRgb(169, 208, 142)));
+                
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(sqFeet)))
+                .setBackgroundColor(new DeviceRgb(187, 173, 219))); 
+        }
+        
+        return table;
+    }
+    
+    private Table createMMCalculationTable(List<Map<String, Object>> calculations) {
+        Table table = new Table(new float[]{2, 2, 2, 2, 2})
+            .useAllAvailableWidth()
+            .setMarginTop(5);
+        
+        // Add headers with specific colors
+        Stream.of("MM", "R.Feet", "Nos", "Sq. Meter", "Sq.Feet")
+            .forEach(title -> {
+                Cell header = new Cell()
+                    .add(new Paragraph(title))
+                    .setBackgroundColor(PRIMARY_COLOR)
+                    .setFontColor(ColorConstants.WHITE)
+                    .setPadding(5);
+                table.addHeaderCell(header);
+            });
+        
+        // Add data rows with matching background colors
+        for (Map<String, Object> calc : calculations) {
+            BigDecimal mm = toBigDecimal(calc.get("mm"));
+            BigDecimal meter = mm.divide(MM_TO_METER, 4, RoundingMode.HALF_UP);
+            BigDecimal sqFeet = toBigDecimal(calc.get("sqFeet"));
+            
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(calc.get("mm"))))
+                .setBackgroundColor(new DeviceRgb(230, 185, 184)));
+                
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(calc.get("runningFeet"))))
+                .setBackgroundColor(new DeviceRgb(141, 180, 227)));
+                
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(calc.get("nos"))))
+                .setBackgroundColor(new DeviceRgb(252, 213, 180)));
+                
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(meter)))
+                .setBackgroundColor(new DeviceRgb(169, 208, 142)));
+                
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(sqFeet)))
+                .setBackgroundColor(new DeviceRgb(187, 173, 219)));  
+        }
+        
+        return table;
+    }
+    
+    private Cell createHeaderCell(String title) {
+        return new Cell()
+            .add(new Paragraph(title))
+            .setBackgroundColor(PRIMARY_COLOR)
+            .setFontColor(ColorConstants.WHITE)
+            .setPadding(5);
+    }
+    
+    private Cell createTotalCell(String value) {
+        return new Cell()
+            .add(new Paragraph(value))
             .setBackgroundColor(PRIMARY_COLOR)
             .setFontColor(ColorConstants.WHITE)
             .setBold()
-            .setPadding(5));
-        
-        document.add(table);
+            .setPadding(5);
+    }
+    
+    private String formatValue(Object value) {
+        return value != null ? value.toString() : "0";
+    }
+    
+    private BigDecimal toBigDecimal(Object value) {
+        if (value == null) return BigDecimal.ZERO;
+        return new BigDecimal(value.toString());
+    }
+    
+    private Long toLong(Object value) {
+        if (value == null) return 0L;
+        return Long.parseLong(value.toString());
     }
     
     private void addItemRow(Table table, Map<String, Object> item, int counter) {
@@ -152,22 +463,185 @@ public class PdfGenerationService {
         table.addCell(new Cell().add(new Paragraph(item.get("finalPrice").toString())));
     }
     
-    private void addFooter(Document document, Map<String, Object> data) {
-        document.add(new Paragraph("\n"));
+    private void addBankDetailsAndTerms(Document document) {
+        // Start new page
+        document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
         
-        // Terms and Conditions
-        document.add(new Paragraph("Terms & Conditions")
-            .setFontColor(PRIMARY_COLOR)
-            .setBold()
-            .setMarginTop(20));
-        document.add(new Paragraph(data.get("termsConditions").toString())
+        // GST Number
+        document.add(new Paragraph("GST No: 24AALFC2707P1Z8")
             .setFontColor(TEXT_PRIMARY)
-            .setMarginTop(10));
+            .setFontSize(12)
+            .setMarginBottom(20));
+        
+        // Bank Details Section
+        document.add(new Paragraph("BANK DETAILS:")
+            .setFontColor(new DeviceRgb(41, 84, 153))  // Blue color
+            .setBold()
+            .setFontSize(14)
+            .setMarginBottom(10));
+        
+        document.add(new Paragraph("CENTRAL BANK OF INDIA")
+            .setFontColor(new DeviceRgb(230, 108, 1))  // Orange color
+            .setBold()
+            .setFontSize(12));
             
-        // Signatures
-        Table signatures = new Table(2).useAllAvailableWidth().setMarginTop(50);
-        signatures.addCell(new Cell().add(new Paragraph("For Company")).setBorder(Border.NO_BORDER));
-        signatures.addCell(new Cell().add(new Paragraph("For Customer")).setBorder(Border.NO_BORDER).setTextAlignment(TextAlignment.RIGHT));
-        document.add(signatures);
+        Table bankTable = new Table(2).useAllAvailableWidth();
+        addBankDetail(bankTable, "A/C NO:", "3592903798");
+        addBankDetail(bankTable, "IFSC CODE:", "CBIN0280569");
+        addBankDetail(bankTable, "BRANCH:", "BHUPENDRAROAD,RAJKOT");
+        document.add(bankTable);
+        
+        // Terms and Conditions Section
+        document.add(new Paragraph("\nTERMS AND CONDITIONS:")
+            .setFontColor(new DeviceRgb(207, 89, 86))  // Red color
+            .setBold()
+            .setFontSize(14)
+            .setMarginTop(20)
+            .setMarginBottom(10));
+        
+        // Add terms
+        addTerm(document, "1.", "Customer will be billed after indicating acceptance of this quote.", new DeviceRgb(66, 133, 244));
+        addTerm(document, "2.", "Payment 50% Advance And 50% before goods Dispatched.", new DeviceRgb(66, 133, 244));
+        addTerm(document, "3.", "Transport Transaction Extra", new DeviceRgb(66, 133, 244));
+        addTerm(document, "4.", "The Responsibility Of All the Material Will Be With That Company.\nThere Will Be No Responsibility Of The Distributor I.E. Captain Steel.", new DeviceRgb(66, 133, 244));
+        addTerm(document, "5.", "SUBJECT TO GONDAL JURISDICTION.", new DeviceRgb(66, 133, 244));
+    }
+
+    private void addBankDetail(Table table, String label, String value) {
+        table.addCell(new Cell().add(new Paragraph(label))
+            .setBold()
+            .setBorder(Border.NO_BORDER));
+        table.addCell(new Cell().add(new Paragraph(value))
+            .setBorder(Border.NO_BORDER));
+    }
+
+    private void addTerm(Document document, String number, String text, Color color) {
+        document.add(new Paragraph(number + " " + text)
+            .setFontColor(color)
+            .setBold()
+            .setMarginBottom(5));
+    }
+    
+    private void addLastPage(Document document) {
+        // Start new page
+        document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
+        
+        try {
+            InputStream imageStream = getClass().getClassLoader().getResourceAsStream("quotation/Quotation_last_page.jpg");
+            if (imageStream == null) {
+                throw new FileNotFoundException("Image not found: quotation/Quotation_last_page.jpg");
+            }
+            ImageData imageData = ImageDataFactory.create(imageStream.readAllBytes());
+            Image img = new Image(imageData);
+            
+            // Get page dimensions
+            float pageWidth = document.getPdfDocument().getDefaultPageSize().getWidth();
+            float pageHeight = document.getPdfDocument().getDefaultPageSize().getHeight();
+            
+            // Set image to fill the entire page
+            img.setFixedPosition(0, 0);  // Start from top-left corner
+            img.scaleToFit(pageWidth, pageHeight);
+            img.setMargins(0, 0, 0, 0);  // Remove all margins
+            
+            document.add(img);
+        } catch (Exception e) {
+            log.error("Error loading last page image", e);
+            e.printStackTrace();
+        }
+    }
+
+    private void addPageFooter(PdfDocument pdfDoc, Document document, int pageNumber) {
+        float footerY = 20;  // Distance from bottom
+        float pageWidth = pdfDoc.getDefaultPageSize().getWidth();
+        
+        // Create HR line table
+        Table lineTable = new Table(1)
+            .useAllAvailableWidth()
+            .setFixedPosition(36, footerY + 15, pageWidth - 72);  // Position above footer text
+        
+        lineTable.addCell(new Cell()
+            .setHeight(0.5f)
+            .setBackgroundColor(TEXT_PRIMARY)
+            .setBorder(Border.NO_BORDER));
+        
+        // Create footer table with single column for centered content
+        Table footerTable = new Table(1)
+            .useAllAvailableWidth()
+            .setFixedPosition(36, footerY, pageWidth - 72);
+        
+        // Contact information cell (center-aligned)
+        Cell contactCell = new Cell()
+            .add(new Paragraph("CAPTAIN STEEL [ CONTECT NO.9879109091 / 8980392009 / 7574879091 / 9879109121 ]")
+                .setFontSize(8)
+                .setFontColor(TEXT_PRIMARY))
+            .setBorder(Border.NO_BORDER)
+            .setTextAlignment(TextAlignment.CENTER);
+        
+        footerTable.addCell(contactCell);
+        
+        // Add both tables to document
+        document.add(lineTable);
+        document.add(footerTable);
+    }
+
+    // Helper method to convert HTML to formatted paragraph
+    private Paragraph convertHtmlToParagraph(Map<String, Object> item, boolean isPrintImage) {
+        Paragraph paragraph = new Paragraph();
+        String html = item.get("productName").toString();
+        
+        // Remove any null or empty strings
+        if (html == null || html.trim().isEmpty()) {
+            return paragraph;
+        }
+
+        // First handle HTML tags
+        String[] parts = html.split("(<b>|</b>)");
+        boolean isBold = false;
+
+        for (String part : parts) {
+            if (!part.trim().isEmpty()) {
+                Text text = new Text(part);
+                if (isBold) {
+                    text.setBold();
+                }
+                paragraph.add(text);
+                isBold = !isBold;
+            }
+        }
+
+        if(isPrintImage) {
+            // Add polycarbonate type image if applicable
+            String polyCarbonateType = (String) item.get("polyCarbonateType");
+            if (polyCarbonateType != null) {
+                String imagePath = getPolyCarbonateImagePath(polyCarbonateType);
+                if (imagePath != null) {
+                    try {
+                        paragraph.add(new Text("\n"));
+                        InputStream imageStream = getClass().getClassLoader().getResourceAsStream(imagePath);
+                        if (imageStream != null) {
+                            ImageData imageData = ImageDataFactory.create(imageStream.readAllBytes());
+                            Image img = new Image(imageData);
+                            img.setWidth(100);
+                            img.setHeight(20);
+                            paragraph.add(img);
+                            imageStream.close(); // Close the stream
+                        }
+                    } catch (Exception e) {
+                        log.error("Error loading polycarbonate image: " + imagePath, e);
+                    }
+                }
+            }
+        }
+        
+        return paragraph;
+    }
+
+    private String getPolyCarbonateImagePath(String polyCarbonateType) {
+        return switch (polyCarbonateType.toUpperCase()) {
+            case "SINGLE" -> "quotation/single.jpg";
+            case "DOUBLE" -> "quotation/double.jpg";
+            case "FULL_SHEET" -> "quotation/full_sheet.jpg";
+            default -> null;
+        };
     }
 } 

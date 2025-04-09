@@ -16,11 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import java.time.OffsetDateTime;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -66,13 +63,17 @@ public class CategoryService {
         try {
             Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ValidationException("Category not found"));
+            UserMaster currentUser = utilityService.getCurrentLoggedInUser();
+            if (!Objects.equals(category.getClient().getId(), currentUser.getClient().getId())) {
+                throw new ValidationException("You are not authorized to update this category");
+            }
 
-            Optional<Category> categoryByName = categoryRepository.findByNameAndIdNotIn(dto.getName().trim(), Collections.singletonList(category.getId()));
+            Optional<Category> categoryByName = categoryRepository.findByNameAndIdNotInAndClient_Id(
+                    dto.getName().trim(), Collections.singletonList(category.getId()), currentUser.getClient().getId());
             if(!categoryByName.isEmpty()) {
                 throw new ValidationException("Category name already exist");
             }
-            
-            UserMaster currentUser = utilityService.getCurrentLoggedInUser();
+
             
             category.setName(dto.getName().trim());
             category.setStatus(dto.getStatus().trim());

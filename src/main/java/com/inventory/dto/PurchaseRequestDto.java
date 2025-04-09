@@ -6,10 +6,10 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.inventory.config.CustomDateDeserializer;
 import lombok.Data;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 
@@ -17,6 +17,7 @@ import java.util.List;
 @Getter
 @Setter
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@NoArgsConstructor
 public class PurchaseRequestDto {
     private Long id;
     private Long customerId;
@@ -24,4 +25,5 @@ public class PurchaseRequestDto {
     private Date purchaseDate;
     private String invoiceNumber;
     private List<PurchaseItemDto> products;
+    private List<String> coilNumbers;
 }

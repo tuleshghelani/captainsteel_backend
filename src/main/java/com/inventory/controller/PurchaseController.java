@@ -44,4 +44,9 @@ public class PurchaseController {
 //            @RequestBody PurchaseRequestDto request) {
 //        return ResponseEntity.ok(purchaseService.update(id, request));
 //    }
+    
+    @PostMapping("/detail")
+    public ResponseEntity<?> getPurchaseDetail(@RequestBody PurchaseDto request) {
+        return ResponseEntity.ok(purchaseService.getPurchaseDetail(request));
+    }
 }

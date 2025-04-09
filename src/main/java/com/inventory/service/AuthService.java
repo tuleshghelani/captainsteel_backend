@@ -79,6 +79,7 @@ public class AuthService {
             tokens.put("firstName", user.getFirstName());
             tokens.put("lastName", user.getLastName());
             tokens.put("email", user.getEmail());
+            tokens.put("roles", user.getRoles().toString());
             
             return tokens;
         } catch (ValidationException ve) {

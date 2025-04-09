@@ -1,11 +1,31 @@
 package com.inventory.entity;
 
-import com.inventory.enums.QuotationStatus;
-import jakarta.persistence.*;
-import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+
+import com.inventory.enums.QuotationStatus;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.Version;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Data
 @Entity
@@ -35,6 +55,12 @@ public class Quotation {
     @Column(name = "customer_name")
     private String customerName;
     
+    @Column(name = "contact_number", length = 20)
+    private String contactNumber;
+    
+    @Column(name = "address", columnDefinition="varchar")
+    private String address;
+    
     @Column(name = "quote_date", nullable = false, columnDefinition = "DATE")
     private LocalDate quoteDate = LocalDate.now();
 
@@ -43,6 +69,15 @@ public class Quotation {
     
     @Column(name = "total_amount", precision = 19, scale = 2)
     private BigDecimal totalAmount = BigDecimal.ZERO;
+
+    @Column(name = "tax_amount", precision = 19, scale = 2)
+    private BigDecimal taxAmount = BigDecimal.ZERO;
+
+    @Column(name = "discounted_price", precision = 19, scale = 2)
+    private BigDecimal discountedPrice = BigDecimal.ZERO;
+    
+    @Column(name = "loading_charge", precision = 17, scale = 2, columnDefinition = "NUMERIC(17, 2) DEFAULT 0.00"    )
+    private BigDecimal loadingCharge = BigDecimal.ZERO;
     
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)

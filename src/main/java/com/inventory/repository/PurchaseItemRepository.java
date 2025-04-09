@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -22,14 +23,6 @@ public interface PurchaseItemRepository extends JpaRepository<PurchaseItem, Long
 //        """)
     @QueryHints(@QueryHint(name = org.hibernate.jpa.QueryHints.HINT_FETCH_SIZE, value = "100"))
     List<PurchaseItem> findByPurchaseId(@Param("purchaseId") Long purchaseId);
-    
-    @Modifying
-    @Query(value = """
-        UPDATE PurchaseItem pi 
-        SET pi.remainingQuantity = :remainingQuantity 
-        WHERE pi.id = :id
-        """)
-    int updateRemainingQuantity(@Param("id") Long id, @Param("remainingQuantity") Long remainingQuantity);
 
     @Modifying
     @Query("DELETE FROM PurchaseItem pi WHERE pi.purchase.id = :purchaseId")

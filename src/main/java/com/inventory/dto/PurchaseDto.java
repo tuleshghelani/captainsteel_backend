@@ -35,6 +35,7 @@ public class PurchaseDto {
     private Integer perPageRecord;
     private String search;
     private String status;
+    private String coilNumber;
     private BigDecimal discount;
     private BigDecimal discountAmount;
     private BigDecimal discountPrice;

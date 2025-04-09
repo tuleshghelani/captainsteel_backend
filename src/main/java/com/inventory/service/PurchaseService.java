@@ -22,9 +22,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.time.OffsetDateTime;
 
 import com.inventory.dto.PurchaseDto;
 
@@ -47,6 +49,12 @@ public class PurchaseService {
             validatePurchaseRequest(request);
             UserMaster currentUser = utilityService.getCurrentLoggedInUser();
             
+            // Handle update case
+            if (request.getId() != null) {
+                return handlePurchaseUpdate(request, currentUser);
+            }
+            
+            // Existing create logic
             Purchase purchase = new Purchase();
             purchase.setCustomer(customerRepository.findById(request.getCustomerId())
                 .orElseThrow(() -> new ValidationException("Customer not found")));
@@ -60,12 +68,19 @@ public class PurchaseService {
             // Process items in batches
             List<PurchaseItem> items = new ArrayList<>();
             BigDecimal totalAmount = BigDecimal.ZERO;
+
+            List<String> coilNumbers = new ArrayList<>();
             
             for (PurchaseItemDto itemDto : request.getProducts()) {
                 PurchaseItem item = createPurchaseItem(itemDto, purchase);
                 items.add(item);
                 purchaseItemRepository.save(item);
                 totalAmount = totalAmount.add(item.getFinalPrice());
+                if (item.getCoilNumber() != null && !item.getCoilNumber().isEmpty()) {
+                    // Escape any special characters including commas
+                    String escapedcoilNumber = item.getCoilNumber().replace(",", "\\,");
+                    coilNumbers.add(escapedcoilNumber);
+                }
     //            productQuantityService.updateProductQuantity(
     //                    item.getProduct().getId(),
     //                    item.getQuantity(),
@@ -73,7 +88,10 @@ public class PurchaseService {
     //            );
             }
             
+            // Round the total amount
+            totalAmount = totalAmount.setScale(0, RoundingMode.HALF_UP);
             purchase.setTotalPurchaseAmount(totalAmount);
+            purchase.setCoilNumbers(coilNumbers);
             purchase = purchaseRepository.save(purchase);
             
             // Process items and update product quantities in batches
@@ -97,20 +115,24 @@ public class PurchaseService {
         item.setProduct(product);
         item.setPurchase(purchase);
         item.setQuantity(dto.getQuantity());
-        item.setUnitPrice(dto.getUnitPrice().setScale(2, BigDecimal.ROUND_HALF_UP));
-        item.setDiscountPercentage(dto.getDiscountPercentage());
+        item.setRemarks(dto.getRemarks());
+        if (dto.getCoilNumber() != null && !dto.getCoilNumber().isEmpty()) {
+            item.setCoilNumber(dto.getCoilNumber().toLowerCase());
+        }
+        item.setUnitPrice(dto.getUnitPrice().setScale(2, RoundingMode.HALF_UP));
+//        item.setDiscountPercentage(dto.getDiscountPercentage());
         
         // Calculate amounts with 2 decimal places
         BigDecimal subTotal = dto.getUnitPrice()
-            .multiply(BigDecimal.valueOf(dto.getQuantity()))
-            .setScale(2, BigDecimal.ROUND_HALF_UP);
+            .multiply((dto.getQuantity()))
+            .setScale(2, RoundingMode.HALF_UP);
             
         BigDecimal discountAmount = calculateDiscountAmount(subTotal, dto.getDiscountPercentage())
-            .setScale(2, BigDecimal.ROUND_HALF_UP);
+            .setScale(2, RoundingMode.HALF_UP);
         
-        item.setDiscountAmount(discountAmount);
-        item.setFinalPrice(subTotal.subtract(discountAmount).setScale(2, BigDecimal.ROUND_HALF_UP));
-        item.setRemainingQuantity(dto.getQuantity());
+//        item.setDiscountAmount(discountAmount);
+        item.setFinalPrice(subTotal.subtract(discountAmount).setScale(2, RoundingMode.HALF_UP));
+//        item.setRemainingQuantity(dto.getQuantity());
         item.setClient(purchase.getClient());
         
         return item;
@@ -119,7 +141,7 @@ public class PurchaseService {
     private BigDecimal calculateDiscountAmount(BigDecimal base, BigDecimal percentage) {
         return percentage != null ? 
             base.multiply(percentage)
-                .divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP) : 
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP) : 
             BigDecimal.ZERO;
     }
     
@@ -154,7 +176,7 @@ public class PurchaseService {
             if (item.getProductId() == null) {
                 throw new ValidationException("Product ID is required");
             }
-            if (item.getQuantity() == null || item.getQuantity() <= 0) {
+            if (item.getQuantity() == null || item.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new ValidationException("Valid quantity is required");
             }
             if (item.getUnitPrice() == null || item.getUnitPrice().compareTo(BigDecimal.ZERO) <= 0) {
@@ -203,5 +225,70 @@ public class PurchaseService {
             log.error("Error deleting purchase: {}", e.getMessage(), e);
             throw new ValidationException("Failed to delete purchase: " + e.getMessage());
         }
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> getPurchaseDetail(PurchaseDto request) {
+        try {
+            UserMaster currentUser = utilityService.getCurrentLoggedInUser();
+            return purchaseDao.getPurchaseDetail(request.getId(), currentUser.getClient().getId());
+        } catch (Exception e) {
+            log.error("Error fetching purchase detail: {}", e.getMessage(), e);
+            throw new ValidationException("Failed to fetch purchase detail: " + e.getMessage());
+        }
+    }
+
+    private ApiResponse<?> handlePurchaseUpdate(PurchaseRequestDto request, UserMaster currentUser) {
+        Purchase existingPurchase = purchaseRepository.findById(request.getId())
+            .orElseThrow(() -> new ValidationException("Purchase not found"));
+            
+        if (!existingPurchase.getClient().getId().equals(currentUser.getClient().getId())) {
+            throw new ValidationException("Unauthorized access to purchase");
+        }
+        
+        // Reverse existing quantities
+        List<PurchaseItem> existingItems = purchaseItemRepository.findByPurchaseId(request.getId());
+        for (PurchaseItem item : existingItems) {
+            productQuantityService.updateProductQuantity(
+                item.getProduct().getId(),
+                item.getQuantity(),
+                false,  // not a purchase
+                true,   // is a sale (reverse)
+                null    // no blocking
+            );
+        }
+        
+        // Delete existing items
+        purchaseItemRepository.deleteByPurchaseId(request.getId());
+        
+        // Update purchase details
+        existingPurchase.setCustomer(customerRepository.findById(request.getCustomerId())
+            .orElseThrow(() -> new ValidationException("Customer not found")));
+        existingPurchase.setPurchaseDate(request.getPurchaseDate());
+        existingPurchase.setInvoiceNumber(request.getInvoiceNumber());
+        existingPurchase.setNumberOfItems(request.getProducts().size());
+        existingPurchase.setUpdatedBy(currentUser);
+        existingPurchase.setUpdatedAt(OffsetDateTime.now());
+        
+        // Process new items
+        List<PurchaseItem> newItems = new ArrayList<>();
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        
+        for (PurchaseItemDto itemDto : request.getProducts()) {
+            PurchaseItem item = createPurchaseItem(itemDto, existingPurchase);
+            newItems.add(item);
+            purchaseItemRepository.save(item);
+            totalAmount = totalAmount.add(item.getFinalPrice());
+        }
+        
+        // Round the total amount
+        totalAmount = totalAmount.setScale(0, RoundingMode.HALF_UP);
+        existingPurchase.setTotalPurchaseAmount(totalAmount);
+        purchaseRepository.save(existingPurchase);
+        
+        // Process items and update product quantities in batches
+        batchProcessingService.processPurchaseItems(newItems);
+        
+        return ApiResponse.success("Purchase updated successfully");
     }
 }

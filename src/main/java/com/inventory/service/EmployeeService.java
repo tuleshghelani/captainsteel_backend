@@ -1,22 +1,26 @@
 package com.inventory.service;
 
+import java.math.BigDecimal;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import com.inventory.dao.EmployeeDao;
 import com.inventory.dto.ApiResponse;
 import com.inventory.dto.EmployeeDto;
 import com.inventory.entity.Employee;
 import com.inventory.entity.UserMaster;
 import com.inventory.exception.ValidationException;
 import com.inventory.repository.EmployeeRepository;
-import com.inventory.dao.EmployeeDao;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
-import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -44,7 +48,7 @@ public class EmployeeService {
             employee.setClient(currentUser.getClient());
             
             employee = employeeRepository.save(employee);
-            return ApiResponse.success("Employee created successfully", mapEntityToDto(employee));
+            return ApiResponse.success("Employee created successfully");
         } catch (ValidationException e) {
             throw e;
         } catch (Exception e) {
@@ -77,7 +81,7 @@ public class EmployeeService {
             employee.setUpdatedAt(OffsetDateTime.now());
             
             employee = employeeRepository.save(employee);
-            return ApiResponse.success("Employee updated successfully", mapEntityToDto(employee));
+            return ApiResponse.success("Employee updated successfully");
         } catch (ValidationException e) {
             throw e;
         } catch (Exception e) {
@@ -147,24 +151,50 @@ public class EmployeeService {
         if (!StringUtils.hasText(dto.getName())) {
             throw new ValidationException("Name is required");
         }
-//        if (!StringUtils.hasText(dto.getMobileNumber())) {
-//            throw new ValidationException("Mobile number is required");
-//        }
-//        if (dto.getMobileNumber().length() < 10 || dto.getMobileNumber().length() > 15) {
-//            throw new ValidationException("Invalid mobile number");
-//        }
+        
+        if (dto.getWageType() != null) {
+            String wageType = dto.getWageType().toUpperCase();
+            if (!wageType.equals("HOURLY") && !wageType.equals("FIXED")) {
+                throw new ValidationException("Wage type must be either 'HOURLY' or 'FIXED'");
+            }
+        } else {
+            dto.setWageType("HOURLY");
+        }
+
+        if (dto.getRegularHours() == null || dto.getRegularHours().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ValidationException("Regular hours must be greater than 0");
+        }
+
+        if (dto.getRegularPay() == null || dto.getRegularPay().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ValidationException("Regular pay must be greater than 0");
+        }
+
+        if (dto.getOvertimePay() == null || dto.getOvertimePay().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ValidationException("Overtime pay must be greater than 0");
+        }
+
+        if (dto.getStartTime() == null || dto.getStartTime().isAfter(LocalTime.of(23, 59, 59))) {
+            throw new ValidationException("Start time must be before 11:59 PM");
+        }
     }
 
     private void mapDtoToEntity(EmployeeDto dto, Employee employee) {
         employee.setName(dto.getName().trim());
         employee.setMobileNumber(dto.getMobileNumber() != null ? dto.getMobileNumber().trim() : null);
+        employee.setAadharNumber(dto.getAadharNumber() != null ? dto.getAadharNumber().trim() : null);
         employee.setEmail(dto.getEmail());
         employee.setAddress(dto.getAddress());
         employee.setDesignation(dto.getDesignation());
         employee.setDepartment(dto.getDepartment());
         employee.setStatus(dto.getStatus() != null ? dto.getStatus() : "A");
         employee.setClient(utilityService.getCurrentLoggedInUser().getClient());
+        employee.setWageType(dto.getWageType());
+        employee.setRegularHours(dto.getRegularHours());
+        employee.setStartTime(dto.getStartTime());
+        employee.setRegularPay(dto.getRegularPay());
+        employee.setOvertimePay(dto.getOvertimePay());
     }
+
 
     private EmployeeDto mapEntityToDto(Employee employee) {
         EmployeeDto dto = new EmployeeDto();

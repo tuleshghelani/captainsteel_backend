@@ -3,6 +3,9 @@ package com.inventory.controller;
 import com.inventory.dto.ProductDto;
 import com.inventory.service.ProductService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,5 +39,21 @@ public class ProductController {
     @PostMapping("/search")
     public ResponseEntity<?> searchProducts(@RequestBody ProductDto productDto) {
         return ResponseEntity.ok(productService.searchProducts(productDto));
+    }
+
+    @PostMapping("/export-pdf")
+    public ResponseEntity<?> exportPdf(@RequestBody ProductDto productDto) {
+        try {
+            byte[] pdfBytes = productService.exportProductsPdf(productDto);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("filename", "products.pdf");
+
+            return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(e.getMessage());
+        }
     }
 }

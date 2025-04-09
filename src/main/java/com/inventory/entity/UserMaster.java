@@ -1,6 +1,8 @@
 package com.inventory.entity;
 
 import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.ArrayList;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -21,6 +23,9 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import com.vladmihalcea.hibernate.type.json.JsonType;
+import org.hibernate.annotations.Type;
 
 @Data
 @Entity
@@ -72,6 +77,10 @@ public class UserMaster {
     
     @Column(name = "fail_login_count", nullable = false)
     private Integer failLoginCount = 0;
+
+    @Column(name = "roles", columnDefinition = "jsonb default '[]'")
+    @Type(value = com.vladmihalcea.hibernate.type.json.JsonType.class)
+    private List<String> roles = new ArrayList<>();
     
     @Column(name = "lock_time")
     private OffsetDateTime lockTime;

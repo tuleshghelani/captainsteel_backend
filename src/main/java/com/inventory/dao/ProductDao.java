@@ -1,17 +1,18 @@
 package com.inventory.dao;
 
-import com.inventory.dto.CategoryDto;
-import com.inventory.dto.ProductDto;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.Query;
-import org.springframework.stereotype.Repository;
-import org.springframework.util.StringUtils;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.springframework.stereotype.Repository;
+import org.springframework.util.StringUtils;
+
+import com.inventory.dto.ProductDto;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.Query;
 
 @Repository
 public class ProductDao {
@@ -27,7 +28,11 @@ public class ProductDao {
                 p.id,
                 p.name,
                 p.purchase_amount,
-                p.sale_amount
+                p.sale_amount,
+                p.type,
+                p.weight,
+                p.poly_carbonate_type,
+                p.measurement
             FROM product p
             WHERE 1=1
         """);
@@ -68,10 +73,16 @@ public class ProductDao {
         for (Object[] row : results) {
             if (row[0] != null) {
                 Map<String, Object> product = new HashMap<>(10);
-                product.put("id", row[0]);
-                product.put("name", row[1]);
-                product.put("purchase_amount", row[2]);
-                product.put("sale_amount", row[3]);
+                int index = 0;
+                product.put("id", row[index++]);
+                product.put("name", row[index++]);
+                product.put("purchaseAmount", row[index++]);
+                product.put("saleAmount", row[index++]);
+                product.put("type", row[index++]);
+                product.put("weight", row[index++]);
+                product.put("polyCarbonateType", row[index++]);
+                product.put("measurement", row[index++]);
+
 
                 products.add(product);
             }
@@ -114,7 +125,13 @@ public class ProductDao {
                 c.id as category_id,
                 c.name as category_name,
                 p.purchase_amount,
-                p.sale_amount
+                p.sale_amount,
+                p.blocked_quantity,
+                p.total_remaining_quantity,
+                p.weight,
+                p.type,
+                p.poly_carbonate_type,
+                p.measurement
             FROM product p
             LEFT JOIN category c ON p.category_id = c.id
             WHERE 1=1
@@ -169,17 +186,24 @@ public class ProductDao {
 
         for (Object[] row : results) {
             if (row[0] != null) {
-                Map<String, Object> product = new HashMap<>(10);
-                product.put("id", row[0]);
-                product.put("name", row[1]);
-                product.put("description", row[2]);
-                product.put("minimumStock", row[3]);
-                product.put("status", row[4]);
-                product.put("remainingQuantity", row[5]);
-                product.put("categoryId", row[6]);
-                product.put("categoryName", row[7]);
-                product.put("purchaseAmount", row[8]);
-                product.put("saleAmount", row[9]);
+                int index = 0;
+                Map<String, Object> product = new HashMap<>(12);
+                product.put("id", row[index++]);
+                product.put("name", row[index++]);
+                product.put("description", row[index++]);
+                product.put("minimumStock", row[index++]);
+                product.put("status", row[index++]);
+                product.put("remainingQuantity", row[index++]);
+                product.put("categoryId", row[index++]);
+                product.put("categoryName", row[index++]);
+                product.put("purchaseAmount", row[index++]);
+                product.put("saleAmount", row[index++]);
+                product.put("blockedQuantity", row[index++]);
+                product.put("totalRemainingQuantity", row[index++]);
+                product.put("weight", row[index++]);
+                product.put("type", row[index++]);
+                product.put("polyCarbonateType", row[index++]);
+                product.put("measurement", row[index++]);
                 products.add(product);
             }
         }
@@ -190,5 +214,75 @@ public class ProductDao {
         response.put("totalPages", (int) Math.ceil((double) totalRecords / pageSize));
 
         return response;
+    }
+
+    public List<Map<String, Object>> getProductsForPdf(ProductDto productDto) {
+        StringBuilder sql = new StringBuilder();
+        Map<String, Object> params = new HashMap<>();
+
+        sql.append("""
+            SELECT 
+                p.id,
+                p.name,
+                p.description,
+                p.minimum_stock,
+                p.status,
+                p.remaining_quantity,
+                c.id as category_id,
+                c.name as category_name,
+                p.purchase_amount,
+                p.sale_amount,
+                p.blocked_quantity,
+                p.total_remaining_quantity,
+                p.weight,
+                p.type,
+                p.poly_carbonate_type,
+                p.measurement
+            FROM product p
+            LEFT JOIN category c ON p.category_id = c.id
+            WHERE 1=1
+        """);
+
+        appendSearchConditions(sql, params, productDto);
+        sql.append(" ORDER BY p.").append(productDto.getSortBy()).append(" ").append(productDto.getSortDir().toUpperCase());
+
+        Query query = entityManager.createNativeQuery(sql.toString())
+            .setHint(org.hibernate.annotations.QueryHints.FETCH_SIZE, 100)
+            .setHint(org.hibernate.annotations.QueryHints.CACHEABLE, true);
+        
+        params.forEach(query::setParameter);
+
+        List<Object[]> results = query.getResultList();
+        return transformPdfResults(results);
+    }
+
+    private List<Map<String, Object>> transformPdfResults(List<Object[]> results) {
+        List<Map<String, Object>> products = new ArrayList<>();
+
+        for (Object[] row : results) {
+            if (row[0] != null) {
+                int index = 0;
+                Map<String, Object> product = new HashMap<>(12);
+                product.put("id", row[index++]);
+                product.put("name", row[index++]);
+                product.put("description", row[index++]);
+                product.put("minimumStock", row[index++]);
+                product.put("status", row[index++]);
+                product.put("remainingQuantity", row[index++]);
+                product.put("categoryId", row[index++]);
+                product.put("categoryName", row[index++]);
+                product.put("purchaseAmount", row[index++]);
+                product.put("saleAmount", row[index++]);
+                product.put("blockedQuantity", row[index++]);
+                product.put("totalRemainingQuantity", row[index++]);
+                product.put("weight", row[index++]);
+                product.put("type", row[index++]);
+                product.put("polyCarbonateType", row[index++]);
+                product.put("measurement", row[index++]);
+                products.add(product);
+            }
+        }
+
+        return products;
     }
 }

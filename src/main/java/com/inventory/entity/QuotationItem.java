@@ -1,8 +1,24 @@
 package com.inventory.entity;
 
-import jakarta.persistence.*;
-import lombok.*;
 import java.math.BigDecimal;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.Version;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Data
 @Entity
@@ -30,8 +46,11 @@ public class QuotationItem {
         foreignKey = @ForeignKey(name = "fk_quotation_items_product_id_product_id"))
     private Product product;
     
-    @Column(name = "quantity", nullable = false)
-    private Long quantity;
+    @Column(name = "quantity", nullable = false, columnDefinition = "numeric(12,3)")
+    private BigDecimal quantity = BigDecimal.ZERO;
+
+    @Column(name = "weight", precision = 12, scale = 3, columnDefinition = "numeric(12,3) DEFAULT 0.000")
+    private BigDecimal weight = BigDecimal.ZERO;
     
     @Column(name = "unit_price", precision = 19, scale = 2, columnDefinition = "NUMERIC(19, 2) DEFAULT 0.00")
     private BigDecimal unitPrice = BigDecimal.ZERO;
@@ -53,6 +72,12 @@ public class QuotationItem {
     
     @Column(name = "final_price", precision = 19, scale = 2, columnDefinition = "NUMERIC(19, 2) DEFAULT 0.00")
     private BigDecimal finalPrice = BigDecimal.ZERO;
+    
+    @Column(name = "loading_charge", precision = 17, scale = 2, columnDefinition = "NUMERIC(17, 2) DEFAULT 0.00"    )
+    private BigDecimal loadingCharge = BigDecimal.ZERO;
+    
+    @Column(name = "calculation_type")
+    private String calculationType;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_id", nullable = false,
