@@ -502,9 +502,6 @@ public class QuotationService {
     }
 
     private void validateQuotationRequest(QuotationRequestDto request) {
-        if (request.getCustomerName() == null) {
-            throw new ValidationException("Customer Name is required");
-        }
         if (request.getQuoteDate() == null) {
             throw new ValidationException("Quote date is required");
         }
