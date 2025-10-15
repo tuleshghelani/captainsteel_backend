@@ -27,4 +27,6 @@ public class QuotationItemRequestDto {
     private List<QuotationItemCalculationDto> calculations;
     private BigDecimal finalPrice;
     private BigDecimal loadingCharge;
+    private String accessoriesSize; // required for ACCESSORIES
+    private Integer nos; // required for ACCESSORIES
 } 

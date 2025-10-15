@@ -221,6 +221,9 @@ public class QuotationService {
             calculateMeasurements(itemDto, product, currentUser);
         } else if (product.getType() == ProductMainType.NOS) {
             validateNosProduct(itemDto);
+        } else if (product.getType() == ProductMainType.ACCESSORIES) {
+            validateAccessoriesProduct(product, itemDto);
+            calculateAccessoriesQuantity(itemDto, product);
         }
         
         // Set default tax percentage if not provided
@@ -232,6 +235,29 @@ public class QuotationService {
         if (itemDto.getDiscountPercentage() == null) {
             itemDto.setDiscountPercentage(BigDecimal.ZERO);
         }
+    }
+
+    private void validateAccessoriesProduct(Product product, QuotationItemRequestDto itemDto) {
+        if (itemDto.getAccessoriesSize() == null || itemDto.getAccessoriesSize().trim().isEmpty()) {
+            throw new ValidationException("accessoriesSize is required for ACCESSORIES products");
+        }
+        if (itemDto.getNos() == null || itemDto.getNos() <= 0) {
+            throw new ValidationException("Nos must be greater than 0 for ACCESSORIES products");
+        }
+        if (product.getAccessoriesWeight() == null || product.getAccessoriesWeight().isEmpty()) {
+            throw new ValidationException("Accessories weights are not configured for product: " + product.getName());
+        }
+        if (!product.getAccessoriesWeight().containsKey(itemDto.getAccessoriesSize())) {
+            throw new ValidationException("Invalid accessories size: " + itemDto.getAccessoriesSize());
+        }
+    }
+
+    private void calculateAccessoriesQuantity(QuotationItemRequestDto itemDto, Product product) {
+        BigDecimal unitWeight = product.getAccessoriesWeight().get(itemDto.getAccessoriesSize());
+        BigDecimal total = unitWeight.multiply(BigDecimal.valueOf(itemDto.getNos()))
+                .setScale(3, RoundingMode.HALF_UP);
+        itemDto.setQuantity(total);
+        itemDto.setWeight(total);
     }
 
     private void validateRegularProductCalculations(QuotationItemRequestDto itemDto) {
@@ -428,6 +454,11 @@ public class QuotationService {
         item.setProduct(product);
         item.setQuantity(itemDto.getQuantity());
         item.setWeight(itemDto.getWeight());
+        if (product.getType() == ProductMainType.ACCESSORIES) {
+            item.setAccessoriesSize(itemDto.getAccessoriesSize());
+            BigDecimal unitWeight = product.getAccessoriesWeight().get(itemDto.getAccessoriesSize());
+            item.setAccessoriesWeight(unitWeight);
+        }
         item.setUnitPrice(itemDto.getUnitPrice());
         item.setDiscountPercentage(itemDto.getDiscountPercentage());
         item.setTaxPercentage(itemDto.getTaxPercentage());
@@ -513,8 +544,20 @@ public class QuotationService {
             if (item.getProductId() == null) {
                 throw new ValidationException("Product ID is required");
             }
-            if (item.getQuantity() == null || item.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
-                throw new ValidationException("Valid quantity is required");
+            // For ACCESSORIES, quantity is derived; require accessoriesSize and nos instead
+            Product product = productRepository.findById(item.getProductId())
+                .orElseThrow(() -> new ValidationException("Product not found"));
+            if (product.getType() == ProductMainType.ACCESSORIES) {
+                if (item.getAccessoriesSize() == null || item.getAccessoriesSize().trim().isEmpty()) {
+                    throw new ValidationException("accessoriesSize is required for ACCESSORIES items");
+                }
+                if (item.getNos() == null || item.getNos() <= 0) {
+                    throw new ValidationException("Nos must be greater than 0 for ACCESSORIES items");
+                }
+            } else {
+                if (item.getQuantity() == null || item.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+                    throw new ValidationException("Valid quantity is required");
+                }
             }
             if (item.getUnitPrice() == null || item.getUnitPrice().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new ValidationException("Valid unit price is required");
@@ -599,6 +642,8 @@ public class QuotationService {
                 itemMap.put("finalPrice", item.getFinalPrice());
                 itemMap.put("calculationType", item.getCalculationType());
                 itemMap.put("loadingCharge", item.getLoadingCharge());
+                itemMap.put("accessoriesSize", item.getAccessoriesSize());
+                itemMap.put("accessoriesWeight", item.getAccessoriesWeight());
                 
                 // Add calculations for this item
                 List<Map<String, Object>> itemCalculations = calculations.stream()

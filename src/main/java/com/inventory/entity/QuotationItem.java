@@ -52,6 +52,9 @@ public class QuotationItem {
     @Column(name = "weight", precision = 12, scale = 3, columnDefinition = "numeric(12,3) DEFAULT 0.000")
     private BigDecimal weight = BigDecimal.ZERO;
     
+    @Column(name = "accessories_weight", precision = 12, scale = 3, columnDefinition = "numeric(12,3)")
+    private BigDecimal accessoriesWeight = BigDecimal.ZERO;
+    
     @Column(name = "unit_price", precision = 19, scale = 2, columnDefinition = "NUMERIC(19, 2) DEFAULT 0.00")
     private BigDecimal unitPrice = BigDecimal.ZERO;
     
@@ -75,6 +78,9 @@ public class QuotationItem {
     
     @Column(name = "loading_charge", precision = 17, scale = 2, columnDefinition = "NUMERIC(17, 2) DEFAULT 0.00"    )
     private BigDecimal loadingCharge = BigDecimal.ZERO;
+    
+    @Column(name = "accessories_size", length = 32)
+    private String accessoriesSize;
     
     @Column(name = "calculation_type")
     private String calculationType;

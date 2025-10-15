@@ -221,8 +221,6 @@ public class ProductService {
 //                    throw new ValidationException("Invalid accessories rate for size: " + key);
 //                }
 //            }
-        } else if (dto.getAccessoriesWeight() != null) {
-            throw new ValidationException("Accessories rates should only be set for ACCESSORIES products");
         }
     }
 
