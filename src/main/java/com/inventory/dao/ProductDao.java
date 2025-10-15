@@ -9,6 +9,8 @@ import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
 
 import com.inventory.dto.ProductDto;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -18,6 +20,7 @@ import jakarta.persistence.Query;
 public class ProductDao {
     @PersistenceContext
     private EntityManager entityManager;
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     
     public List<Map<String, Object>> getProducts(ProductDto productDto) {
         StringBuilder sql = new StringBuilder();
@@ -32,7 +35,8 @@ public class ProductDao {
                 p.type,
                 p.weight,
                 p.poly_carbonate_type,
-                p.measurement
+                p.measurement,
+                p.accessories_rates
             FROM product p
             WHERE 1=1
         """);
@@ -82,6 +86,8 @@ public class ProductDao {
                 product.put("weight", row[index++]);
                 product.put("polyCarbonateType", row[index++]);
                 product.put("measurement", row[index++]);
+                Object accessoriesRatesRaw = row[index++];
+                product.put("accessoriesRates", parseAccessoriesRates(accessoriesRatesRaw));
 
 
                 products.add(product);
@@ -131,7 +137,8 @@ public class ProductDao {
                 p.weight,
                 p.type,
                 p.poly_carbonate_type,
-                p.measurement
+                p.measurement,
+                p.accessories_rates
             FROM product p
             LEFT JOIN category c ON p.category_id = c.id
             WHERE 1=1
@@ -204,6 +211,8 @@ public class ProductDao {
                 product.put("type", row[index++]);
                 product.put("polyCarbonateType", row[index++]);
                 product.put("measurement", row[index++]);
+                Object accessoriesRatesRaw = row[index++];
+                product.put("accessoriesRates", parseAccessoriesRates(accessoriesRatesRaw));
                 products.add(product);
             }
         }
@@ -237,7 +246,8 @@ public class ProductDao {
                 p.weight,
                 p.type,
                 p.poly_carbonate_type,
-                p.measurement
+                p.measurement,
+                p.accessories_rates
             FROM product p
             LEFT JOIN category c ON p.category_id = c.id
             WHERE 1=1
@@ -279,10 +289,35 @@ public class ProductDao {
                 product.put("type", row[index++]);
                 product.put("polyCarbonateType", row[index++]);
                 product.put("measurement", row[index++]);
+                Object accessoriesRatesRaw = row[index++];
+                product.put("accessoriesRates", parseAccessoriesRates(accessoriesRatesRaw));
                 products.add(product);
             }
         }
 
         return products;
+    }
+
+    private Object parseAccessoriesRates(Object value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            if (value instanceof String str) {
+                if (!StringUtils.hasText(str)) {
+                    return null;
+                }
+                return OBJECT_MAPPER.readValue(str, new TypeReference<Map<String, Object>>() {});
+            }
+            // Already a map or other structure
+            if (value instanceof Map) {
+                return value;
+            }
+            // Fallback: return as-is
+            return value;
+        } catch (Exception e) {
+            // On parse error, return original string to avoid breaking the API
+            return value;
+        }
     }
 }

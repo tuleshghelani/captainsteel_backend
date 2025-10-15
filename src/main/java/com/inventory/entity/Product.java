@@ -2,6 +2,8 @@ package com.inventory.entity;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 import com.inventory.enums.PolyCarbonateType;
 import com.inventory.enums.ProductMainType;
@@ -25,6 +27,7 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Type;
 
 @Data
 @Entity
@@ -107,4 +110,8 @@ public class Product {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_id", referencedColumnName = "id", foreignKey = @ForeignKey(name = "fk_product_client_id_client_id"))
     private Client client;
+
+    @Column(name = "accessories_rates", columnDefinition = "jsonb default '{}'")
+    @Type(value = com.vladmihalcea.hibernate.type.json.JsonType.class)
+    private Map<String, BigDecimal> accessoriesRates = new HashMap<>();
 }

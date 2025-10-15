@@ -58,6 +58,11 @@ public class ProductService {
             product.setType(dto.getType() != null ? dto.getType() : null);
             product.setPolyCarbonateType(dto.getType() == ProductMainType.POLY_CARBONATE ? dto.getPolyCarbonateType() : null);
             product.setClient(currentUser.getClient());
+            if (dto.getType() == ProductMainType.ACCESSORIES) {
+                product.setAccessoriesRates(dto.getAccessoriesRates() != null ? new HashMap<>(dto.getAccessoriesRates()) : new HashMap<>());
+            } else {
+                product.setAccessoriesRates(null);
+            }
             product.setCreatedBy(currentUser);
 
             productRepository.save(product);
@@ -101,6 +106,11 @@ public class ProductService {
             product.setType(dto.getType() != null ? dto.getType() : null);
             product.setPolyCarbonateType(dto.getType() == ProductMainType.POLY_CARBONATE ? dto.getPolyCarbonateType() : null);
             product.setClient(currentUser.getClient());
+            if (dto.getType() == ProductMainType.ACCESSORIES) {
+                product.setAccessoriesRates(dto.getAccessoriesRates() != null ? new HashMap<>(dto.getAccessoriesRates()) : new HashMap<>());
+            } else {
+                product.setAccessoriesRates(null);
+            }
 
             // Handle quantity updates using the new method
             dto.setTotalRemainingQuantity(product.getRemainingQuantity().subtract(product.getBlockedQuantity()));
@@ -195,6 +205,25 @@ public class ProductService {
         } else if (dto.getPolyCarbonateType() != null) {
             throw new ValidationException("Poly carbonate type should only be set for POLY_CARBONATE products");
         }
+
+        if (ProductMainType.ACCESSORIES == dto.getType()) {
+            if (dto.getAccessoriesRates() == null || dto.getAccessoriesRates().isEmpty()) {
+                throw new ValidationException("Accessories rates are required for ACCESSORIES products");
+            }
+            // Validate keys present: 6,8,12,16,24,32,48
+//            List<String> requiredKeys = Arrays.asList("6","8","12","16","24","32","48");
+//            for (String key : requiredKeys) {
+//                if (!dto.getAccessoriesRates().containsKey(key)) {
+//                    throw new ValidationException("Missing accessories rate for size: " + key);
+//                }
+//                BigDecimal rate = dto.getAccessoriesRates().get(key);
+//                if (rate == null || rate.compareTo(BigDecimal.ZERO) < 0) {
+//                    throw new ValidationException("Invalid accessories rate for size: " + key);
+//                }
+//            }
+        } else if (dto.getAccessoriesRates() != null) {
+            throw new ValidationException("Accessories rates should only be set for ACCESSORIES products");
+        }
     }
 
     private ProductDto mapToDto(Product product) {
@@ -208,6 +237,9 @@ public class ProductService {
         dto.setRemainingQuantity(product.getRemainingQuantity());
         dto.setClientId(product.getClient().getId());
         dto.setPolyCarbonateType(product.getPolyCarbonateType());
+        if (product.getType() == ProductMainType.ACCESSORIES) {
+            dto.setAccessoriesRates(product.getAccessoriesRates());
+        }
         return dto;
     }
 

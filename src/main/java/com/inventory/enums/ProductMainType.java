@@ -6,7 +6,8 @@ import lombok.Getter;
 public enum ProductMainType {
     NOS("Nos"),
     REGULAR("Regular"),
-    POLY_CARBONATE("Poly Carbonate");
+    POLY_CARBONATE("Poly Carbonate"),
+    ACCESSORIES("Accessories");
 
     private final String text;
     private final String value;

@@ -1,6 +1,7 @@
 package com.inventory.dto;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.inventory.enums.PolyCarbonateType;
@@ -36,4 +37,5 @@ public class ProductDto {
     private String sortBy = "id";
     private String sortDir = "desc";
     private PolyCarbonateType polyCarbonateType;
+    private Map<String, BigDecimal> accessoriesRates;
 }
