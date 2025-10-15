@@ -37,5 +37,5 @@ public class ProductDto {
     private String sortBy = "id";
     private String sortDir = "desc";
     private PolyCarbonateType polyCarbonateType;
-    private Map<String, BigDecimal> accessoriesRates;
+    private Map<String, BigDecimal> accessoriesWeight;
 }

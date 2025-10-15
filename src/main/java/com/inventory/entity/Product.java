@@ -111,7 +111,7 @@ public class Product {
     @JoinColumn(name = "client_id", referencedColumnName = "id", foreignKey = @ForeignKey(name = "fk_product_client_id_client_id"))
     private Client client;
 
-    @Column(name = "accessories_rates", columnDefinition = "jsonb default '{}'")
+    @Column(name = "accessories_weight", columnDefinition = "jsonb default '{}'")
     @Type(value = com.vladmihalcea.hibernate.type.json.JsonType.class)
-    private Map<String, BigDecimal> accessoriesRates = new HashMap<>();
+    private Map<String, BigDecimal> accessoriesWeight = new HashMap<>();
 }

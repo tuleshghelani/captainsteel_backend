@@ -59,9 +59,9 @@ public class ProductService {
             product.setPolyCarbonateType(dto.getType() == ProductMainType.POLY_CARBONATE ? dto.getPolyCarbonateType() : null);
             product.setClient(currentUser.getClient());
             if (dto.getType() == ProductMainType.ACCESSORIES) {
-                product.setAccessoriesRates(dto.getAccessoriesRates() != null ? new HashMap<>(dto.getAccessoriesRates()) : new HashMap<>());
+                product.setAccessoriesWeight(dto.getAccessoriesWeight() != null ? new HashMap<>(dto.getAccessoriesWeight()) : new HashMap<>());
             } else {
-                product.setAccessoriesRates(null);
+                product.setAccessoriesWeight(null);
             }
             product.setCreatedBy(currentUser);
 
@@ -107,9 +107,9 @@ public class ProductService {
             product.setPolyCarbonateType(dto.getType() == ProductMainType.POLY_CARBONATE ? dto.getPolyCarbonateType() : null);
             product.setClient(currentUser.getClient());
             if (dto.getType() == ProductMainType.ACCESSORIES) {
-                product.setAccessoriesRates(dto.getAccessoriesRates() != null ? new HashMap<>(dto.getAccessoriesRates()) : new HashMap<>());
+                product.setAccessoriesWeight(dto.getAccessoriesWeight() != null ? new HashMap<>(dto.getAccessoriesWeight()) : new HashMap<>());
             } else {
-                product.setAccessoriesRates(null);
+                product.setAccessoriesWeight(null);
             }
 
             // Handle quantity updates using the new method
@@ -207,21 +207,21 @@ public class ProductService {
         }
 
         if (ProductMainType.ACCESSORIES == dto.getType()) {
-            if (dto.getAccessoriesRates() == null || dto.getAccessoriesRates().isEmpty()) {
+            if (dto.getAccessoriesWeight() == null || dto.getAccessoriesWeight().isEmpty()) {
                 throw new ValidationException("Accessories rates are required for ACCESSORIES products");
             }
             // Validate keys present: 6,8,12,16,24,32,48
 //            List<String> requiredKeys = Arrays.asList("6","8","12","16","24","32","48");
 //            for (String key : requiredKeys) {
-//                if (!dto.getAccessoriesRates().containsKey(key)) {
+//                if (!dto.getAccessoriesWeight().containsKey(key)) {
 //                    throw new ValidationException("Missing accessories rate for size: " + key);
 //                }
-//                BigDecimal rate = dto.getAccessoriesRates().get(key);
+//                BigDecimal rate = dto.getAccessoriesWeight().get(key);
 //                if (rate == null || rate.compareTo(BigDecimal.ZERO) < 0) {
 //                    throw new ValidationException("Invalid accessories rate for size: " + key);
 //                }
 //            }
-        } else if (dto.getAccessoriesRates() != null) {
+        } else if (dto.getAccessoriesWeight() != null) {
             throw new ValidationException("Accessories rates should only be set for ACCESSORIES products");
         }
     }
@@ -238,7 +238,7 @@ public class ProductService {
         dto.setClientId(product.getClient().getId());
         dto.setPolyCarbonateType(product.getPolyCarbonateType());
         if (product.getType() == ProductMainType.ACCESSORIES) {
-            dto.setAccessoriesRates(product.getAccessoriesRates());
+            dto.setAccessoriesWeight(product.getAccessoriesWeight());
         }
         return dto;
     }

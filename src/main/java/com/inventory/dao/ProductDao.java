@@ -36,7 +36,7 @@ public class ProductDao {
                 p.weight,
                 p.poly_carbonate_type,
                 p.measurement,
-                p.accessories_rates
+                p.accessories_weight
             FROM product p
             WHERE 1=1
         """);
@@ -86,8 +86,8 @@ public class ProductDao {
                 product.put("weight", row[index++]);
                 product.put("polyCarbonateType", row[index++]);
                 product.put("measurement", row[index++]);
-                Object accessoriesRatesRaw = row[index++];
-                product.put("accessoriesRates", parseAccessoriesRates(accessoriesRatesRaw));
+                Object accessoriesWeightRaw = row[index++];
+                product.put("accessoriesWeight", parseAccessoriesWeight(accessoriesWeightRaw));
 
 
                 products.add(product);
@@ -138,7 +138,7 @@ public class ProductDao {
                 p.type,
                 p.poly_carbonate_type,
                 p.measurement,
-                p.accessories_rates
+                p.accessories_weight
             FROM product p
             LEFT JOIN category c ON p.category_id = c.id
             WHERE 1=1
@@ -211,8 +211,8 @@ public class ProductDao {
                 product.put("type", row[index++]);
                 product.put("polyCarbonateType", row[index++]);
                 product.put("measurement", row[index++]);
-                Object accessoriesRatesRaw = row[index++];
-                product.put("accessoriesRates", parseAccessoriesRates(accessoriesRatesRaw));
+                Object accessoriesWeightRaw = row[index++];
+                product.put("accessoriesWeight", parseAccessoriesWeight(accessoriesWeightRaw));
                 products.add(product);
             }
         }
@@ -247,7 +247,7 @@ public class ProductDao {
                 p.type,
                 p.poly_carbonate_type,
                 p.measurement,
-                p.accessories_rates
+                p.accessories_weight
             FROM product p
             LEFT JOIN category c ON p.category_id = c.id
             WHERE 1=1
@@ -289,8 +289,8 @@ public class ProductDao {
                 product.put("type", row[index++]);
                 product.put("polyCarbonateType", row[index++]);
                 product.put("measurement", row[index++]);
-                Object accessoriesRatesRaw = row[index++];
-                product.put("accessoriesRates", parseAccessoriesRates(accessoriesRatesRaw));
+                Object accessoriesWeightRaw = row[index++];
+                product.put("accessoriesWeight", parseAccessoriesWeight(accessoriesWeightRaw));
                 products.add(product);
             }
         }
@@ -298,7 +298,7 @@ public class ProductDao {
         return products;
     }
 
-    private Object parseAccessoriesRates(Object value) {
+    private Object parseAccessoriesWeight(Object value) {
         if (value == null) {
             return null;
         }
