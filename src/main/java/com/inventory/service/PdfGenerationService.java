@@ -25,6 +25,7 @@ import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
+import com.itextpdf.layout.borders.SolidBorder;
 import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Image;
 import com.itextpdf.layout.element.Paragraph;
@@ -214,75 +215,80 @@ public class PdfGenerationService {
         
         document.add(table);
         
-        // Create summary table with 2 columns
-        Table summaryTable = new Table(new float[]{3, 1})
+        // Create a proper summary table with professional formatting
+        Table summaryTable = new Table(new float[]{4, 1})
             .useAllAvailableWidth()
-            .setMarginTop(10);
-        
-        // Add empty cell on left side
-        Cell leftCell = new Cell()
-            // .add(new Paragraph("SGST 9% CGST 9%"))
-            .setBorder(Border.NO_BORDER)
-            .setTextAlignment(TextAlignment.LEFT)
-            .setFontSize(10);
-        
-        // Create right-side table for totals
-        Table totalsTable = new Table(2)
-            .useAllAvailableWidth();
-
-        // Add total rows with borders
-        Cell totalLabelCell = new Cell()
-                .add(new Paragraph("TOTAL"))
-                .setBorder(Border.NO_BORDER);
-        Cell totalValueCell = new Cell()
-                .add(new Paragraph(totalAmount.toString() + "/-"))
-                .setBorder(Border.NO_BORDER)
-                .setTextAlignment(TextAlignment.RIGHT);
-        totalsTable.addCell(totalLabelCell);
-        totalsTable.addCell(totalValueCell);
-        
-        // Add loading charge rows with borders
-        Cell totalLoading = new Cell()
-            .add(new Paragraph("Loading Charge"))
+            .setMarginTop(20)
             .setBorder(Border.NO_BORDER);
-        Cell totalLoadingValueCell = new Cell()
-            .add(new Paragraph(quotationData.get("loadingCharge").toString()))
-            .setBorder(Border.NO_BORDER)
-            .setTextAlignment(TextAlignment.RIGHT);
-        totalsTable.addCell(totalLoading);
-        totalsTable.addCell(totalLoadingValueCell);
         
-        // Calculate and add GST
+        // Add total row
+        Cell totalLabelCell = new Cell()
+            .add(new Paragraph("TOTAL"))
+            .setBorder(Border.NO_BORDER)
+            .setBorderTop(new SolidBorder(BORDER_COLOR, 1))
+            .setBorderBottom(new SolidBorder(BORDER_COLOR, 1))
+            .setPadding(6);
+        Cell totalValueCell = new Cell()
+            .add(new Paragraph(totalAmount.toString() + "/-"))
+            .setBorder(Border.NO_BORDER)
+            .setBorderTop(new SolidBorder(BORDER_COLOR, 1))
+            .setBorderBottom(new SolidBorder(BORDER_COLOR, 1))
+            .setTextAlignment(TextAlignment.RIGHT)
+            .setPadding(6);
+        summaryTable.addCell(totalLabelCell);
+        summaryTable.addCell(totalValueCell);
+        
+        // Add loading charge row
+        Cell loadingLabelCell = new Cell()
+            .add(new Paragraph("Loading Charge"))
+            .setBorder(Border.NO_BORDER)
+            .setBorderBottom(new SolidBorder(BORDER_COLOR, 1))
+            .setPadding(6);
+        Cell loadingValueCell = new Cell()
+            .add(new Paragraph(quotationData.get("loadingCharge").toString() + "/-"))
+            .setBorder(Border.NO_BORDER)
+            .setBorderBottom(new SolidBorder(BORDER_COLOR, 1))
+            .setTextAlignment(TextAlignment.RIGHT)
+            .setPadding(6);
+        summaryTable.addCell(loadingLabelCell);
+        summaryTable.addCell(loadingValueCell);
+        
+        // Add GST row
         BigDecimal gstAmount = totalAmount.multiply(BigDecimal.valueOf(18))
                 .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
         Cell gstLabelCell = new Cell()
-            .add(new Paragraph("GST 18 % (SGST 9% CGST 9%)"))
-            .setBorder(Border.NO_BORDER);
+            .add(new Paragraph("GST 18% (SGST 9% CGST 9%)"))
+            .setBorder(Border.NO_BORDER)
+            .setBorderBottom(new SolidBorder(BORDER_COLOR, 1))
+            .setPadding(6);
         Cell gstValueCell = new Cell()
             .add(new Paragraph(gstAmount.toString() + "/-"))
             .setBorder(Border.NO_BORDER)
-            .setTextAlignment(TextAlignment.RIGHT);
-        totalsTable.addCell(gstLabelCell);
-        totalsTable.addCell(gstValueCell);
+            .setBorderBottom(new SolidBorder(BORDER_COLOR, 1))
+            .setTextAlignment(TextAlignment.RIGHT)
+            .setPadding(6);
+        summaryTable.addCell(gstLabelCell);
+        summaryTable.addCell(gstValueCell);
         
-        // Add grand total
-        BigDecimal grandTotal = ((BigDecimal) quotationData.get("totalAmount")).setScale(0, RoundingMode.HALF_UP);;
+        // Add grand total row with emphasis
+        BigDecimal grandTotal = ((BigDecimal) quotationData.get("totalAmount")).setScale(0, RoundingMode.HALF_UP);
         Cell grandTotalLabelCell = new Cell()
             .add(new Paragraph("GRAND TOTAL"))
             .setBorder(Border.NO_BORDER)
-            .setBold();
+            .setBorderTop(new SolidBorder(BORDER_COLOR, 2))
+            .setBorderBottom(new SolidBorder(BORDER_COLOR, 2))
+            .setBold()
+            .setPadding(8);
         Cell grandTotalValueCell = new Cell()
             .add(new Paragraph(grandTotal.toString() + "/-"))
             .setBorder(Border.NO_BORDER)
+            .setBorderTop(new SolidBorder(BORDER_COLOR, 2))
+            .setBorderBottom(new SolidBorder(BORDER_COLOR, 2))
             .setTextAlignment(TextAlignment.RIGHT)
-            .setBold();
-        totalsTable.addCell(grandTotalLabelCell);
-        totalsTable.addCell(grandTotalValueCell);
-        
-        // Add the tables to the main summary table
-        summaryTable.addCell(leftCell);
-        Cell rightCell = new Cell().add(totalsTable).setBorder(Border.NO_BORDER);
-        summaryTable.addCell(rightCell);
+            .setBold()
+            .setPadding(8);
+        summaryTable.addCell(grandTotalLabelCell);
+        summaryTable.addCell(grandTotalValueCell);
         
         document.add(summaryTable);
 
