@@ -29,4 +29,5 @@ public class QuotationItemRequestDto {
     private BigDecimal loadingCharge;
     private String accessoriesSize; // required for ACCESSORIES
     private Integer nos; // required for ACCESSORIES
-} 
+    private String itemRemarks;
+}

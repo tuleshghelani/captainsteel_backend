@@ -474,7 +474,6 @@ public class QuotationService {
         item.setTaxPercentage(itemDto.getTaxPercentage());
         item.setCalculationType(itemDto.getCalculationType());
         item.setLoadingCharge(itemDto.getLoadingCharge());
-
         // Calculate price components
         BigDecimal subTotal = itemDto.getUnitPrice().multiply(itemDto.getQuantity())
                 .setScale(2, RoundingMode.HALF_UP);
@@ -495,6 +494,11 @@ public class QuotationService {
             item.setFinalPrice(afterDiscount.add(taxAmount));
         }
         item.setClient(currentUser.getClient());
+
+        // Set item remarks if provided
+        if (itemDto.getItemRemarks() != null) {
+            item.setItemRemarks(itemDto.getItemRemarks().trim());
+        }
 
         // Save the item first
         item = quotationItemRepository.save(item);
@@ -654,6 +658,7 @@ public class QuotationService {
                 itemMap.put("loadingCharge", item.getLoadingCharge());
                 itemMap.put("accessoriesSize", item.getAccessoriesSize());
                 itemMap.put("accessoriesWeight", item.getAccessoriesWeight());
+                itemMap.put("itemRemarks", item.getItemRemarks());
                 
                 // Add calculations for this item
                 List<Map<String, Object>> itemCalculations = calculations.stream()

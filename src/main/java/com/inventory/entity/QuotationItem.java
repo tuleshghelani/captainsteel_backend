@@ -85,6 +85,9 @@ public class QuotationItem {
     @Column(name = "calculation_type")
     private String calculationType;
     
+    @Column(name = "item_remarks", columnDefinition = "TEXT")
+    private String itemRemarks;
+    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_id", nullable = false,
         foreignKey = @ForeignKey(name = "fk_quotation_items_client_id_client_id"))

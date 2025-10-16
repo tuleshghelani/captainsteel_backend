@@ -63,6 +63,17 @@ public class ProductService {
             } else {
                 product.setAccessoriesWeight(null);
             }
+            // Set sq_feet_multiplier only for REGULAR and POLY_CARBONATE product types
+            if (dto.getType() == ProductMainType.REGULAR || dto.getType() == ProductMainType.POLY_CARBONATE) {
+                BigDecimal sqFeetMultiplier = dto.getSqFeetMultiplier();
+                // If null or zero, set default value 3.500
+                if (sqFeetMultiplier == null || sqFeetMultiplier.compareTo(BigDecimal.ZERO) == 0) {
+                    sqFeetMultiplier = new BigDecimal("3.500");
+                }
+                product.setSqFeetMultiplier(sqFeetMultiplier);
+            } else {
+                product.setSqFeetMultiplier(null);
+            }
 
             product.setCreatedBy(currentUser);
 
