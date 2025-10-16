@@ -63,6 +63,7 @@ public class ProductService {
             } else {
                 product.setAccessoriesWeight(null);
             }
+
             product.setCreatedBy(currentUser);
 
             productRepository.save(product);
@@ -110,6 +111,18 @@ public class ProductService {
                 product.setAccessoriesWeight(dto.getAccessoriesWeight() != null ? new HashMap<>(dto.getAccessoriesWeight()) : new HashMap<>());
             } else {
                 product.setAccessoriesWeight(null);
+            }
+            
+            // Set sq_feet_multiplier only for REGULAR and POLY_CARBONATE product types
+            if (dto.getType() == ProductMainType.REGULAR || dto.getType() == ProductMainType.POLY_CARBONATE) {
+                BigDecimal sqFeetMultiplier = dto.getSqFeetMultiplier();
+                // If null or zero, set default value 3.500
+                if (sqFeetMultiplier == null || sqFeetMultiplier.compareTo(BigDecimal.ZERO) == 0) {
+                    sqFeetMultiplier = new BigDecimal("3.500");
+                }
+                product.setSqFeetMultiplier(sqFeetMultiplier);
+            } else {
+                product.setSqFeetMultiplier(null);
             }
 
             // Handle quantity updates using the new method
@@ -206,6 +219,18 @@ public class ProductService {
             throw new ValidationException("Poly carbonate type should only be set for POLY_CARBONATE products");
         }
 
+        // Validate sq_feet_multiplier for REGULAR and POLY_CARBONATE product types
+        if (dto.getType() == ProductMainType.REGULAR || dto.getType() == ProductMainType.POLY_CARBONATE) {
+            BigDecimal sqFeetMultiplier = dto.getSqFeetMultiplier();
+            // If null or zero, it will be set to default 3.500 in create/update methods
+            // But if provided, it should be a positive number
+            if (sqFeetMultiplier != null && sqFeetMultiplier.compareTo(BigDecimal.ZERO) < 0) {
+                throw new ValidationException("Square feet multiplier must be a non-negative number");
+            }
+        } else if (dto.getSqFeetMultiplier() != null) {
+            throw new ValidationException("Square feet multiplier should only be set for REGULAR and POLY_CARBONATE products");
+        }
+
         if (ProductMainType.ACCESSORIES == dto.getType()) {
             if (dto.getAccessoriesWeight() == null || dto.getAccessoriesWeight().isEmpty()) {
                 throw new ValidationException("Accessories rates are required for ACCESSORIES products");
@@ -237,6 +262,10 @@ public class ProductService {
         dto.setPolyCarbonateType(product.getPolyCarbonateType());
         if (product.getType() == ProductMainType.ACCESSORIES) {
             dto.setAccessoriesWeight(product.getAccessoriesWeight());
+        }
+        // Set sq_feet_multiplier for REGULAR and POLY_CARBONATE product types
+        if (product.getType() == ProductMainType.REGULAR || product.getType() == ProductMainType.POLY_CARBONATE) {
+            dto.setSqFeetMultiplier(product.getSqFeetMultiplier());
         }
         return dto;
     }

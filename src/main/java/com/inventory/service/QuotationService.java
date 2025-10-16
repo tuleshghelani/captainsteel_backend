@@ -46,7 +46,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class QuotationService {
     private static final BigDecimal INCHES_IN_FOOT = BigDecimal.valueOf(12);
-    private static final BigDecimal SQ_FEET_MULTIPLIER = BigDecimal.valueOf(3.5);
+    private static final BigDecimal DEFAULT_SQ_FEET_MULTIPLIER = BigDecimal.valueOf(3.5);
     private static final BigDecimal DEFAULT_TAX_PERCENTAGE = BigDecimal.valueOf(18);
     private static final BigDecimal MM_TO_FEET_CONVERSION = BigDecimal.valueOf(304.8);
     
@@ -337,7 +337,12 @@ public class QuotationService {
             BigDecimal sqFeet = BigDecimal.ZERO;
 
             if(Objects.equals(product.getType(), ProductMainType.REGULAR)) {
-                sqFeet = runningFeet.multiply(SQ_FEET_MULTIPLIER)
+                // Use product's sq_feet_multiplier, default to 3.5 if null or zero
+                BigDecimal multiplier = DEFAULT_SQ_FEET_MULTIPLIER;
+                if (product.getSqFeetMultiplier() != null && product.getSqFeetMultiplier().compareTo(BigDecimal.ZERO) > 0) {
+                    multiplier = product.getSqFeetMultiplier();
+                }
+                sqFeet = runningFeet.multiply(multiplier)
                         .setScale(2, RoundingMode.HALF_UP);
             } else if (Objects.equals(product.getType(), ProductMainType.POLY_CARBONATE)) {
                 BigDecimal multiplier = getPolyCarbonateMultiplier(product.getPolyCarbonateType());
@@ -400,7 +405,12 @@ public class QuotationService {
             BigDecimal sqFeet = BigDecimal.ZERO;
 
             if(Objects.equals(product.getType(), ProductMainType.REGULAR)) {
-                sqFeet = runningFeet.multiply(SQ_FEET_MULTIPLIER)
+                // Use product's sq_feet_multiplier, default to 3.5 if null or zero
+                BigDecimal multiplier = DEFAULT_SQ_FEET_MULTIPLIER;
+                if (product.getSqFeetMultiplier() != null && product.getSqFeetMultiplier().compareTo(BigDecimal.ZERO) > 0) {
+                    multiplier = product.getSqFeetMultiplier();
+                }
+                sqFeet = runningFeet.multiply(multiplier)
                         .setScale(2, RoundingMode.HALF_UP);
             } else if (Objects.equals(product.getType(), ProductMainType.POLY_CARBONATE)) {
                 BigDecimal multiplier = getPolyCarbonateMultiplier(product.getPolyCarbonateType());

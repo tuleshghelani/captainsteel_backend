@@ -36,7 +36,8 @@ public class ProductDao {
                 p.weight,
                 p.poly_carbonate_type,
                 p.measurement,
-                p.accessories_weight
+                p.accessories_weight,
+                p.sq_feet_multiplier
             FROM product p
             WHERE 1=1
         """);
@@ -88,8 +89,7 @@ public class ProductDao {
                 product.put("measurement", row[index++]);
                 Object accessoriesWeightRaw = row[index++];
                 product.put("accessoriesWeight", parseAccessoriesWeight(accessoriesWeightRaw));
-
-
+                product.put("sqFeetMultiplier", row[index++]);
                 products.add(product);
             }
         }
@@ -138,7 +138,8 @@ public class ProductDao {
                 p.type,
                 p.poly_carbonate_type,
                 p.measurement,
-                p.accessories_weight
+                p.accessories_weight,
+                p.sq_feet_multiplier
             FROM product p
             LEFT JOIN category c ON p.category_id = c.id
             WHERE 1=1
@@ -213,6 +214,7 @@ public class ProductDao {
                 product.put("measurement", row[index++]);
                 Object accessoriesWeightRaw = row[index++];
                 product.put("accessoriesWeight", parseAccessoriesWeight(accessoriesWeightRaw));
+                product.put("sqFeetMultiplier", row[index++]);
                 products.add(product);
             }
         }
@@ -247,7 +249,8 @@ public class ProductDao {
                 p.type,
                 p.poly_carbonate_type,
                 p.measurement,
-                p.accessories_weight
+                p.accessories_weight,
+                p.sq_feet_multiplier
             FROM product p
             LEFT JOIN category c ON p.category_id = c.id
             WHERE 1=1
@@ -291,6 +294,7 @@ public class ProductDao {
                 product.put("measurement", row[index++]);
                 Object accessoriesWeightRaw = row[index++];
                 product.put("accessoriesWeight", parseAccessoriesWeight(accessoriesWeightRaw));
+                product.put("sqFeetMultiplier", row[index++]);
                 products.add(product);
             }
         }

@@ -114,4 +114,7 @@ public class Product {
     @Column(name = "accessories_weight", columnDefinition = "jsonb default '{}'")
     @Type(value = com.vladmihalcea.hibernate.type.json.JsonType.class)
     private Map<String, BigDecimal> accessoriesWeight = new HashMap<>();
+    
+    @Column(name = "sq_feet_multiplier", precision = 8, scale = 3, columnDefinition = "numeric(8,3) ")
+    private BigDecimal sqFeetMultiplier;
 }

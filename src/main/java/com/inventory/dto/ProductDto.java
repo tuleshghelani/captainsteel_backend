@@ -38,4 +38,5 @@ public class ProductDto {
     private String sortDir = "desc";
     private PolyCarbonateType polyCarbonateType;
     private Map<String, BigDecimal> accessoriesWeight;
+    private BigDecimal sqFeetMultiplier;
 }
