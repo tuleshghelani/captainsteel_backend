@@ -258,6 +258,8 @@ public class QuotationService {
                 .setScale(3, RoundingMode.HALF_UP);
         itemDto.setQuantity(total);
         itemDto.setWeight(total);
+        // Calculate loading charge for ACCESSORIES products (same as REGULAR products)
+        itemDto.setLoadingCharge(total.multiply(BigDecimal.valueOf(0.1)).setScale(2, RoundingMode.HALF_UP));
     }
 
     private void validateRegularProductCalculations(QuotationItemRequestDto itemDto) {
@@ -486,8 +488,8 @@ public class QuotationService {
         item.setDiscountPrice(afterDiscount);
         item.setTaxAmount(taxAmount);
         
-        // Add loading charge to final price for REGULAR type products
-        if (product.getType() == ProductMainType.REGULAR) {
+        // Add loading charge to final price for REGULAR and ACCESSORIES type products
+        if (product.getType() == ProductMainType.REGULAR || product.getType() == ProductMainType.ACCESSORIES) {
             BigDecimal loadingCharge = item.getLoadingCharge() != null ? item.getLoadingCharge() : BigDecimal.ZERO;
             item.setFinalPrice(afterDiscount.add(taxAmount).add(loadingCharge));
         } else {
