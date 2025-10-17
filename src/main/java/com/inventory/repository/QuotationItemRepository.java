@@ -20,4 +20,8 @@ public interface QuotationItemRepository extends JpaRepository<QuotationItem, Lo
     void deleteByQuotationId(Long quotationId);
 
     List<QuotationItem> findByQuotationId(Long quotationId);
+
+    @Modifying
+    @Query("UPDATE QuotationItem qi SET qi.quotationItemStatus = :status WHERE qi.id = :id")
+    int updateQuotationItemStatusById(Long id, String status);
 } 

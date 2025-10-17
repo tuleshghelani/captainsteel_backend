@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import com.inventory.enums.QuotationStatusItem;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -476,6 +477,9 @@ public class QuotationService {
         item.setTaxPercentage(itemDto.getTaxPercentage());
         item.setCalculationType(itemDto.getCalculationType());
         item.setLoadingCharge(itemDto.getLoadingCharge());
+        if(itemDto.getQuotationItemStatus()!=null){
+            item.setQuotationItemStatus(itemDto.getQuotationItemStatus());
+        }
         // Calculate price components
         BigDecimal subTotal = itemDto.getUnitPrice().multiply(itemDto.getQuantity())
                 .setScale(2, RoundingMode.HALF_UP);
@@ -500,6 +504,9 @@ public class QuotationService {
         // Set item remarks if provided
         if (itemDto.getItemRemarks() != null) {
             item.setItemRemarks(itemDto.getItemRemarks().trim());
+        }
+        if(itemDto.getIsProduction() != null){
+            item.setIsProduction(itemDto.getIsProduction());
         }
 
         // Save the item first

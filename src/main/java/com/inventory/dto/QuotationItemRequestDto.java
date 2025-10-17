@@ -16,6 +16,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class QuotationItemRequestDto {
+    private Long id;
     private Long productId;
     private String productType;
     private String calculationType;
@@ -30,4 +31,6 @@ public class QuotationItemRequestDto {
     private String accessoriesSize; // required for ACCESSORIES
     private Integer nos; // required for ACCESSORIES
     private String itemRemarks;
+    private Boolean isProduction;
+    private String quotationItemStatus;
 }

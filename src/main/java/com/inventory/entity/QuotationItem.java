@@ -16,14 +16,10 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Data
 @Entity
-@Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "quotation_items", indexes = {
@@ -87,6 +83,12 @@ public class QuotationItem {
     
     @Column(name = "item_remarks", columnDefinition = "TEXT")
     private String itemRemarks;
+
+    @Column(name = "is_production", nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private Boolean isProduction = false;
+
+    @Column(name = "quotation_item_status", length = 4)
+    private String quotationItemStatus;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_id", nullable = false,
@@ -95,4 +97,4 @@ public class QuotationItem {
     
     @Version
     private Long version;
-} 
+}

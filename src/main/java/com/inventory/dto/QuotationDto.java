@@ -53,4 +53,27 @@ public class QuotationDto {
 
     private String contactNumber;
     private String address;
-} 
+    
+    // Getters (in case Lombok is not working)
+    public Long getId() { return id; }
+    public Long getCustomerId() { return customerId; }
+    public String getCustomerName() { return customerName; }
+    public String getQuoteNumber() { return quoteNumber; }
+    public BigDecimal getTotalAmount() { return totalAmount; }
+    public String getStatus() { return status; }
+    public LocalDate getQuoteDate() { return quoteDate; }
+    public LocalDate getValidUntil() { return validUntil; }
+    public String getRemarks() { return remarks; }
+    public String getTermsConditions() { return termsConditions; }
+    public List<QuotationItemRequestDto> getItems() { return items; }
+    public String getSearch() { return search; }
+    public Integer getCurrentPage() { return currentPage; }
+    public Integer getPerPageRecord() { return perPageRecord; }
+    public String getSortBy() { return sortBy; }
+    public String getSortDir() { return sortDir; }
+    public Long getClientId() { return clientId; }
+    public LocalDate getStartDate() { return startDate; }
+    public LocalDate getEndDate() { return endDate; }
+    public String getContactNumber() { return contactNumber; }
+    public String getAddress() { return address; }
+}
