@@ -78,8 +78,14 @@ public class QuotationItem {
     @Column(name = "accessories_size", length = 32)
     private String accessoriesSize;
     
+    @Column(name = "nos")
+    private Integer nos; // Used only for ACCESSORIES product type
+    
     @Column(name = "calculation_type")
     private String calculationType;
+    
+    @Column(name = "calculation_base", length = 2)
+    private String calculationBase; // 'W', 'RF', 'SF' or null/empty (defaults to 'W')
     
     @Column(name = "item_remarks", columnDefinition = "TEXT")
     private String itemRemarks;

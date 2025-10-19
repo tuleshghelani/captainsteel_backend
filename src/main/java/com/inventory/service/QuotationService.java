@@ -388,11 +388,34 @@ public class QuotationService {
             calc.setMeter(meter);
         }
         
-        // Update item totals
+        // Update item totals based on calculationBase
         if(Objects.equals(product.getType(), ProductMainType.REGULAR)) {
-            itemDto.setWeight(totalWeight);
-            itemDto.setQuantity(totalWeight);
-            itemDto.setLoadingCharge(totalWeight.multiply(BigDecimal.valueOf(0.1)).setScale(2, RoundingMode.HALF_UP));
+            // Default to 'W' (Weight) if calculationBase is null or empty
+            String calculationBase = itemDto.getCalculationBase();
+            if (calculationBase == null || calculationBase.trim().isEmpty()) {
+                calculationBase = "W"; // Default to Weight
+            }
+            
+            switch (calculationBase) {
+                case "RF": // Running Feet
+                    BigDecimal totalRunningFeet = BigDecimal.ZERO;
+                    for (QuotationItemCalculationDto calc : itemDto.getCalculations()) {
+                        totalRunningFeet = totalRunningFeet.add(calc.getRunningFeet());
+                    }
+                    itemDto.setWeight(totalRunningFeet);
+                    itemDto.setQuantity(totalRunningFeet);
+                    break;
+                case "SF": // Sq. Feet
+                    itemDto.setWeight(totalSqFeet);
+                    itemDto.setQuantity(totalSqFeet);
+                    break;
+                case "W": // Weight (default)
+                default:
+                    itemDto.setWeight(totalWeight);
+                    itemDto.setQuantity(totalWeight);
+                    break;
+            }
+            itemDto.setLoadingCharge(itemDto.getQuantity().multiply(BigDecimal.valueOf(0.1)).setScale(2, RoundingMode.HALF_UP));
         } else if (Objects.equals(product.getType(), ProductMainType.POLY_CARBONATE)) {
             itemDto.setQuantity(totalSqFeet);
             itemDto.setWeight(BigDecimal.ZERO);
@@ -459,11 +482,34 @@ public class QuotationService {
             calc.setMeter(meter);
         }
 
-        // Update item totals
+        // Update item totals based on calculationBase
         if(Objects.equals(product.getType(), ProductMainType.REGULAR)) {
-            itemDto.setWeight(totalWeight);
-            itemDto.setQuantity(totalWeight);
-            itemDto.setLoadingCharge(totalWeight.multiply(BigDecimal.valueOf(0.1)).setScale(2, RoundingMode.HALF_UP));
+            // Default to 'W' (Weight) if calculationBase is null or empty
+            String calculationBase = itemDto.getCalculationBase();
+            if (calculationBase == null || calculationBase.trim().isEmpty()) {
+                calculationBase = "W"; // Default to Weight
+            }
+            
+            switch (calculationBase) {
+                case "RF": // Running Feet
+                    BigDecimal totalRunningFeet = BigDecimal.ZERO;
+                    for (QuotationItemCalculationDto calc : itemDto.getCalculations()) {
+                        totalRunningFeet = totalRunningFeet.add(calc.getRunningFeet());
+                    }
+                    itemDto.setWeight(totalRunningFeet);
+                    itemDto.setQuantity(totalRunningFeet);
+                    break;
+                case "SF": // Sq. Feet
+                    itemDto.setWeight(totalSqFeet);
+                    itemDto.setQuantity(totalSqFeet);
+                    break;
+                case "W": // Weight (default)
+                default:
+                    itemDto.setWeight(totalWeight);
+                    itemDto.setQuantity(totalWeight);
+                    break;
+            }
+            itemDto.setLoadingCharge(itemDto.getQuantity().multiply(BigDecimal.valueOf(0.1)).setScale(2, RoundingMode.HALF_UP));
         } else if (Objects.equals(product.getType(), ProductMainType.POLY_CARBONATE)) {
             itemDto.setQuantity(totalSqFeet);
             itemDto.setWeight(BigDecimal.ZERO);
@@ -487,6 +533,7 @@ public class QuotationService {
         item.setWeight(itemDto.getWeight());
         if (product.getType() == ProductMainType.ACCESSORIES) {
             item.setAccessoriesSize(itemDto.getAccessoriesSize());
+            item.setNos(itemDto.getNos()); // Set nos for ACCESSORIES
             // For Custom size, use the provided weight; otherwise, get from product's accessoriesWeight map
             if ("C".equals(itemDto.getAccessoriesSize())) {
                 item.setAccessoriesWeight(itemDto.getWeight());
@@ -499,6 +546,7 @@ public class QuotationService {
         item.setDiscountPercentage(itemDto.getDiscountPercentage());
         item.setTaxPercentage(itemDto.getTaxPercentage());
         item.setCalculationType(itemDto.getCalculationType());
+        item.setCalculationBase(itemDto.getCalculationBase()); // Set calculationBase
         item.setLoadingCharge(itemDto.getLoadingCharge());
         if(itemDto.getQuotationItemStatus()!=null){
             item.setQuotationItemStatus(itemDto.getQuotationItemStatus());
@@ -693,9 +741,11 @@ public class QuotationService {
                 itemMap.put("taxAmount", item.getTaxAmount());
                 itemMap.put("finalPrice", item.getFinalPrice());
                 itemMap.put("calculationType", item.getCalculationType());
+                itemMap.put("calculationBase", item.getCalculationBase());
                 itemMap.put("loadingCharge", item.getLoadingCharge());
                 itemMap.put("accessoriesSize", item.getAccessoriesSize());
                 itemMap.put("accessoriesWeight", item.getAccessoriesWeight());
+                itemMap.put("nos", item.getNos()); // Add nos field for ACCESSORIES
                 itemMap.put("itemRemarks", item.getItemRemarks());
                 
                 // Add calculations for this item

@@ -20,6 +20,7 @@ public class QuotationItemRequestDto {
     private Long productId;
     private String productType;
     private String calculationType;
+    private String calculationBase; // New field: 'W', 'RF', 'SF' or null/empty (defaults to 'W')
     private BigDecimal weight;
     private BigDecimal quantity;
     private BigDecimal unitPrice;
