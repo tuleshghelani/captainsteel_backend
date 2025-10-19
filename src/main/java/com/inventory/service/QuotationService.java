@@ -245,20 +245,38 @@ public class QuotationService {
         if (itemDto.getNos() == null || itemDto.getNos() <= 0) {
             throw new ValidationException("Nos must be greater than 0 for ACCESSORIES products");
         }
-        if (product.getAccessoriesWeight() == null || product.getAccessoriesWeight().isEmpty()) {
-            throw new ValidationException("Accessories weights are not configured for product: " + product.getName());
-        }
-        if (!product.getAccessoriesWeight().containsKey(itemDto.getAccessoriesSize())) {
-            throw new ValidationException("Invalid accessories size: " + itemDto.getAccessoriesSize());
+        
+        // For Custom size ("C"), we don't need to check if it exists in the product's accessoriesWeight map
+        if (!"C".equals(itemDto.getAccessoriesSize())) {
+            if (product.getAccessoriesWeight() == null || product.getAccessoriesWeight().isEmpty()) {
+                throw new ValidationException("Accessories weights are not configured for product: " + product.getName());
+            }
+            if (!product.getAccessoriesWeight().containsKey(itemDto.getAccessoriesSize())) {
+                throw new ValidationException("Invalid accessories size: " + itemDto.getAccessoriesSize());
+            }
+        } else {
+            // For Custom size, weight is required
+            if (itemDto.getWeight() == null || itemDto.getWeight().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ValidationException("Weight is required for Custom accessories size");
+            }
         }
     }
 
     private void calculateAccessoriesQuantity(QuotationItemRequestDto itemDto, Product product) {
-        BigDecimal unitWeight = product.getAccessoriesWeight().get(itemDto.getAccessoriesSize());
-        BigDecimal total = unitWeight.multiply(BigDecimal.valueOf(itemDto.getNos()))
-                .setScale(3, RoundingMode.HALF_UP);
-        itemDto.setQuantity(total);
-        itemDto.setWeight(total);
+        BigDecimal total;
+        if ("C".equals(itemDto.getAccessoriesSize())) {
+            // For Custom size, use the provided weight
+            total = itemDto.getWeight().multiply(BigDecimal.valueOf(itemDto.getNos()))
+                    .setScale(3, RoundingMode.HALF_UP);
+            itemDto.setQuantity(total);
+            // Weight is already set by the user for Custom size
+        } else {
+            BigDecimal unitWeight = product.getAccessoriesWeight().get(itemDto.getAccessoriesSize());
+            total = unitWeight.multiply(BigDecimal.valueOf(itemDto.getNos()))
+                    .setScale(3, RoundingMode.HALF_UP);
+            itemDto.setQuantity(total);
+            itemDto.setWeight(total);
+        }
         // Calculate loading charge for ACCESSORIES products (same as REGULAR products)
         itemDto.setLoadingCharge(total.multiply(BigDecimal.valueOf(0.1)).setScale(2, RoundingMode.HALF_UP));
     }
@@ -469,8 +487,13 @@ public class QuotationService {
         item.setWeight(itemDto.getWeight());
         if (product.getType() == ProductMainType.ACCESSORIES) {
             item.setAccessoriesSize(itemDto.getAccessoriesSize());
-            BigDecimal unitWeight = product.getAccessoriesWeight().get(itemDto.getAccessoriesSize());
-            item.setAccessoriesWeight(unitWeight);
+            // For Custom size, use the provided weight; otherwise, get from product's accessoriesWeight map
+            if ("C".equals(itemDto.getAccessoriesSize())) {
+                item.setAccessoriesWeight(itemDto.getWeight());
+            } else {
+                BigDecimal unitWeight = product.getAccessoriesWeight().get(itemDto.getAccessoriesSize());
+                item.setAccessoriesWeight(unitWeight);
+            }
         }
         item.setUnitPrice(itemDto.getUnitPrice());
         item.setDiscountPercentage(itemDto.getDiscountPercentage());
@@ -576,6 +599,12 @@ public class QuotationService {
                 }
                 if (item.getNos() == null || item.getNos() <= 0) {
                     throw new ValidationException("Nos must be greater than 0 for ACCESSORIES items");
+                }
+                // For Custom size, weight is required and will be used for quantity calculation
+                if ("C".equals(item.getAccessoriesSize())) {
+                    if (item.getWeight() == null || item.getWeight().compareTo(BigDecimal.ZERO) <= 0) {
+                        throw new ValidationException("Weight is required for Custom accessories size");
+                    }
                 }
             } else {
                 if (item.getQuantity() == null || item.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
