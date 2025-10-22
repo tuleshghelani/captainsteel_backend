@@ -1,5 +1,25 @@
 package com.inventory.service;
 
+import com.inventory.exception.ValidationException;
+import com.itextpdf.io.image.ImageData;
+import com.itextpdf.io.image.ImageDataFactory;
+import com.itextpdf.kernel.colors.Color;
+import com.itextpdf.kernel.colors.ColorConstants;
+import com.itextpdf.kernel.colors.DeviceRgb;
+import com.itextpdf.kernel.geom.PageSize;
+import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.layout.Document;
+import com.itextpdf.layout.borders.Border;
+import com.itextpdf.layout.borders.SolidBorder;
+import com.itextpdf.layout.element.*;
+import com.itextpdf.layout.properties.AreaBreakType;
+import com.itextpdf.layout.properties.TextAlignment;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
@@ -10,37 +30,10 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
-import com.itextpdf.io.image.ImageData;
-import com.itextpdf.io.image.ImageDataFactory;
-import com.itextpdf.layout.properties.AreaBreakType;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-
-import com.inventory.exception.ValidationException;
-import com.itextpdf.kernel.colors.Color;
-import com.itextpdf.kernel.colors.ColorConstants;
-import com.itextpdf.kernel.colors.DeviceRgb;
-import com.itextpdf.kernel.geom.PageSize;
-import com.itextpdf.kernel.pdf.PdfDocument;
-import com.itextpdf.kernel.pdf.PdfWriter;
-import com.itextpdf.layout.Document;
-import com.itextpdf.layout.borders.Border;
-import com.itextpdf.layout.borders.SolidBorder;
-import com.itextpdf.layout.element.Cell;
-import com.itextpdf.layout.element.Image;
-import com.itextpdf.layout.element.Paragraph;
-import com.itextpdf.layout.element.Table;
-import com.itextpdf.layout.properties.TextAlignment;
-import com.itextpdf.layout.element.AreaBreak;
-import com.itextpdf.layout.element.Text;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class PdfGenerationService {
+public class QuotationWithOutPdfGenerationService {
     private static final Color PRIMARY_COLOR = new DeviceRgb(23, 163, 222);
     private static final Color TEXT_PRIMARY = new DeviceRgb(44, 62, 80);
     private static final Color BORDER_COLOR = new DeviceRgb(222, 226, 230);
@@ -56,18 +49,18 @@ public class PdfGenerationService {
             document.setMargins(36, 36, 36, 36);
             
             // Add content
-            addHeader(document, quotationData);
+//            addHeader(document, quotationData);
             addPageFooter(pdf, document, 1);
             
             addQuotationDetails(document, quotationData);
             addItemsTable(document, (List<Map<String, Object>>) quotationData.get("items"), quotationData);
             addPageFooter(pdf, document, 2);
             
-            addBankDetailsAndTerms(document);
-            addPageFooter(pdf, document, 3);
+//            addBankDetailsAndTerms(document);
+//            addPageFooter(pdf, document, 3);
             
-            addLastPage(document);
-            addPageFooter(pdf, document, 4);
+//            addLastPage(document);
+//            addPageFooter(pdf, document, 4);
             
             document.close();
             return outputStream.toByteArray();
@@ -200,8 +193,7 @@ public class PdfGenerationService {
         // Add items
         AtomicInteger counter = new AtomicInteger(1);
         BigDecimal totalAmount = BigDecimal.ZERO;
-        BigDecimal totalTaxAmount = BigDecimal.ZERO;
-
+        
         for (Map<String, Object> item : items) {
             table.addCell(new Cell().add(new Paragraph(String.valueOf(counter.getAndIncrement()))));
             table.addCell(new Cell().add(convertHtmlToParagraph(item, true)));
@@ -215,7 +207,6 @@ public class PdfGenerationService {
             table.addCell(new Cell().add(new Paragraph(item.get("discountPrice").toString())));
             
             totalAmount = totalAmount.add(new BigDecimal(item.get("discountPrice").toString()));
-            totalTaxAmount = totalTaxAmount.add(new BigDecimal(item.get("taxAmount").toString()));
         }
         
         document.add(table);
@@ -259,21 +250,21 @@ public class PdfGenerationService {
         summaryTable.addCell(loadingValueCell);
         
         // Add GST row
-//        BigDecimal gstAmount = totalAmount.multiply(BigDecimal.valueOf(18))
-//                .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
-        Cell gstLabelCell = new Cell()
-            .add(new Paragraph("GST 18% (SGST 9% CGST 9%)"))
-            .setBorder(Border.NO_BORDER)
-            .setBorderBottom(new SolidBorder(BORDER_COLOR, 1))
-            .setPadding(6);
-        Cell gstValueCell = new Cell()
-            .add(new Paragraph(totalTaxAmount.toString() + "/-"))
-            .setBorder(Border.NO_BORDER)
-            .setBorderBottom(new SolidBorder(BORDER_COLOR, 1))
-            .setTextAlignment(TextAlignment.RIGHT)
-            .setPadding(6);
-        summaryTable.addCell(gstLabelCell);
-        summaryTable.addCell(gstValueCell);
+        BigDecimal gstAmount = totalAmount.multiply(BigDecimal.valueOf(18))
+                .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+//        Cell gstLabelCell = new Cell()
+//            .add(new Paragraph("GST 18% (SGST 9% CGST 9%)"))
+//            .setBorder(Border.NO_BORDER)
+//            .setBorderBottom(new SolidBorder(BORDER_COLOR, 1))
+//            .setPadding(6);
+//        Cell gstValueCell = new Cell()
+//            .add(new Paragraph(gstAmount.toString() + "/-"))
+//            .setBorder(Border.NO_BORDER)
+//            .setBorderBottom(new SolidBorder(BORDER_COLOR, 1))
+//            .setTextAlignment(TextAlignment.RIGHT)
+//            .setPadding(6);
+//        summaryTable.addCell(gstLabelCell);
+//        summaryTable.addCell(gstValueCell);
         
         // Add grand total row with emphasis
         BigDecimal grandTotal = ((BigDecimal) quotationData.get("totalAmount")).setScale(0, RoundingMode.HALF_UP);
@@ -583,7 +574,7 @@ public class PdfGenerationService {
         
         // Contact information cell (center-aligned)
         Cell contactCell = new Cell()
-            .add(new Paragraph("CAPTAIN STEEL [ CONTECT NO.9879109091 / 8980392009 / 7574879091 / 9879109121 ]")
+            .add(new Paragraph("GST will be additional")
                 .setFontSize(8)
                 .setFontColor(TEXT_PRIMARY))
             .setBorder(Border.NO_BORDER)

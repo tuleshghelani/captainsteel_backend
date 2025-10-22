@@ -150,7 +150,8 @@ public class QuotationDao {
                 qi.tax_percentage, qi.tax_amount, qi.final_price,
                 p.id as product_id, p.name as product_name, p.type, qi.calculation_type,
                 qi.discount_price, p.measurement, p.poly_carbonate_type, qi.item_remarks,
-                qi.is_production, qi.quotation_item_status
+                qi.is_production, qi.quotation_item_status, qi.accessories_size, qi.weight,
+                q.quotation_discount, q.quotation_discount_amount
             FROM (select * from quotation q where q.client_id = :clientId and q.id = :quotationId) q
             LEFT JOIN (select * from customer c where c.client_id = :clientId) c ON q.customer_id = c.id
             LEFT JOIN (select * from quotation_items qi where qi.client_id = :clientId) qi ON q.id = qi.quotation_id
@@ -188,6 +189,8 @@ public class QuotationDao {
         quotation.put("customerName", firstRow[9]);
         quotation.put("contactNumber", firstRow[10]);
         quotation.put("loadingCharge", firstRow[11]);
+        quotation.put("quotationDiscount", firstRow[32]);
+        quotation.put("quotationDiscountAmount", firstRow[33]);
 
         // Process items
         for (Object[] row : results) {
@@ -210,6 +213,8 @@ public class QuotationDao {
             item.put("itemRemarks", row[27]);
             item.put("isProduction", row[28]);
             item.put("quotationItemStatus", row[29]);
+            item.put("accessoriesSize", row[30]);
+            item.put("weight", row[31]);
             items.add(item);
         }
 

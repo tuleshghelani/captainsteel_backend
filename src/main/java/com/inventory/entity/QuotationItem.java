@@ -90,6 +90,9 @@ public class QuotationItem {
     @Column(name = "item_remarks", columnDefinition = "TEXT")
     private String itemRemarks;
 
+    @Column(name = "quotation_discount_amount", precision = 12, scale = 2, columnDefinition = "NUMERIC(12, 2) ")
+    private BigDecimal quotationDiscountAmount = BigDecimal.ZERO;
+
     @Column(name = "is_production", nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
     private Boolean isProduction = false;
 

@@ -1,5 +1,6 @@
 package com.inventory.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -32,5 +33,8 @@ public class QuotationRequestDto {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate validUntil;
     
+    private BigDecimal quotationDiscount = BigDecimal.ZERO;
+    private BigDecimal quotationDiscountAmount = BigDecimal.ZERO;
+    
     private List<QuotationItemRequestDto> items;
-} 
+}

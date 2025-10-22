@@ -34,4 +34,5 @@ public class QuotationItemRequestDto {
     private String itemRemarks;
     private Boolean isProduction;
     private String quotationItemStatus;
+    private BigDecimal quotationDiscountAmount = BigDecimal.ZERO;
 }

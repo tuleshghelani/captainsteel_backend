@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import com.inventory.enums.QuotationStatusItem;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -69,6 +68,7 @@ public class QuotationService {
     private final QuotationDao quotationDao;
     private final QuoteNumberGeneratorService quoteNumberGeneratorService;
     private final PdfGenerationService pdfGenerationService;
+    private final QuotationWithOutPdfGenerationService quotationWithOutPdfGenerationService;
     private final ProductQuantityService productQuantityService;
     private final QuotationItemCalculationRepository quotationItemCalculationRepository;
     private final DispatchSlipPdfService dispatchSlipPdfService;
@@ -106,6 +106,8 @@ public class QuotationService {
             quotation.setStatus(QuotationStatus.Q);
             quotation.setClient(currentUser.getClient());
             quotation.setCreatedBy(currentUser);
+            quotation.setQuotationDiscount(request.getQuotationDiscount() != null ? request.getQuotationDiscount() : BigDecimal.ZERO);
+            quotation.setQuotationDiscountAmount(request.getQuotationDiscountAmount() != null ? request.getQuotationDiscountAmount() : BigDecimal.ZERO);
 
             // Generate quote number
             String quoteNumber = quoteNumberGeneratorService.generateQuoteNumber(currentUser.getClient());
@@ -133,11 +135,16 @@ public class QuotationService {
             
             quotationItemRepository.saveAll(items);
 
+            // Apply quotation discount to tax amount
+            BigDecimal quotationDiscountAmount = calculateQuotationDiscount(taxAmount, quotation.getQuotationDiscount(), quotation.getQuotationDiscountAmount());
+            taxAmount = taxAmount.subtract(quotationDiscountAmount);
+            
             totalAmount = totalAmount.setScale(0, RoundingMode.HALF_UP);
             quotation.setTotalAmount(totalAmount);
             quotation.setTaxAmount(taxAmount);
             quotation.setDiscountedPrice(discountedPrice);
             quotation.setLoadingCharge(loadingCharge);
+            quotation.setQuotationDiscountAmount(quotationDiscountAmount); // Set the calculated discount amount
             quotationRepository.save(quotation);
             
             return ApiResponse.success("Quotation created successfully");
@@ -198,11 +205,16 @@ public class QuotationService {
             
             quotationItemRepository.saveAll(items);
 
+            // Apply quotation discount to tax amount
+            BigDecimal quotationDiscountAmount = calculateQuotationDiscount(taxAmount, quotation.getQuotationDiscount(), quotation.getQuotationDiscountAmount());
+            taxAmount = taxAmount.subtract(quotationDiscountAmount);
+
             totalAmount = totalAmount.setScale(0, RoundingMode.HALF_UP);
             quotation.setTotalAmount(totalAmount);
             quotation.setTaxAmount(taxAmount);
             quotation.setDiscountedPrice(discountedPrice);
             quotation.setLoadingCharge(loadingCharge);
+            quotation.setQuotationDiscountAmount(quotationDiscountAmount); // Set the calculated discount amount
             quotationRepository.save(quotation);
             
             return ApiResponse.success("Quotation updated successfully");
@@ -559,16 +571,21 @@ public class QuotationService {
         BigDecimal afterDiscount = subTotal.subtract(discountAmount);
         BigDecimal taxAmount = calculatePercentageAmount(afterDiscount, itemDto.getTaxPercentage());
 
+        // Calculate quotation discount amount for this item based on the quotation's discount
+        BigDecimal itemQuotationDiscountAmount = calculateQuotationDiscountForItem(taxAmount, quotation.getQuotationDiscount());
+        BigDecimal adjustedTaxAmount = taxAmount.subtract(itemQuotationDiscountAmount);
+
         item.setDiscountAmount(discountAmount);
         item.setDiscountPrice(afterDiscount);
-        item.setTaxAmount(taxAmount);
+        item.setTaxAmount(adjustedTaxAmount);
+        item.setQuotationDiscountAmount(itemQuotationDiscountAmount);
         
         // Add loading charge to final price for REGULAR and ACCESSORIES type products
         if (product.getType() == ProductMainType.REGULAR || product.getType() == ProductMainType.ACCESSORIES) {
             BigDecimal loadingCharge = item.getLoadingCharge() != null ? item.getLoadingCharge() : BigDecimal.ZERO;
-            item.setFinalPrice(afterDiscount.add(taxAmount).add(loadingCharge));
+            item.setFinalPrice(afterDiscount.add(adjustedTaxAmount).add(loadingCharge));
         } else {
-            item.setFinalPrice(afterDiscount.add(taxAmount));
+            item.setFinalPrice(afterDiscount.add(adjustedTaxAmount));
         }
         item.setClient(currentUser.getClient());
 
@@ -625,6 +642,56 @@ public class QuotationService {
                 .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP) : 
             BigDecimal.ZERO;
     }
+    
+    private BigDecimal calculateQuotationDiscount(BigDecimal taxAmount, BigDecimal quotationDiscount, BigDecimal quotationDiscountAmount) {
+        // If quotationDiscountAmount is provided (not zero), use it directly
+        if (quotationDiscountAmount != null && quotationDiscountAmount.compareTo(BigDecimal.ZERO) > 0) {
+            // Ensure the discount amount doesn't exceed the tax amount
+            if (quotationDiscountAmount.compareTo(taxAmount) > 0) {
+                return taxAmount;
+            }
+            return quotationDiscountAmount;
+        }
+        
+        // Otherwise, calculate based on percentage
+        if (quotationDiscount == null || quotationDiscount.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        
+        // Ensure discount doesn't exceed 100%
+        if (quotationDiscount.compareTo(BigDecimal.valueOf(100)) > 0) {
+            quotationDiscount = BigDecimal.valueOf(100);
+        }
+        
+        return taxAmount.multiply(quotationDiscount)
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+    }
+    
+    /**
+     * Calculate quotation discount amount for an individual item based on the quotation's discount percentage
+     * @param itemTaxAmount The tax amount for this specific item
+     * @param quotationDiscount The quotation discount percentage
+     * @return The discount amount to be applied to this item's tax
+     */
+    private BigDecimal calculateQuotationDiscountForItem(BigDecimal itemTaxAmount, BigDecimal quotationDiscount) {
+        if (itemTaxAmount == null || itemTaxAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        
+        if (quotationDiscount == null || quotationDiscount.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        
+        // Ensure discount doesn't exceed 100%
+        if (quotationDiscount.compareTo(BigDecimal.valueOf(100)) > 0) {
+            quotationDiscount = BigDecimal.valueOf(100);
+        }
+        
+        return itemTaxAmount.multiply(quotationDiscount)
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+    }
+
+
 
     private void validateQuotationRequest(QuotationRequestDto request) {
         if (request.getQuoteDate() == null) {
@@ -632,6 +699,13 @@ public class QuotationService {
         }
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new ValidationException("At least one item is required");
+        }
+        
+        // Validate quotation discount range (0 to 100)
+        if (request.getQuotationDiscount() != null && 
+            (request.getQuotationDiscount().compareTo(BigDecimal.ZERO) < 0 || 
+             request.getQuotationDiscount().compareTo(BigDecimal.valueOf(100)) > 0)) {
+            throw new ValidationException("Quotation discount must be between 0 and 100");
         }
         
         request.getItems().forEach(item -> {
@@ -675,6 +749,8 @@ public class QuotationService {
         quotation.setAddress(request.getAddress());
         quotation.setUpdatedAt(OffsetDateTime.now());
         quotation.setUpdatedBy(currentUser);
+        quotation.setQuotationDiscount(request.getQuotationDiscount() != null ? request.getQuotationDiscount() : BigDecimal.ZERO);
+        quotation.setQuotationDiscountAmount(request.getQuotationDiscountAmount() != null ? request.getQuotationDiscountAmount() : BigDecimal.ZERO);
     }
 
     public Map<String, Object> searchQuotations(QuotationDto searchParams) {
@@ -722,6 +798,8 @@ public class QuotationService {
             response.put("customerId", quotation.getCustomer() != null ? quotation.getCustomer().getId() : null);
             response.put("contactNumber", quotation.getContactNumber());
             response.put("address", quotation.getAddress());
+            response.put("quotationDiscount", quotation.getQuotationDiscount());
+            response.put("quotationDiscountAmount", quotation.getQuotationDiscountAmount());
             
             // Transform and add items
             List<Map<String, Object>> itemsList = new ArrayList<>();
@@ -747,6 +825,7 @@ public class QuotationService {
                 itemMap.put("accessoriesWeight", item.getAccessoriesWeight());
                 itemMap.put("nos", item.getNos()); // Add nos field for ACCESSORIES
                 itemMap.put("itemRemarks", item.getItemRemarks());
+                itemMap.put("quotationDiscountAmount", item.getQuotationDiscountAmount());
                 
                 // Add calculations for this item
                 List<Map<String, Object>> itemCalculations = calculations.stream()
@@ -783,7 +862,15 @@ public class QuotationService {
             UserMaster currentUser = utilityService.getCurrentLoggedInUser();
             request.setClientId(currentUser.getClient().getId());
             Map<String, Object> quotationData = quotationDao.getQuotationDetail(request);
-            return pdfGenerationService.generateQuotationPdf(quotationData);
+            
+            // Check if quotation discount is 0 or null, then use PdfGenerationService
+            // Otherwise, use QuotationWithOutPdfGenerationService
+            BigDecimal quotationDiscount = (BigDecimal) quotationData.get("quotationDiscount");
+            if (quotationDiscount == null || quotationDiscount.compareTo(BigDecimal.ZERO) <= 0) {
+                return pdfGenerationService.generateQuotationPdf(quotationData);
+            } else {
+                return quotationWithOutPdfGenerationService.generateQuotationPdf(quotationData);
+            }
         } catch (ValidationException ve) {
             ve.printStackTrace();
             throw ve;
@@ -966,4 +1053,4 @@ public class QuotationService {
             throw new ValidationException("Failed to delete quotation: " + e.getMessage(), HttpStatus.UNPROCESSABLE_ENTITY);
         }
     }
-} 
+}

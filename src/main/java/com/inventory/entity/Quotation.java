@@ -79,6 +79,12 @@ public class Quotation {
     @Column(name = "loading_charge", precision = 17, scale = 2, columnDefinition = "NUMERIC(17, 2) DEFAULT 0.00"    )
     private BigDecimal loadingCharge = BigDecimal.ZERO;
     
+    @Column(name = "quotation_discount", precision = 5, scale = 2, columnDefinition = "NUMERIC(5, 2) DEFAULT 0.00")
+    private BigDecimal quotationDiscount = BigDecimal.ZERO;
+
+    @Column(name = "quotation_discount_amount", precision = 19, scale = 2, columnDefinition = "NUMERIC(19, 2) DEFAULT 0.00")
+    private BigDecimal quotationDiscountAmount = BigDecimal.ZERO;
+
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
     private QuotationStatus status = QuotationStatus.Q;
@@ -115,4 +121,4 @@ public class Quotation {
     
     @Version
     private Long version;
-} 
+}

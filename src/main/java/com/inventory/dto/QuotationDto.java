@@ -53,6 +53,8 @@ public class QuotationDto {
 
     private String contactNumber;
     private String address;
+    private BigDecimal quotationDiscount = BigDecimal.ZERO;
+    private BigDecimal quotationDiscountAmount = BigDecimal.ZERO;
     
     // Getters (in case Lombok is not working)
     public Long getId() { return id; }
@@ -76,4 +78,6 @@ public class QuotationDto {
     public LocalDate getEndDate() { return endDate; }
     public String getContactNumber() { return contactNumber; }
     public String getAddress() { return address; }
+    public BigDecimal getQuotationDiscount() { return quotationDiscount; }
+    public BigDecimal getQuotationDiscountAmount() { return quotationDiscountAmount; }
 }
