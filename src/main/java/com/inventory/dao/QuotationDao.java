@@ -270,4 +270,192 @@ public class QuotationDao {
 
         return query.getResultList();
     }
+    
+    /**
+     * Search quotation items with quotation details
+     * @param searchParams The search parameters
+     * @return Map containing the search results and pagination info
+     */
+    public Map<String, Object> searchQuotationItemsWithDetails(QuotationDto searchParams) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("clientId", searchParams.getClientId());
+        
+        // Build the main query
+        StringBuilder sql = new StringBuilder("""
+            SELECT 
+                qi.id as item_id, qi.quantity, qi.unit_price, qi.weight,
+                qi.discount_percentage, qi.discount_amount, qi.discount_price,
+                qi.tax_percentage, qi.tax_amount, qi.final_price,
+                qi.loading_charge, qi.accessories_size, qi.nos,
+                qi.calculation_type, qi.calculation_base, qi.item_remarks,
+                qi.is_production, qi.quotation_item_status, qi.quotation_discount_amount,
+                p.id as product_id, p.name as product_name, p.type as product_type,
+                q.id as quotation_id, q.quote_number, q.quote_date,
+                q.valid_until, q.status as quotation_status, q.customer_name,
+                q.contact_number, q.address, q.total_amount as quotation_total_amount,
+                q.quotation_discount, c.id as customer_id
+            FROM (select * from quotation_items qi where qi.client_id = :clientId """);
+
+        params.put("clientId", searchParams.getClientId());
+            if (searchParams.getQuotationItemStatuses() != null && !searchParams.getQuotationItemStatuses().isEmpty()) {
+                sql.append(" AND qi.quotation_item_status IN (:quotationItemStatuses) ");
+                params.put("quotationItemStatuses", searchParams.getQuotationItemStatuses());
+            }
+
+            if (searchParams.getQuotationId() != null) {
+                sql.append(" AND qi.quotation_id = :quotationId ");
+                params.put("quotationId", searchParams.getQuotationId());
+            }
+
+            if (searchParams.getProductId() != null) {
+                sql.append(" AND qi.product_id = :productId ");
+                params.put("productId", searchParams.getProductId());
+            }
+
+            if (searchParams.getIsProduction() != null) {
+                sql.append(" AND qi.is_production = :isProduction ");
+                params.put("isProduction", searchParams.getIsProduction());
+            }
+    sql.append(" ) qi " +
+           " JOIN (select * from quotation q WHERE q.client_id = :clientId ");
+
+        params.put("clientId", searchParams.getClientId());
+    // Quotation filters
+    if (searchParams.getQuotationStatuses() != null && !searchParams.getQuotationStatuses().isEmpty()) {
+        sql.append(" AND q.status IN (:quotationStatuses)");
+        params.put("quotationStatuses", searchParams.getQuotationStatuses());
+    }
+
+    if (searchParams.getCustomerId() != null) {
+        sql.append(" AND q.customer_id = :customerId");
+        params.put("customerId", searchParams.getCustomerId());
+    }
+
+    if (searchParams.getStartDate() != null) {
+        sql.append(" AND q.quote_date >= :startDate");
+        params.put("startDate", searchParams.getStartDate());
+    }
+
+    if (searchParams.getEndDate() != null) {
+        sql.append(" AND q.quote_date <= :endDate");
+        params.put("endDate", searchParams.getEndDate());
+    }
+
+    // General search
+    if (searchParams.getSearch() != null && !searchParams.getSearch().trim().isEmpty()) {
+        sql.append(" AND (q.quote_number LIKE :search OR p.name LIKE :search OR q.customer_name LIKE :search)");
+        params.put("search", "%" + searchParams.getSearch().trim() + "%");
+    }
+    sql.append(" ) q ON qi.quotation_id = q.id " +
+           " JOIN (select * from product p where p.client_id = :clientId) p ON qi.product_id = p.id " +
+           " LEFT JOIN customer c ON q.customer_id = c.id " +
+           " WHERE qi.client_id = :clientId ");
+        
+        // Build conditions
+//        buildQuotationItemSearchConditions(conditions, params, searchParams);
+        
+        // Count query
+
+        params.put("clientId", searchParams.getClientId());
+        String countSql = "SELECT COUNT(*) from (" + sql.toString() +") t1 ";
+        Query countQuery = entityManager.createNativeQuery(countSql);
+        setQueryParameters(countQuery, params, null);
+        Long totalRecords = ((Number) countQuery.getSingleResult()).longValue();
+        
+        // Main query with pagination
+//        sql.append(conditions);
+        sql.append(" ORDER BY qi.").append(searchParams.getSortBy()).append(" ")
+           .append(searchParams.getSortDir());
+        sql.append(" LIMIT :pageSize OFFSET :offset");
+        
+        Query query = entityManager.createNativeQuery(sql.toString());
+        setQueryParameters(query, params, searchParams);
+        
+        List<Object[]> results = query.getResultList();
+        return transformQuotationItemResults(results, totalRecords, searchParams);
+    }
+    
+    private void buildQuotationItemSearchConditions(StringBuilder conditions, Map<String, Object> params, QuotationDto searchParams) {
+        // Quotation item filters
+        if (searchParams.getQuotationItemStatuses() != null && !searchParams.getQuotationItemStatuses().isEmpty()) {
+            conditions.append(" AND qi.quotation_item_status IN :quotationItemStatuses ");
+            params.put("quotationItemStatuses", searchParams.getQuotationItemStatuses());
+        }
+        
+        if (searchParams.getQuotationId() != null) {
+            conditions.append(" AND qi.quotation_id = :quotationId");
+            params.put("quotationId", searchParams.getQuotationId());
+        }
+        
+        if (searchParams.getProductId() != null) {
+            conditions.append(" AND qi.product_id = :productId");
+            params.put("productId", searchParams.getProductId());
+        }
+        
+        if (searchParams.getIsProduction() != null) {
+            conditions.append(" AND qi.is_production = :isProduction");
+            params.put("isProduction", searchParams.getIsProduction());
+        }
+
+    }
+    
+    private Map<String, Object> transformQuotationItemResults(List<Object[]> results, Long totalRecords, QuotationDto searchParams) {
+        List<Map<String, Object>> items = new ArrayList<>();
+        
+        for (Object[] row : results) {
+            Map<String, Object> item = new HashMap<>();
+            int index = 0;
+            
+            // Quotation Item fields
+            item.put("id", row[index++]);
+            item.put("quantity", row[index++]);
+            item.put("unitPrice", row[index++]);
+            item.put("weight", row[index++]);
+            item.put("discountPercentage", row[index++]);
+            item.put("discountAmount", row[index++]);
+            item.put("discountPrice", row[index++]);
+            item.put("taxPercentage", row[index++]);
+            item.put("taxAmount", row[index++]);
+            item.put("finalPrice", row[index++]);
+            item.put("loadingCharge", row[index++]);
+            item.put("accessoriesSize", row[index++]);
+            item.put("nos", row[index++]);
+            item.put("calculationType", row[index++]);
+            item.put("calculationBase", row[index++]);
+            item.put("itemRemarks", row[index++]);
+            item.put("isProduction", row[index++]);
+            item.put("quotationItemStatus", row[index++]);
+            item.put("quotationDiscountAmount", row[index++]);
+            
+            // Product fields
+            item.put("productId", row[index++]);
+            item.put("productName", row[index++]);
+            item.put("productType", row[index++]);
+            
+            // Quotation fields
+            item.put("quotationId", row[index++]);
+            item.put("quoteNumber", row[index++]);
+            item.put("quoteDate", row[index++]);
+            item.put("validUntil", row[index++]);
+            item.put("quotationStatus", row[index++]);
+            item.put("customerName", row[index++]);
+            item.put("contactNumber", row[index++]);
+            item.put("address", row[index++]);
+            item.put("quotationTotalAmount", row[index++]);
+            item.put("quotationDiscount", row[index++]);
+            
+            // Customer fields
+            item.put("customerId", row[index]);
+            
+            items.add(item);
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", items);
+        response.put("currentPage", searchParams.getCurrentPage());
+        response.put("totalItems", totalRecords);
+        response.put("totalPages", (int) Math.ceil((double) totalRecords / searchParams.getPerPageRecord()));
+
+        return response;
+    }
 }

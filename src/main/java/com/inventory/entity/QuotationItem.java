@@ -16,6 +16,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Data
@@ -60,7 +61,7 @@ public class QuotationItem {
     @Column(name = "discount_amount", precision = 19, scale = 2, columnDefinition = "NUMERIC(19, 2) DEFAULT 0.00")
     private BigDecimal discountAmount = BigDecimal.ZERO;
     
-    @Column(name = "discount_price", precision = 19, scale = 2, columnDefinition = "NUMERIC(19, 2) DEFAULT 0.00"    )
+    @Column(name = "discount_price", precision = 19, scale = 2, columnDefinition = "NUMERIC(19, 2) DEFAULT 0.00")
     private BigDecimal discountPrice = BigDecimal.ZERO;
     
     @Column(name = "tax_percentage", precision = 5, scale = 2, columnDefinition = "NUMERIC(5, 2) DEFAULT 0.00")
@@ -72,7 +73,7 @@ public class QuotationItem {
     @Column(name = "final_price", precision = 19, scale = 2, columnDefinition = "NUMERIC(19, 2) DEFAULT 0.00")
     private BigDecimal finalPrice = BigDecimal.ZERO;
     
-    @Column(name = "loading_charge", precision = 17, scale = 2, columnDefinition = "NUMERIC(17, 2) DEFAULT 0.00"    )
+    @Column(name = "loading_charge", precision = 17, scale = 2, columnDefinition = "NUMERIC(17, 2) DEFAULT 0.00")
     private BigDecimal loadingCharge = BigDecimal.ZERO;
     
     @Column(name = "accessories_size", length = 32)
@@ -97,7 +98,7 @@ public class QuotationItem {
     private Boolean isProduction = false;
 
     @Column(name = "quotation_item_status", length = 4)
-    private String quotationItemStatus;
+    private String quotationItemStatus;//'O'-Open,'IP'-In Process,'C'-Completed,'B'-Billed
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_id", nullable = false,

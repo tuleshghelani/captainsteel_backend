@@ -168,8 +168,7 @@ public class QuotationService {
                 throw new ValidationException("Unauthorized access to quotation");
             }
 
-            if(quotation.getStatus() == QuotationStatus.A || quotation.getStatus() == QuotationStatus.P ||
-                quotation.getStatus() == QuotationStatus.C) {
+            if(quotation.getStatus() == QuotationStatus.C) {
                 throw new ValidationException("Quotation is already accepted, processed or completed");
             }
             
@@ -825,6 +824,8 @@ public class QuotationService {
                 itemMap.put("accessoriesWeight", item.getAccessoriesWeight());
                 itemMap.put("nos", item.getNos()); // Add nos field for ACCESSORIES
                 itemMap.put("itemRemarks", item.getItemRemarks());
+                itemMap.put("quotationItemStatus", item.getQuotationItemStatus());
+                itemMap.put("isProduction", item.getIsProduction());
                 itemMap.put("quotationDiscountAmount", item.getQuotationDiscountAmount());
                 
                 // Add calculations for this item

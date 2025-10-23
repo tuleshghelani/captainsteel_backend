@@ -1,14 +1,15 @@
 package com.inventory.controller;
 
 import com.inventory.dto.ApiResponse;
+import com.inventory.dto.QuotationDto;
 import com.inventory.dto.QuotationItemRequestDto;
-import com.inventory.dto.request.*;
 import com.inventory.service.QuotationItemService;
-import com.inventory.service.QuotationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/quotation-items")
@@ -30,6 +31,11 @@ public class QuotationItemController {
         log.debug("Update quotation item production for ID: {}", request.getId());
         return ResponseEntity.ok(quotationItemService.updateQuotationItemProduction(request));
     }
+    
+    @PostMapping("/search-with-details")
+    public ResponseEntity<?> searchQuotationItemsWithDetails(@RequestBody QuotationDto searchParams) {
+        log.debug("Received search quotation items with details request: {}", searchParams);
+        Map<String, Object> result = quotationItemService.searchQuotationItemsWithDetails(searchParams);
+        return ResponseEntity.ok(result);
+    }
 }
-
-

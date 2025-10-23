@@ -56,6 +56,13 @@ public class QuotationDto {
     private BigDecimal quotationDiscount = BigDecimal.ZERO;
     private BigDecimal quotationDiscountAmount = BigDecimal.ZERO;
     
+    // Quotation item search parameters
+    private List<String> quotationItemStatuses;
+    private Long quotationId;
+    private Long productId;
+    private Boolean isProduction;
+    private List<String> quotationStatuses;
+    
     // Getters (in case Lombok is not working)
     public Long getId() { return id; }
     public Long getCustomerId() { return customerId; }
