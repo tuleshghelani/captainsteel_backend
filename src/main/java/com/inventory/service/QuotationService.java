@@ -992,7 +992,8 @@ public class QuotationService {
             return;
         }
 
-        if (currentStatus == QuotationStatus.Q && newStatus == QuotationStatus.A) {
+        if ((currentStatus == QuotationStatus.Q && newStatus == QuotationStatus.A) ||
+            (currentStatus == QuotationStatus.D && newStatus == QuotationStatus.A)) {
             // Block quantities when accepting
             updateProductQuantities(quotation, true);
         } else if (currentStatus == QuotationStatus.A && newStatus == QuotationStatus.D) {
@@ -1002,15 +1003,6 @@ public class QuotationService {
             // Move quantities from blocked to used (subtract from blocked)
             updateProductQuantities(quotation, false);
         }
-//        else if (currentStatus == QuotationStatus.A && newStatus != QuotationStatus.P) {
-//            // When changing from Accepted to any other status (except Processing), unblock quantities
-//            // This handles the case when A -> D is already handled above, but also handles A -> Q, A -> C, etc.
-//            updateProductQuantities(quotation, false);
-//        } else if (currentStatus == QuotationStatus.P && newStatus != QuotationStatus.C) {
-//            // When changing from Processing to any other status (except Completed), unblock quantities
-//            // This handles P -> A, P -> D, P -> Q, etc.
-//            updateProductQuantities(quotation, false);
-//        }
     }
 
     private void updateProductQuantities(Quotation quotation, boolean block) {
@@ -1109,40 +1101,6 @@ public class QuotationService {
         } catch (Exception e) {
             log.error("Error deleting quotation", e);
             throw new ValidationException("Failed to delete quotation: " + e.getMessage(), HttpStatus.UNPROCESSABLE_ENTITY);
-        }
-    }
-    
-    /**
-     * Release product quantities by adding them back to remaining and subtracting from blocked
-     * @param items The quotation items to release quantities for
-     */
-    private void releaseProductQuantities(List<QuotationItem> items) {
-        for (QuotationItem item : items) {
-            Product product = item.getProduct();
-            productQuantityService.updateProductQuantity(
-                product.getId(), 
-                item.getQuantity(),
-                false,  // not a purchase
-                false,  // not a sale
-                false   // unblock (release)
-            );
-        }
-    }
-    
-    /**
-     * Block product quantities by subtracting from remaining and adding to blocked
-     * @param items The quotation items to block quantities for
-     */
-    private void blockProductQuantities(List<QuotationItem> items) {
-        for (QuotationItem item : items) {
-            Product product = item.getProduct();
-            productQuantityService.updateProductQuantity(
-                product.getId(), 
-                item.getQuantity(),
-                false,  // not a purchase
-                false,  // not a sale
-                true    // block
-            );
         }
     }
 }
