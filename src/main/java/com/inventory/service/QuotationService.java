@@ -169,7 +169,13 @@ public class QuotationService {
             }
 
             if(quotation.getStatus() == QuotationStatus.C) {
-                throw new ValidationException("Quotation is already accepted, processed or completed");
+                throw new ValidationException("Quotation is already completed");
+            }
+            
+            // Store the original items if the quotation is in 'A' or 'P' status
+            List<QuotationItem> originalItems = new ArrayList<>();
+            if (quotation.getStatus() == QuotationStatus.A || quotation.getStatus() == QuotationStatus.P) {
+                originalItems = quotationItemRepository.findByQuotationId(quotation.getId());
             }
             
             if(request.getCustomerId() != null){
@@ -187,6 +193,21 @@ public class QuotationService {
             quotationItemCalculationRepository.deleteByQuotationId(quotation.getId());
             quotationItemRepository.deleteByQuotationId(quotation.getId());
             
+            // If the quotation was in 'A' or 'P' status, release the quantities of original items
+            if (quotation.getStatus() == QuotationStatus.A || quotation.getStatus() == QuotationStatus.P) {
+                // Release quantities: add to remaining, subtract from blocked
+                for (QuotationItem item : originalItems) {
+                    Product product = item.getProduct();
+                    productQuantityService.updateProductQuantity(
+                        product.getId(), 
+                        item.getQuantity(),
+                        false,  // not a purchase
+                        false,  // not a sale
+                        false   // unblock (release)
+                    );
+                }
+            }
+            
             List<QuotationItem> items = new ArrayList<>();
             BigDecimal totalAmount = BigDecimal.ZERO;
             BigDecimal taxAmount = BigDecimal.ZERO;
@@ -200,6 +221,18 @@ public class QuotationService {
                 taxAmount = taxAmount.add(item.getTaxAmount());
                 discountedPrice = discountedPrice.add(item.getDiscountPrice());
                 loadingCharge = loadingCharge.add(item.getLoadingCharge());
+
+                if (quotation.getStatus() == QuotationStatus.A || quotation.getStatus() == QuotationStatus.P) {
+                    // Block quantities: subtract from remaining, add to blocked
+                    Product product = item.getProduct();
+                    productQuantityService.updateProductQuantity(
+                            product.getId(),
+                            item.getQuantity(),
+                            false,  // not a purchase
+                            false,  // not a sale
+                            true    // block
+                    );
+                }
             }
             
             quotationItemRepository.saveAll(items);
@@ -215,6 +248,21 @@ public class QuotationService {
             quotation.setLoadingCharge(loadingCharge);
             quotation.setQuotationDiscountAmount(quotationDiscountAmount); // Set the calculated discount amount
             quotationRepository.save(quotation);
+
+            // If the quotation is now in 'A' or 'P' status, block the quantities of new items
+//            if (quotation.getStatus() == QuotationStatus.A || quotation.getStatus() == QuotationStatus.P) {
+//                // Block quantities: subtract from remaining, add to blocked
+//                for (QuotationItem item : items) {
+//                    Product product = item.getProduct();
+//                    productQuantityService.updateProductQuantity(
+//                        product.getId(),
+//                        item.getQuantity(),
+//                        false,  // not a purchase
+//                        false,  // not a sale
+//                        true    // block
+//                    );
+//                }
+//            }
             
             return ApiResponse.success("Quotation updated successfully");
         } catch (Exception e) {
@@ -954,6 +1002,15 @@ public class QuotationService {
             // Move quantities from blocked to used (subtract from blocked)
             updateProductQuantities(quotation, false);
         }
+//        else if (currentStatus == QuotationStatus.A && newStatus != QuotationStatus.P) {
+//            // When changing from Accepted to any other status (except Processing), unblock quantities
+//            // This handles the case when A -> D is already handled above, but also handles A -> Q, A -> C, etc.
+//            updateProductQuantities(quotation, false);
+//        } else if (currentStatus == QuotationStatus.P && newStatus != QuotationStatus.C) {
+//            // When changing from Processing to any other status (except Completed), unblock quantities
+//            // This handles P -> A, P -> D, P -> Q, etc.
+//            updateProductQuantities(quotation, false);
+//        }
     }
 
     private void updateProductQuantities(Quotation quotation, boolean block) {
@@ -1052,6 +1109,40 @@ public class QuotationService {
         } catch (Exception e) {
             log.error("Error deleting quotation", e);
             throw new ValidationException("Failed to delete quotation: " + e.getMessage(), HttpStatus.UNPROCESSABLE_ENTITY);
+        }
+    }
+    
+    /**
+     * Release product quantities by adding them back to remaining and subtracting from blocked
+     * @param items The quotation items to release quantities for
+     */
+    private void releaseProductQuantities(List<QuotationItem> items) {
+        for (QuotationItem item : items) {
+            Product product = item.getProduct();
+            productQuantityService.updateProductQuantity(
+                product.getId(), 
+                item.getQuantity(),
+                false,  // not a purchase
+                false,  // not a sale
+                false   // unblock (release)
+            );
+        }
+    }
+    
+    /**
+     * Block product quantities by subtracting from remaining and adding to blocked
+     * @param items The quotation items to block quantities for
+     */
+    private void blockProductQuantities(List<QuotationItem> items) {
+        for (QuotationItem item : items) {
+            Product product = item.getProduct();
+            productQuantityService.updateProductQuantity(
+                product.getId(), 
+                item.getQuantity(),
+                false,  // not a purchase
+                false,  // not a sale
+                true    // block
+            );
         }
     }
 }

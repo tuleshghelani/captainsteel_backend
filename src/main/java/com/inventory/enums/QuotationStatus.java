@@ -8,7 +8,7 @@ public enum QuotationStatus {
     Q("Quote"),
     A("Accepted"),
     D("Declined"),
-    R("Ready"),
+//    R("Ready"),
     P("Processing"),
     C("Completed");
 
