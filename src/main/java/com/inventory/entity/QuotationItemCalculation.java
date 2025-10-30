@@ -26,7 +26,9 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "quotation_item_calculations", indexes = {
-    @Index(name = "idx_quotation_item_calculations_quotation_item_id", columnList = "quotation_item_id")
+    @Index(name = "idx_quotation_item_calculations_quotation_item_id", columnList = "quotation_item_id"),
+    @Index(name = "idx_quotation_item_calculations_quotation_id", columnList = "quotation_id"),
+    @Index(name = "idx_quotation_item_calculations_client_id", columnList = "client_id")
 })
 public class QuotationItemCalculation {
     @Id
