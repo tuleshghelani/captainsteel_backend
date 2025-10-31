@@ -260,7 +260,7 @@ public class QuotationWithOutPdfGenerationService {
                 .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
         
         // Calculate GRAND TOTAL and round it
-        BigDecimal grandTotal = totalAmount.add(loadingCharge).add(gstAmount).setScale(0, RoundingMode.HALF_UP);
+        BigDecimal grandTotal = totalAmount.add(loadingCharge).setScale(0, RoundingMode.HALF_UP);
         
         // Create a proper summary table with professional formatting
         Table summaryTable = new Table(new float[]{4, 1})
