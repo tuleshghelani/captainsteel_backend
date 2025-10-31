@@ -619,11 +619,29 @@ public class QuotationWithOutPdfGenerationService {
             return paragraph;
         }
 
+        // Handle non-ACCESSORIES products (existing logic)
+        String[] parts = html.split("(<b>|</b>)");
+        boolean isBold = false;
+
+        for (String part : parts) {
+            if (!part.trim().isEmpty()) {
+                // Handle spacing between words
+                String formattedPart = part;
+
+                Text text = new Text(formattedPart);
+                if (isBold) {
+                    text.setBold();
+                }
+                paragraph.add(text);
+                isBold = !isBold;
+            }
+        }
+
         // Handle ACCESSORIES product type
         String productType = (String) item.get("productType");
         if ("ACCESSORIES".equals(productType)) {
             // Add product name
-            paragraph.add(new Text(html));
+//            paragraph.add(new Text(html));
             
             // Add accessories size information
             String accessoriesSize = (String) item.get("accessoriesSize");
@@ -636,7 +654,7 @@ public class QuotationWithOutPdfGenerationService {
                     // Add weight if available
                     Object weightObj = item.get("weight");
                     if (weightObj != null) {
-                        paragraph.add(new Text(", " + weightObj.toString() + " kg"));
+                        paragraph.add(new Text(", " + weightObj.toString() + " "));
                     }
                     paragraph.add(new Text(")"));
                 } else {
@@ -646,21 +664,6 @@ public class QuotationWithOutPdfGenerationService {
             }
             
             return paragraph;
-        }
-
-        // Handle non-ACCESSORIES products (existing logic)
-        String[] parts = html.split("(<b>|</b>)");
-        boolean isBold = false;
-
-        for (String part : parts) {
-            if (!part.trim().isEmpty()) {
-                Text text = new Text(part);
-                if (isBold) {
-                    text.setBold();
-                }
-                paragraph.add(text);
-                isBold = !isBold;
-            }
         }
 
         if(isPrintImage) {

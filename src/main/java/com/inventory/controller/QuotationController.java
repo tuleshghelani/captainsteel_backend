@@ -5,6 +5,7 @@ import com.inventory.dto.QuotationDto;
 import com.inventory.dto.QuotationRequestDto;
 import com.inventory.dto.QuotationStatusUpdateDto;
 import com.inventory.service.QuotationService;
+import com.inventory.service.QuoteNumberResetService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class QuotationController {
     private final QuotationService quotationService;
+    private final QuoteNumberResetService quoteNumberResetService;
     
     @PostMapping("/create")
     public ResponseEntity<ApiResponse<?>> createQuotation(@RequestBody QuotationRequestDto request) {
@@ -63,5 +65,23 @@ public class QuotationController {
     public ResponseEntity<ApiResponse<?>> deleteQuotation(@RequestBody QuotationRequestDto request) {
         log.debug("Received quotation delete request for ID: {}", request.getQuotationId());
         return ResponseEntity.ok(quotationService.deleteQuotation(request));
+    }
+    
+    /**
+     * Manual endpoint to reset quote numbers (useful for testing or emergency reset)
+     * Should be protected with admin-only access in production
+     */
+    @PostMapping("/reset-quote-numbers")
+    public ResponseEntity<ApiResponse<?>> resetQuoteNumbers() {
+        log.info("Manual quote number reset triggered");
+        try {
+            int resetCount = quoteNumberResetService.resetQuoteNumbers();
+            return ResponseEntity.ok(new ApiResponse<>(true, 
+                "Quote numbers reset successfully for " + resetCount + " clients", null));
+        } catch (Exception e) {
+            log.error("Error resetting quote numbers: {}", e.getMessage(), e);
+            return ResponseEntity.ok(new ApiResponse<>(false, 
+                "Failed to reset quote numbers: " + e.getMessage(), null));
+        }
     }
 } 
