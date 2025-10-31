@@ -11,7 +11,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -906,7 +909,7 @@ public class QuotationService {
         }
     }
 
-    public byte[] generateQuotationPdf(QuotationDto request) {
+    public ResponseEntity<byte[]> generateQuotationPdfWithMetadata(QuotationDto request) {
         try {
             UserMaster currentUser = utilityService.getCurrentLoggedInUser();
             request.setClientId(currentUser.getClient().getId());
@@ -915,11 +918,26 @@ public class QuotationService {
             // Check if quotation discount is 0 or null, then use PdfGenerationService
             // Otherwise, use QuotationWithOutPdfGenerationService
             BigDecimal quotationDiscount = (BigDecimal) quotationData.get("quotationDiscount");
+            byte[] pdfBytes;
             if (quotationDiscount == null || quotationDiscount.compareTo(BigDecimal.ZERO) <= 0) {
-                return pdfGenerationService.generateQuotationPdf(quotationData);
+                pdfBytes = pdfGenerationService.generateQuotationPdf(quotationData);
             } else {
-                return quotationWithOutPdfGenerationService.generateQuotationPdf(quotationData);
+                pdfBytes = quotationWithOutPdfGenerationService.generateQuotationPdf(quotationData);
             }
+            
+            // Generate filename from quote number and customer name
+            String quoteNumber = (String) quotationData.get("quoteNumber");
+            String customerName = (String) quotationData.get("customerName");
+            String filenamePart = (quoteNumber != null ? quoteNumber : "quotation") + "_" + 
+                                  (customerName != null ? customerName : "");
+            String filename = sanitizeFilename(filenamePart + ".pdf");
+            
+            // Prepare HTTP response with headers
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("filename", filename);
+            
+            return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
         } catch (ValidationException ve) {
             ve.printStackTrace();
             throw ve;
@@ -927,6 +945,11 @@ public class QuotationService {
             log.error("Error generating quotation PDF", e);
             throw new ValidationException("Failed to generate PDF: " + e.getMessage());
         }
+    }
+    
+    public byte[] generateQuotationPdf(QuotationDto request) {
+        ResponseEntity<byte[]> result = generateQuotationPdfWithMetadata(request);
+        return result.getBody();
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -1045,12 +1068,26 @@ public class QuotationService {
         };
     }
 
-    public byte[] generateDispatchSlipPdf(QuotationDto request) {
+    public ResponseEntity<byte[]> generateDispatchSlipPdfWithMetadata(QuotationDto request) {
         try {
             UserMaster currentUser = utilityService.getCurrentLoggedInUser();
             request.setClientId(currentUser.getClient().getId());
             Map<String, Object> quotationData = quotationDao.getQuotationDetail(request);
-            return dispatchSlipPdfService.generateDispatchSlipPdf(quotationData);
+            byte[] pdfBytes = dispatchSlipPdfService.generateDispatchSlipPdf(quotationData);
+            
+            // Generate filename from quote number and customer name
+            String quoteNumber = (String) quotationData.get("quoteNumber");
+            String customerName = (String) quotationData.get("customerName");
+            String filenamePart = (quoteNumber != null ? quoteNumber : "quotation") + "_" + 
+                                  (customerName != null ? customerName : "") + "_dispatch_slip";
+            String filename = sanitizeFilename(filenamePart + ".pdf");
+            
+            // Prepare HTTP response with headers
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("filename", filename);
+            
+            return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
         } catch (ValidationException ve) {
             log.error("Error generating dispatch slip PDF", ve);
             throw ve;
@@ -1058,6 +1095,24 @@ public class QuotationService {
             log.error("Error generating dispatch slip PDF", e);
             throw new ValidationException("Failed to generate dispatch slip PDF: " + e.getMessage());
         }
+    }
+    
+    public byte[] generateDispatchSlipPdf(QuotationDto request) {
+        ResponseEntity<byte[]> result = generateDispatchSlipPdfWithMetadata(request);
+        return result.getBody();
+    }
+    
+    /**
+     * Sanitize filename by removing invalid characters
+     * @param filename The filename to sanitize
+     * @return Sanitized filename safe for all operating systems
+     */
+    private String sanitizeFilename(String filename) {
+        if (filename == null || filename.trim().isEmpty()) {
+            return "quotation.pdf";
+        }
+        // Replace invalid characters with underscore
+        return filename.replaceAll("[^a-zA-Z0-9._-]", "_");
     }
 
     @Transactional(rollbackFor = Exception.class)

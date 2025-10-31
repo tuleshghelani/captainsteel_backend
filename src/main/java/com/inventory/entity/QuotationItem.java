@@ -27,7 +27,7 @@ import lombok.NoArgsConstructor;
     @Index(name = "idx_quotation_items_quotation_id", columnList = "quotation_id"),
     @Index(name = "idx_quotation_items_product_id", columnList = "product_id"),
     @Index(name = "idx_quotation_items_client_id", columnList = "client_id"),
-    @Index(name = "idx_quotation_items_quotation_isProduction", columnList = "isProduction"),
+    @Index(name = "idx_quotation_items_quotation_isProduction", columnList = "is_production"),
     @Index(name = "idx_quotation_items_quotation_quotation_item_status", columnList = "quotation_item_status")
 })
 public class QuotationItem {

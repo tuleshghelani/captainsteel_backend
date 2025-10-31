@@ -13,7 +13,7 @@ public class QuoteNumberGeneratorService {
     private final ClientRepository clientRepository;
     
     @Transactional
-    public String generateQuoteNumber(Client client) {
+    public synchronized String generateQuoteNumber(Client client) {
         // Using pessimistic lock to ensure thread safety
         Client lockedClient = clientRepository.findByIdWithPessimisticLock(client.getId())
             .orElseThrow(() -> new RuntimeException("Client not found"));

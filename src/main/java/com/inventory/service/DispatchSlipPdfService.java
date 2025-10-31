@@ -178,8 +178,30 @@ public class DispatchSlipPdfService {
 
         for (Map<String, Object> item : items) {
             table.addCell(new Cell().add(new Paragraph(String.valueOf(counter.getAndIncrement()))));
-            table.addCell(new Cell().add(convertHtmlToParagraph(item.get("productName").toString())));
-            table.addCell(new Cell().add(new Paragraph(item.get("quantity").toString())));
+            
+            // Create item name cell with product name and optional remarks
+            Paragraph itemNameParagraph = convertHtmlToParagraph(item.get("productName").toString());
+            
+            // Add nos in brackets if available and not null (after item name)
+            Object nos = item.get("nos");
+            if (nos != null && !nos.toString().trim().isEmpty()) {
+                itemNameParagraph.add(new Text(" (" + nos.toString() + " nos)")
+                    .setFontSize(10)
+                    .setFontColor(new DeviceRgb(60, 60, 60)));
+            }
+            
+            // Add item remarks if available
+            String itemRemarks = item.get("itemRemarks") != null ? item.get("itemRemarks").toString().trim() : "";
+            if (!itemRemarks.isEmpty()) {
+                itemNameParagraph.add(new Text("\n(" + itemRemarks + ")")
+                    .setFontSize(9)
+                    .setItalic()
+                    .setFontColor(new DeviceRgb(100, 100, 100)));
+            }
+            
+            table.addCell(new Cell().add(itemNameParagraph));
+            
+            table.addCell(new Cell().add(new Paragraph(item.get("quantity").toString() + " " + item.get("measurement"))));
         }
 
         document.add(table);

@@ -9,9 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 
 @RestController
 @RequestMapping("/api/quotations")
@@ -47,25 +44,13 @@ public class QuotationController {
     @PostMapping("/generate-pdf")
     public ResponseEntity<byte[]> generateQuotationPdf(@RequestBody QuotationDto request) {
         log.debug("Received quotation PDF generation request for ID: {}", request.getId());
-        byte[] pdfBytes = quotationService.generateQuotationPdf(request);
-        
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDispositionFormData("filename", "quotation.pdf");
-        
-        return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+        return quotationService.generateQuotationPdfWithMetadata(request);
     }
     
     @PostMapping("/generate-dispatch-slip")
     public ResponseEntity<byte[]> generateDispatchSlipPdf(@RequestBody QuotationDto request) {
         log.debug("Received dispatch slip PDF generation request for ID: {}", request.getId());
-        byte[] pdfBytes = quotationService.generateDispatchSlipPdf(request);
-        
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDispositionFormData("filename", "dispatch-slip.pdf");
-        
-        return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+        return quotationService.generateDispatchSlipPdfWithMetadata(request);
     }
     
     @PutMapping("/update-status")
