@@ -233,14 +233,34 @@ public class QuotationWithOutPdfGenerationService {
                 displayMeasurement = measurement.toLowerCase().equals("kg") ? "\n " + measurement + "(approx.)" : "\n" + measurement;
             }
             
-            table.addCell(new Cell().add(new Paragraph(item.get("quantity").toString() + " " + displayMeasurement)));
-            table.addCell(new Cell().add(new Paragraph(item.get("unitPrice").toString())));
-            table.addCell(new Cell().add(new Paragraph(item.get("discountPrice").toString())));
+            // Round quantity for display (55.335 -> 55, 55.658 -> 56)
+            BigDecimal roundedQuantity = new BigDecimal(item.get("quantity").toString()).setScale(0, RoundingMode.HALF_UP);
+            BigDecimal unitPrice = new BigDecimal(item.get("unitPrice").toString());
             
-            totalAmount = totalAmount.add(new BigDecimal(item.get("discountPrice").toString()));
+            // Recalculate TOTAL AMOUNT based on rounded quantity
+            BigDecimal itemSubTotal = roundedQuantity.multiply(unitPrice).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal discountPercentage = new BigDecimal(item.get("discountPercentage").toString());
+            BigDecimal discountAmount = itemSubTotal.multiply(discountPercentage).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            BigDecimal afterDiscount = itemSubTotal.subtract(discountAmount);
+            
+            table.addCell(new Cell().add(new Paragraph(roundedQuantity.toString() + " " + displayMeasurement)));
+            table.addCell(new Cell().add(new Paragraph(unitPrice.toString())));
+            table.addCell(new Cell().add(new Paragraph(afterDiscount.toString())));
+            
+            totalAmount = totalAmount.add(afterDiscount);
         }
         
         document.add(table);
+        
+        // Recalculate loading charge based on rounded quantities
+        BigDecimal loadingCharge = new BigDecimal(quotationData.get("loadingCharge").toString());
+        
+        // Calculate GST 18% based on recalculated total
+        BigDecimal gstAmount = totalAmount.multiply(BigDecimal.valueOf(18))
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        
+        // Calculate GRAND TOTAL and round it
+        BigDecimal grandTotal = totalAmount.add(loadingCharge).add(gstAmount).setScale(0, RoundingMode.HALF_UP);
         
         // Create a proper summary table with professional formatting
         Table summaryTable = new Table(new float[]{4, 1})
@@ -248,7 +268,7 @@ public class QuotationWithOutPdfGenerationService {
             .setMarginTop(20)
             .setBorder(Border.NO_BORDER);
         
-        // Add total row
+        // Add total row (not rounded, shows detail)
         Cell totalLabelCell = new Cell()
             .add(new Paragraph("TOTAL"))
             .setBorder(Border.NO_BORDER)
@@ -265,14 +285,14 @@ public class QuotationWithOutPdfGenerationService {
         summaryTable.addCell(totalLabelCell);
         summaryTable.addCell(totalValueCell);
         
-        // Add loading charge row
+        // Add loading charge row (not rounded, shows detail)
         Cell loadingLabelCell = new Cell()
             .add(new Paragraph("Loading Charge"))
             .setBorder(Border.NO_BORDER)
             .setBorderBottom(new SolidBorder(BORDER_COLOR, 1))
             .setPadding(6);
         Cell loadingValueCell = new Cell()
-            .add(new Paragraph(quotationData.get("loadingCharge").toString() + "/-"))
+            .add(new Paragraph(loadingCharge.toString() + "/-"))
             .setBorder(Border.NO_BORDER)
             .setBorderBottom(new SolidBorder(BORDER_COLOR, 1))
             .setTextAlignment(TextAlignment.RIGHT)
@@ -280,9 +300,7 @@ public class QuotationWithOutPdfGenerationService {
         summaryTable.addCell(loadingLabelCell);
         summaryTable.addCell(loadingValueCell);
         
-        // Add GST row
-        BigDecimal gstAmount = totalAmount.multiply(BigDecimal.valueOf(18))
-                .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+        // Add GST row (not rounded, shows detail)
 //        Cell gstLabelCell = new Cell()
 //            .add(new Paragraph("GST 18% (SGST 9% CGST 9%)"))
 //            .setBorder(Border.NO_BORDER)
@@ -297,8 +315,7 @@ public class QuotationWithOutPdfGenerationService {
 //        summaryTable.addCell(gstLabelCell);
 //        summaryTable.addCell(gstValueCell);
         
-        // Add grand total row with emphasis
-        BigDecimal grandTotal = ((BigDecimal) quotationData.get("totalAmount")).setScale(0, RoundingMode.HALF_UP);
+        // Add grand total row with emphasis (ONLY THIS IS ROUNDED)
         Cell grandTotalLabelCell = new Cell()
             .add(new Paragraph("GRAND TOTAL"))
             .setBorder(Border.NO_BORDER)
