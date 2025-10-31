@@ -219,10 +219,19 @@ public class QuotationWithOutPdfGenerationService {
             
             table.addCell(new Cell().add(itemNameParagraph));
             
-            String measurement = item.get("measurement") != null ? item.get("measurement").toString().trim() : "";
+            // Check if calculation type is NOS
+            String calculationType = item.get("calculationType") != null ? item.get("calculationType").toString().trim() : "";
+            String displayMeasurement;
             
-            // Add "approx." prefix for kg measurements
-            String displayMeasurement = measurement.toLowerCase().equals("kg") ? "\n " + measurement + "(approx.)" : "\n" + measurement;
+            if ("NOS".equals(calculationType)) {
+                // For NOS calculation type, show "NOS" instead of measurement
+                displayMeasurement = "\nNOS";
+            } else {
+                // For other calculation types, show the measurement unit
+                String measurement = item.get("measurement") != null ? item.get("measurement").toString().trim() : "";
+                // Add "approx." prefix for kg measurements
+                displayMeasurement = measurement.toLowerCase().equals("kg") ? "\n " + measurement + "(approx.)" : "\n" + measurement;
+            }
             
             table.addCell(new Cell().add(new Paragraph(item.get("quantity").toString() + " " + displayMeasurement)));
             table.addCell(new Cell().add(new Paragraph(item.get("unitPrice").toString())));
@@ -320,7 +329,12 @@ public class QuotationWithOutPdfGenerationService {
 
     private boolean shouldShowCalculationDetails(Map<String, Object> item) {
         String productType = (String) item.get("productType");
+        String calculationType = (String) item.get("calculationType");
         System.out.println("item : " + item);
+        // Don't show calculation details if calculation type is NOS
+        if ("NOS".equals(calculationType)) {
+            return false;
+        }
         return "REGULAR".equals(productType) || "POLY_CARBONATE".equals(productType);
     }
     

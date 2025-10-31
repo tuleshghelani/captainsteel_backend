@@ -157,6 +157,7 @@ public class QuotationDao {
             LEFT JOIN (select * from quotation_items qi where qi.client_id = :clientId) qi ON q.id = qi.quotation_id
             LEFT JOIN (select * from product p where p.client_id = :clientId) p ON qi.product_id = p.id
             WHERE q.id = :quotationId 
+            order by qi.id
         """);
 
         Query query = entityManager.createNativeQuery(sql.toString());

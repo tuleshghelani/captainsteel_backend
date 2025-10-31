@@ -277,11 +277,21 @@ public class QuotationService {
 
     private void validateAndProcessItem(QuotationItemRequestDto itemDto, Product product, UserMaster currentUser) {
         if (product.getType() == ProductMainType.REGULAR) {
-            validateRegularProductCalculations(itemDto);
-            calculateMeasurements(itemDto, product, currentUser);
+            // Check if calculation type is NOS - if so, just validate quantity
+            if ("NOS".equalsIgnoreCase(itemDto.getCalculationType())) {
+                validateNosProduct(itemDto);
+            } else {
+                validateRegularProductCalculations(itemDto);
+                calculateMeasurements(itemDto, product, currentUser);
+            }
         } else if (product.getType() == ProductMainType.POLY_CARBONATE) {
-            validatePolyCarbonateProduct(product, itemDto);
-            calculateMeasurements(itemDto, product, currentUser);
+            // Check if calculation type is NOS - if so, just validate quantity
+            if ("NOS".equalsIgnoreCase(itemDto.getCalculationType())) {
+                validateNosProduct(itemDto);
+            } else {
+                validatePolyCarbonateProduct(product, itemDto);
+                calculateMeasurements(itemDto, product, currentUser);
+            }
         } else if (product.getType() == ProductMainType.NOS) {
             validateNosProduct(itemDto);
         } else if (product.getType() == ProductMainType.ACCESSORIES) {
@@ -612,6 +622,8 @@ public class QuotationService {
         item.setLoadingCharge(itemDto.getLoadingCharge());
         if(itemDto.getQuotationItemStatus()!=null){
             item.setQuotationItemStatus(itemDto.getQuotationItemStatus());
+        } else if (itemDto.getQuotationItemStatus()==null && itemDto.getIsProduction() != null && itemDto.getIsProduction()) {
+            item.setQuotationItemStatus("O");
         }
         // Calculate price components
         BigDecimal subTotal = itemDto.getUnitPrice().multiply(itemDto.getQuantity())

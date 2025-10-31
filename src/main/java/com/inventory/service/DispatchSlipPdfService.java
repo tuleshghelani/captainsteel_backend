@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
@@ -180,28 +181,42 @@ public class DispatchSlipPdfService {
             table.addCell(new Cell().add(new Paragraph(String.valueOf(counter.getAndIncrement()))));
             
             // Create item name cell with product name and optional remarks
-            Paragraph itemNameParagraph = convertHtmlToParagraph(item.get("productName").toString());
-            
+            Paragraph itemNameParagraph = convertHtmlToParagraph(item, true);
+
             // Add nos in brackets if available and not null (after item name)
             Object nos = item.get("nos");
             if (nos != null && !nos.toString().trim().isEmpty()) {
                 itemNameParagraph.add(new Text(" (" + nos.toString() + " nos)")
-                    .setFontSize(10)
-                    .setFontColor(new DeviceRgb(60, 60, 60)));
+                        .setFontSize(10)
+                        .setFontColor(new DeviceRgb(60, 60, 60)));
             }
-            
+
             // Add item remarks if available
             String itemRemarks = item.get("itemRemarks") != null ? item.get("itemRemarks").toString().trim() : "";
             if (!itemRemarks.isEmpty()) {
                 itemNameParagraph.add(new Text("\n(" + itemRemarks + ")")
-                    .setFontSize(9)
-                    .setItalic()
-                    .setFontColor(new DeviceRgb(100, 100, 100)));
+                        .setFontSize(9)
+                        .setItalic()
+                        .setFontColor(new DeviceRgb(100, 100, 100)));
             }
-            
+
             table.addCell(new Cell().add(itemNameParagraph));
-            
-            table.addCell(new Cell().add(new Paragraph(item.get("quantity").toString() + " " + item.get("measurement"))));
+
+            // Check if calculation type is NOS
+            String calculationType = item.get("calculationType") != null ? item.get("calculationType").toString().trim() : "";
+            String displayMeasurement;
+
+            if ("NOS".equals(calculationType)) {
+                // For NOS calculation type, show "NOS" instead of measurement
+                displayMeasurement = "\nNOS";
+            } else {
+                // For other calculation types, show the measurement unit
+                String measurement = item.get("measurement") != null ? item.get("measurement").toString().trim() : "";
+                // Add "approx." prefix for kg measurements
+                displayMeasurement = measurement.toLowerCase().equals("kg") ? "\n " + measurement + "(approx.)" : "\n" + measurement;
+            }
+
+            table.addCell(new Cell().add(new Paragraph(item.get("quantity").toString() + " " + displayMeasurement)));
         }
 
         document.add(table);
@@ -216,19 +231,24 @@ public class DispatchSlipPdfService {
 
     private boolean shouldShowCalculationDetails(Map<String, Object> item) {
         String productType = (String) item.get("productType");
+        String calculationType = (String) item.get("calculationType");
         System.out.println("item : " + item);
+        // Don't show calculation details if calculation type is NOS
+        if ("NOS".equals(calculationType)) {
+            return false;
+        }
         return "REGULAR".equals(productType) || "POLY_CARBONATE".equals(productType);
     }
-    
+
     private void addCalculationDetailsTable(Document document, Map<String, Object> item) {
         String productNameHtml = item.get("productName").toString();
-        Paragraph productNameParagraph = convertHtmlToParagraph(productNameHtml);
-        
+        Paragraph productNameParagraph = convertHtmlToParagraph(item, false);
+
         document.add(new Paragraph("\nCalculation Details for : ")
-            .add(productNameParagraph)
-            .setFontColor(TEXT_PRIMARY)
-            .setMarginTop(10));
-            
+                .add(productNameParagraph)
+                .setFontColor(TEXT_PRIMARY)
+                .setMarginTop(10));
+
         List<Map<String, Object>> calculations = (List<Map<String, Object>>) item.get("calculations");
         if (calculations == null || calculations.isEmpty()) {
             return;
@@ -238,7 +258,7 @@ public class DispatchSlipPdfService {
         Table table;
 
         System.out.println("calculationType : " + calculationType);
-        
+
         if ("SQ_FEET".equals(calculationType)) {
             table = createSqFeetCalculationTable(calculations);
         } else if ("MM".equals(calculationType)) {
@@ -246,7 +266,7 @@ public class DispatchSlipPdfService {
         } else {
             return;
         }
-        
+
         document.add(table);
     }
     
@@ -385,15 +405,17 @@ public class DispatchSlipPdfService {
         document.add(footerTable);
     }
 
-    private Paragraph convertHtmlToParagraph(String html) {
+    // Helper method to convert HTML to formatted paragraph
+    private Paragraph convertHtmlToParagraph(Map<String, Object> item, boolean isPrintImage) {
         Paragraph paragraph = new Paragraph();
+        String html = item.get("productName").toString();
 
         // Remove any null or empty strings
         if (html == null || html.trim().isEmpty()) {
             return paragraph;
         }
 
-        // First handle HTML tags
+        // Handle non-ACCESSORIES products (existing logic)
         String[] parts = html.split("(<b>|</b>)");
         boolean isBold = false;
 
@@ -411,6 +433,69 @@ public class DispatchSlipPdfService {
             }
         }
 
+        // Handle ACCESSORIES product type
+        String productType = (String) item.get("productType");
+        if ("ACCESSORIES".equals(productType)) {
+            // Add product name
+//            paragraph.add(new Text(html));
+
+            // Add accessories size information
+            String accessoriesSize = (String) item.get("accessoriesSize");
+            System.out.println("accessoriesSize inside convertHtmlToParagraph"+ accessoriesSize);
+            if (accessoriesSize != null) {
+                if ("C".equalsIgnoreCase(accessoriesSize)) {
+                    // For Custom size, show "Custom" and weight
+                    paragraph.add(new Text(" (Custom"));
+
+                    // Add weight if available
+                    Object weightObj = item.get("weight");
+                    if (weightObj != null) {
+                        paragraph.add(new Text(", " + weightObj.toString() + " "));
+                    }
+                    paragraph.add(new Text(")"));
+                } else {
+                    // For standard sizes, show size in inches
+                    paragraph.add(new Text(" (" + accessoriesSize + "\")"));
+                }
+            }
+
+            return paragraph;
+        }
+
+        if(isPrintImage) {
+            // Add polycarbonate type image if applicable
+            String polyCarbonateType = (String) item.get("polyCarbonateType");
+            if (polyCarbonateType != null) {
+                String imagePath = getPolyCarbonateImagePath(polyCarbonateType);
+                if (imagePath != null) {
+                    try {
+                        paragraph.add(new Text("\n"));
+                        InputStream imageStream = getClass().getClassLoader().getResourceAsStream(imagePath);
+                        if (imageStream != null) {
+                            ImageData imageData = ImageDataFactory.create(imageStream.readAllBytes());
+                            Image img = new Image(imageData);
+                            img.setWidth(100);
+                            img.setHeight(20);
+                            paragraph.add(img);
+                            imageStream.close(); // Close the stream
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Error loading polycarbonate image: " + imagePath + ", error: " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+
         return paragraph;
+    }
+
+    private String getPolyCarbonateImagePath(String polyCarbonateType) {
+        return switch (polyCarbonateType.toUpperCase()) {
+            case "SINGLE" -> "quotation/single.jpg";
+            case "DOUBLE" -> "quotation/double.jpg";
+            case "FULL_SHEET" -> "quotation/full_sheet.jpg";
+            default -> null;
+        };
     }
 } 

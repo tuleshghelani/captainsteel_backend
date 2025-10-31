@@ -135,7 +135,8 @@ public class ProductService {
             } else {
                 product.setSqFeetMultiplier(null);
             }
-
+            product.setRemainingQuantity(dto.getRemainingQuantity() != null ? dto.getRemainingQuantity() : BigDecimal.valueOf(0));
+            product.setBlockedQuantity(dto.getBlockedQuantity() != null ? dto.getBlockedQuantity() : BigDecimal.valueOf(0));
             // Handle quantity updates using the new method
             dto.setTotalRemainingQuantity(product.getRemainingQuantity().subtract(product.getBlockedQuantity()));
             if (dto.getRemainingQuantity() != null || dto.getBlockedQuantity() != null || dto.getTotalRemainingQuantity() != null) {
