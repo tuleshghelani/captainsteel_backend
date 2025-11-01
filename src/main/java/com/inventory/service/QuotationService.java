@@ -91,8 +91,9 @@ public class QuotationService {
             //         throw new ValidationException("Unauthorized access to quotation");
             //     }
             // }
+            Customer customer = null;
             if(request.getCustomerId() != null){
-                Customer customer = customerRepository.findById(request.getCustomerId())
+                customer = customerRepository.findById(request.getCustomerId())
                 .orElseThrow(() -> new ValidationException("Customer not found"));
                 quotation.setCustomer(customer);
                 quotation.setCustomerName(customer.getName());
@@ -104,7 +105,13 @@ public class QuotationService {
             quotation.setValidUntil(request.getValidUntil());
             quotation.setRemarks(request.getRemarks());
             quotation.setTermsConditions(request.getTermsConditions());
-            quotation.setContactNumber(request.getContactNumber());
+            
+            // Set contact number: use from request if provided, otherwise use customer's mobile if customer exists
+            String contactNumber = request.getContactNumber();
+            if ((contactNumber == null || contactNumber.trim().isEmpty()) && customer != null && customer.getMobile() != null) {
+                contactNumber = customer.getMobile();
+            }
+            quotation.setContactNumber(contactNumber);
             quotation.setAddress(request.getAddress());
             quotation.setStatus(QuotationStatus.Q);
             quotation.setClient(currentUser.getClient());
@@ -276,6 +283,13 @@ public class QuotationService {
     }
 
     private void validateAndProcessItem(QuotationItemRequestDto itemDto, Product product, UserMaster currentUser) {
+        // Validate calculationBase='N' can only be used when there's exactly 1 calculation
+        if ("N".equalsIgnoreCase(itemDto.getCalculationBase())) {
+            if (itemDto.getCalculations() == null || itemDto.getCalculations().size() != 1) {
+                throw new ValidationException("CalculationBase 'N' (NOS) can only be selected when there is exactly 1 row in calculations");
+            }
+        }
+        
         if (product.getType() == ProductMainType.REGULAR) {
             // Check if calculation type is NOS - if so, just validate quantity
             if ("NOS".equalsIgnoreCase(itemDto.getCalculationType())) {
@@ -342,15 +356,17 @@ public class QuotationService {
                     .setScale(3, RoundingMode.HALF_UP);
             itemDto.setQuantity(total);
             // Weight is already set by the user for Custom size
+            // No loading charge for Custom size ('C')
+            itemDto.setLoadingCharge(BigDecimal.ZERO);
         } else {
             BigDecimal unitWeight = product.getAccessoriesWeight().get(itemDto.getAccessoriesSize());
             total = unitWeight.multiply(BigDecimal.valueOf(itemDto.getNos()))
                     .setScale(3, RoundingMode.HALF_UP);
             itemDto.setQuantity(total);
             itemDto.setWeight(total);
+            // Calculate loading charge for ACCESSORIES products when accessoriesSize != 'C'
+            itemDto.setLoadingCharge(total.multiply(BigDecimal.valueOf(0.1)).setScale(2, RoundingMode.HALF_UP));
         }
-        // Calculate loading charge for ACCESSORIES products (same as REGULAR products)
-        itemDto.setLoadingCharge(total.multiply(BigDecimal.valueOf(0.1)).setScale(2, RoundingMode.HALF_UP));
     }
 
     private void validateRegularProductCalculations(QuotationItemRequestDto itemDto) {
@@ -476,21 +492,80 @@ public class QuotationService {
                     }
                     itemDto.setWeight(totalRunningFeet);
                     itemDto.setQuantity(totalRunningFeet);
+                    // No loading charge for RF
+                    itemDto.setLoadingCharge(BigDecimal.ZERO);
                     break;
                 case "SF": // Sq. Feet
                     itemDto.setWeight(totalSqFeet);
                     itemDto.setQuantity(totalSqFeet);
+                    // No loading charge for SF
+                    itemDto.setLoadingCharge(BigDecimal.ZERO);
+                    break;
+                case "N": // NOS - total of Nos
+                    Long totalNos = 0L;
+                    for (QuotationItemCalculationDto calc : itemDto.getCalculations()) {
+                        if (calc.getNos() != null) {
+                            totalNos += calc.getNos();
+                        }
+                    }
+                    itemDto.setWeight(BigDecimal.ZERO);
+                    itemDto.setQuantity(BigDecimal.valueOf(totalNos));
+                    // No loading charge for N
+                    itemDto.setLoadingCharge(BigDecimal.ZERO);
                     break;
                 case "W": // Weight (default)
                 default:
                     itemDto.setWeight(totalWeight);
                     itemDto.setQuantity(totalWeight);
+                    // Calculate loading charge only when calculationBase is 'W' or null
+                    itemDto.setLoadingCharge(itemDto.getQuantity().multiply(BigDecimal.valueOf(0.1)).setScale(2, RoundingMode.HALF_UP));
                     break;
             }
-            itemDto.setLoadingCharge(itemDto.getQuantity().multiply(BigDecimal.valueOf(0.1)).setScale(2, RoundingMode.HALF_UP));
         } else if (Objects.equals(product.getType(), ProductMainType.POLY_CARBONATE)) {
-            itemDto.setQuantity(totalSqFeet);
-            itemDto.setWeight(BigDecimal.ZERO);
+            // Check if calculationBase is null or empty - if so, calculate loading charge
+            String calculationBase = itemDto.getCalculationBase();
+            boolean isCalculationBaseNull = (calculationBase == null || calculationBase.trim().isEmpty());
+            
+            // Ensure calculationBase is not null for switch statement
+            if (isCalculationBaseNull) {
+                calculationBase = "SF"; // Default to Sq. Feet for POLY_CARBONATE for quantity calculation
+            } else {
+                calculationBase = calculationBase != null ? calculationBase.trim() : "SF";
+            }
+            
+            // Ensure calculationBase is not null before switch
+            String finalCalculationBase = calculationBase != null ? calculationBase : "SF";
+            switch (finalCalculationBase) {
+                case "N": // NOS - total of Nos
+                    Long totalNos = 0L;
+                    for (QuotationItemCalculationDto calc : itemDto.getCalculations()) {
+                        if (calc.getNos() != null) {
+                            totalNos += calc.getNos();
+                        }
+                    }
+                    itemDto.setQuantity(BigDecimal.valueOf(totalNos));
+                    itemDto.setWeight(BigDecimal.ZERO);
+                    // No loading charge for N
+                    itemDto.setLoadingCharge(BigDecimal.ZERO);
+                    break;
+                case "W": // Weight - calculate loading charge
+                    itemDto.setQuantity(totalSqFeet);
+                    itemDto.setWeight(BigDecimal.ZERO);
+                    // Calculate loading charge when calculationBase is 'W'
+                    itemDto.setLoadingCharge(itemDto.getQuantity().multiply(BigDecimal.valueOf(0.1)).setScale(2, RoundingMode.HALF_UP));
+                    break;
+                case "SF": // Sq. Feet (default)
+                default:
+                    itemDto.setQuantity(totalSqFeet);
+                    itemDto.setWeight(BigDecimal.ZERO);
+                    // Calculate loading charge when calculationBase is null, otherwise no loading charge for SF
+                    if (isCalculationBaseNull) {
+                        itemDto.setLoadingCharge(itemDto.getQuantity().multiply(BigDecimal.valueOf(0.1)).setScale(2, RoundingMode.HALF_UP));
+                    } else {
+                        itemDto.setLoadingCharge(BigDecimal.ZERO);
+                    }
+                    break;
+            }
         }
     }
 
@@ -570,21 +645,80 @@ public class QuotationService {
                     }
                     itemDto.setWeight(totalRunningFeet);
                     itemDto.setQuantity(totalRunningFeet);
+                    // No loading charge for RF
+                    itemDto.setLoadingCharge(BigDecimal.ZERO);
                     break;
                 case "SF": // Sq. Feet
                     itemDto.setWeight(totalSqFeet);
                     itemDto.setQuantity(totalSqFeet);
+                    // No loading charge for SF
+                    itemDto.setLoadingCharge(BigDecimal.ZERO);
+                    break;
+                case "N": // NOS - total of Nos
+                    Long totalNos = 0L;
+                    for (QuotationItemCalculationDto calc : itemDto.getCalculations()) {
+                        if (calc.getNos() != null) {
+                            totalNos += calc.getNos();
+                        }
+                    }
+                    itemDto.setWeight(BigDecimal.ZERO);
+                    itemDto.setQuantity(BigDecimal.valueOf(totalNos));
+                    // No loading charge for N
+                    itemDto.setLoadingCharge(BigDecimal.ZERO);
                     break;
                 case "W": // Weight (default)
                 default:
                     itemDto.setWeight(totalWeight);
                     itemDto.setQuantity(totalWeight);
+                    // Calculate loading charge only when calculationBase is 'W' or null
+                    itemDto.setLoadingCharge(itemDto.getQuantity().multiply(BigDecimal.valueOf(0.1)).setScale(2, RoundingMode.HALF_UP));
                     break;
             }
-            itemDto.setLoadingCharge(itemDto.getQuantity().multiply(BigDecimal.valueOf(0.1)).setScale(2, RoundingMode.HALF_UP));
         } else if (Objects.equals(product.getType(), ProductMainType.POLY_CARBONATE)) {
-            itemDto.setQuantity(totalSqFeet);
-            itemDto.setWeight(BigDecimal.ZERO);
+            // Check if calculationBase is null or empty - if so, calculate loading charge
+            String calculationBase = itemDto.getCalculationBase();
+            boolean isCalculationBaseNull = (calculationBase == null || calculationBase.trim().isEmpty());
+            
+            // Ensure calculationBase is not null for switch statement
+            if (isCalculationBaseNull) {
+                calculationBase = "SF"; // Default to Sq. Feet for POLY_CARBONATE for quantity calculation
+            } else {
+                calculationBase = calculationBase != null ? calculationBase.trim() : "SF";
+            }
+            
+            // Ensure calculationBase is not null before switch
+            String finalCalculationBase = calculationBase != null ? calculationBase : "SF";
+            switch (finalCalculationBase) {
+                case "N": // NOS - total of Nos
+                    Long totalNos = 0L;
+                    for (QuotationItemCalculationDto calc : itemDto.getCalculations()) {
+                        if (calc.getNos() != null) {
+                            totalNos += calc.getNos();
+                        }
+                    }
+                    itemDto.setQuantity(BigDecimal.valueOf(totalNos));
+                    itemDto.setWeight(BigDecimal.ZERO);
+                    // No loading charge for N
+                    itemDto.setLoadingCharge(BigDecimal.ZERO);
+                    break;
+                case "W": // Weight - calculate loading charge
+                    itemDto.setQuantity(totalSqFeet);
+                    itemDto.setWeight(BigDecimal.ZERO);
+                    // Calculate loading charge when calculationBase is 'W'
+                    itemDto.setLoadingCharge(itemDto.getQuantity().multiply(BigDecimal.valueOf(0.1)).setScale(2, RoundingMode.HALF_UP));
+                    break;
+                case "SF": // Sq. Feet (default)
+                default:
+                    itemDto.setQuantity(totalSqFeet);
+                    itemDto.setWeight(BigDecimal.ZERO);
+                    // Calculate loading charge when calculationBase is null, otherwise no loading charge for SF
+                    if (isCalculationBaseNull) {
+                        itemDto.setLoadingCharge(itemDto.getQuantity().multiply(BigDecimal.valueOf(0.1)).setScale(2, RoundingMode.HALF_UP));
+                    } else {
+                        itemDto.setLoadingCharge(BigDecimal.ZERO);
+                    }
+                    break;
+            }
         }
     }
 
@@ -642,9 +776,13 @@ public class QuotationService {
         item.setTaxAmount(adjustedTaxAmount);
         item.setQuotationDiscountAmount(itemQuotationDiscountAmount);
         
-        // Add loading charge to final price for REGULAR and ACCESSORIES type products
-        if (product.getType() == ProductMainType.REGULAR || product.getType() == ProductMainType.ACCESSORIES) {
-            BigDecimal loadingCharge = item.getLoadingCharge() != null ? item.getLoadingCharge() : BigDecimal.ZERO;
+        // Add loading charge to final price for REGULAR, ACCESSORIES, and POLY_CARBONATE type products
+        // For REGULAR: when calculationBase='W' or null
+        // For ACCESSORIES: when accessoriesSize!='C'
+        // For POLY_CARBONATE: when calculationBase='W' or null
+        BigDecimal loadingCharge = item.getLoadingCharge() != null ? item.getLoadingCharge() : BigDecimal.ZERO;
+        if (product.getType() == ProductMainType.REGULAR || product.getType() == ProductMainType.ACCESSORIES || 
+            product.getType() == ProductMainType.POLY_CARBONATE) {
             item.setFinalPrice(afterDiscount.add(adjustedTaxAmount).add(loadingCharge));
         } else {
             item.setFinalPrice(afterDiscount.add(adjustedTaxAmount));
@@ -807,7 +945,13 @@ public class QuotationService {
         quotation.setValidUntil(request.getValidUntil());
         quotation.setRemarks(request.getRemarks());
         quotation.setTermsConditions(request.getTermsConditions());
-        quotation.setContactNumber(request.getContactNumber());
+        
+        // Set contact number: use from request if provided, otherwise use customer's mobile if customer exists
+        String contactNumber = request.getContactNumber();
+        if ((contactNumber == null || contactNumber.trim().isEmpty()) && quotation.getCustomer() != null && quotation.getCustomer().getMobile() != null) {
+            contactNumber = quotation.getCustomer().getMobile();
+        }
+        quotation.setContactNumber(contactNumber);
         quotation.setAddress(request.getAddress());
         quotation.setUpdatedAt(OffsetDateTime.now());
         quotation.setUpdatedBy(currentUser);

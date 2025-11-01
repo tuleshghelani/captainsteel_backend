@@ -219,12 +219,13 @@ public class QuotationWithOutPdfGenerationService {
             
             table.addCell(new Cell().add(itemNameParagraph));
             
-            // Check if calculation type is NOS
+            // Check if calculationBase is N (NOS) or calculationType is NOS
+            String calculationBase = item.get("calculationBase") != null ? item.get("calculationBase").toString().trim() : "";
             String calculationType = item.get("calculationType") != null ? item.get("calculationType").toString().trim() : "";
             String displayMeasurement;
             
-            if ("NOS".equals(calculationType)) {
-                // For NOS calculation type, show "NOS" instead of measurement
+            if ("N".equals(calculationBase) || "NOS".equals(calculationType)) {
+                // For NOS calculation base/type, show "NOS" instead of measurement
                 displayMeasurement = "\nNOS";
             } else {
                 // For other calculation types, show the measurement unit
@@ -346,10 +347,11 @@ public class QuotationWithOutPdfGenerationService {
 
     private boolean shouldShowCalculationDetails(Map<String, Object> item) {
         String productType = (String) item.get("productType");
+        String calculationBase = (String) item.get("calculationBase");
         String calculationType = (String) item.get("calculationType");
         System.out.println("item : " + item);
-        // Don't show calculation details if calculation type is NOS
-        if ("NOS".equals(calculationType)) {
+        // Don't show calculation details if calculationBase is N (NOS) or calculationType is NOS
+        if ("N".equals(calculationBase) || "NOS".equals(calculationType)) {
             return false;
         }
         return "REGULAR".equals(productType) || "POLY_CARBONATE".equals(productType);

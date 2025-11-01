@@ -88,7 +88,7 @@ public class QuotationItem {
     private String calculationType;
     
     @Column(name = "calculation_base", length = 2)
-    private String calculationBase; // 'W', 'RF', 'SF' or null/empty (defaults to 'W')
+    private String calculationBase; // 'W', 'RF', 'SF', 'N' or null/empty (defaults to 'W')
     
     @Column(name = "item_remarks", columnDefinition = "TEXT")
     private String itemRemarks;

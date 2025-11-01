@@ -60,7 +60,8 @@ public class QuotationDao {
         return new StringBuilder()
             .append("SELECT q.id, q.quote_number, q.quote_date,")
             .append(" q.total_amount, q.status, COALESCE(c.name, q.customer_name, '') as customer_name, ")
-            .append(" q.valid_until, q.remarks, q.terms_conditions ")
+            .append(" q.valid_until, q.remarks, q.terms_conditions, ")
+            .append(" COALESCE(NULLIF(q.contact_number, ''), NULLIF(c.mobile, ''), '') as contact_number ")
             .append(nativeQuery)
             .append(conditions)
             .append(" ORDER BY q.").append(searchParams.getSortBy()).append(" ")
@@ -127,6 +128,7 @@ public class QuotationDao {
             quotation.put("validUntil", row[index++]);
             quotation.put("remarks", row[index++]);
             quotation.put("termsConditions", row[index++]);
+            quotation.put("contactNumber", row[index++]);
             quotations.add(quotation);
         }
 
@@ -144,12 +146,12 @@ public class QuotationDao {
             SELECT 
                 q.id, q.quote_number, q.quote_date, q.valid_until,
                 q.total_amount, q.status, q.remarks, q.terms_conditions,
-                c.id as customer_id, q.customer_name, q.contact_number, q.loading_charge,
+                c.id as customer_id, q.customer_name, COALESCE(NULLIF(q.contact_number, ''), NULLIF(c.mobile, ''), '') as contact_number, q.loading_charge,
                 qi.id as item_id, qi.quantity, qi.unit_price,
                 qi.discount_percentage, qi.discount_amount,
                 qi.tax_percentage, qi.tax_amount, qi.final_price,
                 p.id as product_id, p.name as product_name, p.type, qi.calculation_type,
-                qi.discount_price, p.measurement, p.poly_carbonate_type, qi.item_remarks,
+                qi.calculation_base, qi.discount_price, p.measurement, p.poly_carbonate_type, qi.item_remarks,
                 qi.is_production, qi.quotation_item_status, qi.accessories_size, qi.weight,
                 qi.nos, q.quotation_discount, q.quotation_discount_amount
             FROM (select * from quotation q where q.client_id = :clientId and q.id = :quotationId) q
@@ -190,8 +192,8 @@ public class QuotationDao {
         quotation.put("customerName", firstRow[9]);
         quotation.put("contactNumber", firstRow[10]);
         quotation.put("loadingCharge", firstRow[11]);
-        quotation.put("quotationDiscount", firstRow[33]);
-        quotation.put("quotationDiscountAmount", firstRow[34]);
+        quotation.put("quotationDiscount", firstRow[34]);
+        quotation.put("quotationDiscountAmount", firstRow[35]);
 
         // Process items
         for (Object[] row : results) {
@@ -208,15 +210,16 @@ public class QuotationDao {
             item.put("productName", row[21]);
             item.put("productType", row[22]);
             item.put("calculationType", row[23]);
-            item.put("discountPrice", row[24]);
-            item.put("measurement", row[25]);
-            item.put("polyCarbonateType", row[26]);
-            item.put("itemRemarks", row[27]);
-            item.put("isProduction", row[28]);
-            item.put("quotationItemStatus", row[29]);
-            item.put("accessoriesSize", row[30]);
-            item.put("weight", row[31]);
-            item.put("nos", row[32]);
+            item.put("calculationBase", row[24]);
+            item.put("discountPrice", row[25]);
+            item.put("measurement", row[26]);
+            item.put("polyCarbonateType", row[27]);
+            item.put("itemRemarks", row[28]);
+            item.put("isProduction", row[29]);
+            item.put("quotationItemStatus", row[30]);
+            item.put("accessoriesSize", row[31]);
+            item.put("weight", row[32]);
+            item.put("nos", row[33]);
             items.add(item);
         }
 
@@ -294,7 +297,7 @@ public class QuotationDao {
                 p.id as product_id, p.name as product_name, p.type as product_type,
                 q.id as quotation_id, q.quote_number, q.quote_date,
                 q.valid_until, q.status as quotation_status, q.customer_name,
-                q.contact_number, q.address, q.total_amount as quotation_total_amount,
+                COALESCE(NULLIF(q.contact_number, ''), NULLIF(c.mobile, ''), '') as contact_number, q.address, q.total_amount as quotation_total_amount,
                 q.quotation_discount, c.id as customer_id
             FROM (select * from quotation_items qi where qi.client_id = :clientId """);
 
