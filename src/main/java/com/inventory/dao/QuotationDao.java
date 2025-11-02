@@ -146,7 +146,8 @@ public class QuotationDao {
             SELECT 
                 q.id, q.quote_number, q.quote_date, q.valid_until,
                 q.total_amount, q.status, q.remarks, q.terms_conditions,
-                c.id as customer_id, q.customer_name, COALESCE(NULLIF(q.contact_number, ''), NULLIF(c.mobile, ''), '') as contact_number, q.loading_charge,
+                c.id as customer_id, q.customer_name, COALESCE(NULLIF(q.contact_number, ''), NULLIF(c.mobile, ''), '') as contact_number, 
+                q.address, c.gst as customer_gst, c.address as customer_address, q.loading_charge,
                 qi.id as item_id, qi.quantity, qi.unit_price,
                 qi.discount_percentage, qi.discount_amount,
                 qi.tax_percentage, qi.tax_amount, qi.final_price,
@@ -191,35 +192,38 @@ public class QuotationDao {
         quotation.put("customerId", firstRow[8]);
         quotation.put("customerName", firstRow[9]);
         quotation.put("contactNumber", firstRow[10]);
-        quotation.put("loadingCharge", firstRow[11]);
-        quotation.put("quotationDiscount", firstRow[34]);
-        quotation.put("quotationDiscountAmount", firstRow[35]);
+        quotation.put("address", firstRow[11]);
+        quotation.put("customerGst", firstRow[12]);
+        quotation.put("customerAddress", firstRow[13]);
+        quotation.put("loadingCharge", firstRow[14]);
+        quotation.put("quotationDiscount", firstRow[37]);
+        quotation.put("quotationDiscountAmount", firstRow[38]);
 
         // Process items
         for (Object[] row : results) {
             Map<String, Object> item = new HashMap<>();
-            item.put("id", row[12]);
-            item.put("quantity", row[13]);
-            item.put("unitPrice", row[14]);
-            item.put("discountPercentage", row[15]);
-            item.put("discountAmount", row[16]);
-            item.put("taxPercentage", row[17]);
-            item.put("taxAmount", row[18]);
-            item.put("finalPrice", row[19]);
-            item.put("productId", row[20]);
-            item.put("productName", row[21]);
-            item.put("productType", row[22]);
-            item.put("calculationType", row[23]);
-            item.put("calculationBase", row[24]);
-            item.put("discountPrice", row[25]);
-            item.put("measurement", row[26]);
-            item.put("polyCarbonateType", row[27]);
-            item.put("itemRemarks", row[28]);
-            item.put("isProduction", row[29]);
-            item.put("quotationItemStatus", row[30]);
-            item.put("accessoriesSize", row[31]);
-            item.put("weight", row[32]);
-            item.put("nos", row[33]);
+            item.put("id", row[15]);
+            item.put("quantity", row[16]);
+            item.put("unitPrice", row[17]);
+            item.put("discountPercentage", row[18]);
+            item.put("discountAmount", row[19]);
+            item.put("taxPercentage", row[20]);
+            item.put("taxAmount", row[21]);
+            item.put("finalPrice", row[22]);
+            item.put("productId", row[23]);
+            item.put("productName", row[24]);
+            item.put("productType", row[25]);
+            item.put("calculationType", row[26]);
+            item.put("calculationBase", row[27]);
+            item.put("discountPrice", row[28]);
+            item.put("measurement", row[29]);
+            item.put("polyCarbonateType", row[30]);
+            item.put("itemRemarks", row[31]);
+            item.put("isProduction", row[32]);
+            item.put("quotationItemStatus", row[33]);
+            item.put("accessoriesSize", row[34]);
+            item.put("weight", row[35]);
+            item.put("nos", row[36]);
             items.add(item);
         }
 
@@ -238,7 +242,8 @@ public class QuotationDao {
         String sql = """
             SELECT 
                 qic.feet, qic.inch, qic.mm, qic.nos, 
-                qic.running_feet, qic.sq_feet, qic.weight
+                qic.running_feet, qic.sq_feet, qic.weight, 
+                qic.length, qic.width
             FROM quotation_item_calculations qic
             WHERE qic.quotation_item_id = :itemId
         """;
@@ -257,6 +262,8 @@ public class QuotationDao {
             calc.put("runningFeet", row[i++]);
             calc.put("sqFeet", row[i++]);
             calc.put("weight", row[i++]);
+            calc.put("length", row[i++]);
+            calc.put("width", row[i++]);
             return calc;
         }).collect(Collectors.toList());
     }

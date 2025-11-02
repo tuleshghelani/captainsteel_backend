@@ -22,7 +22,7 @@ public class QuotationItemRequestDto {
     private String calculationType;
     private String calculationBase; // New field: 'W', 'RF', 'SF', 'N' or null/empty (defaults to 'W')
     private BigDecimal weight;
-    private BigDecimal quantity;
+    private BigDecimal quantity;// For POLY_CARBONATE_ROLL when calculationBase='M'
     private BigDecimal unitPrice;
     private BigDecimal taxPercentage = BigDecimal.valueOf(18); // Default 18%
     private BigDecimal discountPercentage = BigDecimal.ZERO;
@@ -35,4 +35,5 @@ public class QuotationItemRequestDto {
     private Boolean isProduction;
     private String quotationItemStatus;
     private BigDecimal quotationDiscountAmount = BigDecimal.ZERO;
+//    private BigDecimal manualQuantity; // For POLY_CARBONATE_ROLL when calculationBase='M'
 }

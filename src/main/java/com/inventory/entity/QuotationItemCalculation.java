@@ -46,8 +46,8 @@ public class QuotationItemCalculation {
     @Column(name = "inch", precision = 8, scale = 2, columnDefinition = "numeric(8,2) DEFAULT 0.00")
     private BigDecimal inch = BigDecimal.ZERO;
     
-    @Column(name = "nos", nullable = false)
-    private Long nos = 0L;
+    @Column(name = "nos")
+    private Long nos;
     
     @Column(name = "running_feet", precision = 10, scale = 4, columnDefinition = "numeric(10,4) DEFAULT 0.00")
     private BigDecimal runningFeet = BigDecimal.ZERO;
@@ -73,4 +73,10 @@ public class QuotationItemCalculation {
 
     @Column(name = "meter", precision = 10, scale = 3, columnDefinition = "numeric(10,4) ")
     private BigDecimal meter = BigDecimal.ZERO;
+    
+    @Column(name = "length", precision = 10, scale = 4, columnDefinition = "numeric(10,4) ")
+    private BigDecimal length; // For POLY_CARBONATE_ROLL products
+    
+    @Column(name = "width", precision = 10, scale = 4, columnDefinition = "numeric(10,4) ")
+    private BigDecimal width; // For POLY_CARBONATE_ROLL products
 } 

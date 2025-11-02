@@ -25,5 +25,7 @@ public class QuotationItemCalculationDto {
     private BigDecimal sqFeet;
     private BigDecimal weight;
     private BigDecimal meter;
+    private BigDecimal length; // For POLY_CARBONATE_ROLL products
+    private BigDecimal width;  // For POLY_CARBONATE_ROLL products
     private Long clientId;
 } 

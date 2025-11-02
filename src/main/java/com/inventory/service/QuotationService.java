@@ -306,6 +306,9 @@ public class QuotationService {
                 validatePolyCarbonateProduct(product, itemDto);
                 calculateMeasurements(itemDto, product, currentUser);
             }
+        } else if (product.getType() == ProductMainType.POLY_CARBONATE_ROLL) {
+            validatePolyCarbonateRollProduct(product, itemDto);
+            calculatePolyCarbonateRollMeasurements(itemDto, product, currentUser);
         } else if (product.getType() == ProductMainType.NOS) {
             validateNosProduct(itemDto);
         } else if (product.getType() == ProductMainType.ACCESSORIES) {
@@ -401,6 +404,41 @@ public class QuotationService {
         validateRegularProductCalculations(itemDto);
     }
 
+    private void validatePolyCarbonateRollProduct(Product product, QuotationItemRequestDto itemDto) {
+        // Default calculationBase to 'SF' for POLY_CARBONATE_ROLL if null or empty
+        String calculationBase = itemDto.getCalculationBase();
+        if (calculationBase == null || calculationBase.trim().isEmpty()) {
+            calculationBase = "SF";
+            itemDto.setCalculationBase("SF");
+        } else {
+            calculationBase = calculationBase.trim();
+            itemDto.setCalculationBase(calculationBase);
+        }
+        
+        // If calculationBase is 'M' (Manual), validate manual quantity
+        if ("M".equalsIgnoreCase(calculationBase)) {
+            if (itemDto.getQuantity() == null || itemDto.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ValidationException("Quantity must be greater than 0 when calculationBase is 'M' for POLY_CARBONATE_ROLL products");
+            }
+            // For Manual mode, calculations are not required
+            return;
+        }
+        
+        // For 'SF' (Square Feet) mode, validate calculations with length and width
+        if (itemDto.getCalculations() == null || itemDto.getCalculations().isEmpty()) {
+            throw new ValidationException("Calculations with length and width are required for POLY_CARBONATE_ROLL products when calculationBase is 'SF'");
+        }
+    
+        for (QuotationItemCalculationDto calc : itemDto.getCalculations()) {
+            if (calc.getLength() == null || calc.getLength().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ValidationException("Length must be greater than 0 for POLY_CARBONATE_ROLL products");
+            }
+            if (calc.getWidth() == null || calc.getWidth().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ValidationException("Width must be greater than 0 for POLY_CARBONATE_ROLL products");
+            }
+        }
+    }
+
     private void validateNosProduct(QuotationItemRequestDto itemDto) {
         if (itemDto.getQuantity() == null || itemDto.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
             throw new ValidationException("Quantity must be greater than 0 for NOS products");
@@ -415,6 +453,60 @@ public class QuotationService {
         } else {
             throw new ValidationException("Invalid calculation type: " + itemDto.getCalculationType());
         }
+    }
+
+    private void calculatePolyCarbonateRollMeasurements(QuotationItemRequestDto itemDto, Product product, UserMaster currentUser) {
+        // Default calculationBase to 'SF' if null or empty
+        String calculationBase = itemDto.getCalculationBase();
+        if (calculationBase == null || calculationBase.trim().isEmpty()) {
+            calculationBase = "SF";
+            itemDto.setCalculationBase("SF");
+        } else {
+            calculationBase = calculationBase.trim();
+            itemDto.setCalculationBase(calculationBase);
+        }
+        
+        // 'SF' (Square Feet) mode: calculate from length * width
+        BigDecimal totalQuantity = BigDecimal.ZERO;
+        
+        if (itemDto.getCalculations() == null || itemDto.getCalculations().isEmpty()) {
+            throw new ValidationException("Calculations are required for POLY_CARBONATE_ROLL products when calculationBase is 'SF'");
+        }
+        
+        for (QuotationItemCalculationDto calc : itemDto.getCalculations()) {
+            if (calc.getLength() == null || calc.getLength().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ValidationException("Length must be greater than 0");
+            }
+            if (calc.getWidth() == null || calc.getWidth().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ValidationException("Width must be greater than 0");
+            }
+    
+            // Calculate total: length * width
+            BigDecimal total = calc.getLength().multiply(calc.getWidth())
+                    .setScale(4, RoundingMode.HALF_UP);
+            
+            // Store total in sqFeet field for consistency (can be used for display)
+            calc.setSqFeet(total);
+            
+            // Accumulate totals
+            totalQuantity = totalQuantity.add(total);
+        }
+
+        itemDto.setWeight(BigDecimal.ZERO);
+        // No loading charge for POLY_CARBONATE_ROLL
+        itemDto.setLoadingCharge(BigDecimal.ZERO);
+        // Handle based on calculationBase
+        if ("M".equalsIgnoreCase(calculationBase)) {
+            // Manual mode: use manual quantity directly
+            if (itemDto.getQuantity() == null || itemDto.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ValidationException("Quantity must be greater than 0 when calculationBase is 'M'");
+            }
+            itemDto.setQuantity(itemDto.getQuantity().setScale(3, RoundingMode.HALF_UP));
+            return;
+        }
+        
+        // Set the total quantity as the item quantity
+        itemDto.setQuantity(totalQuantity.setScale(3, RoundingMode.HALF_UP));
     }
 
     private void calculateSqFeetMeasurements(QuotationItemRequestDto itemDto, Product product, UserMaster currentUser) {
@@ -780,6 +872,7 @@ public class QuotationService {
         // For REGULAR: when calculationBase='W' or null
         // For ACCESSORIES: when accessoriesSize!='C'
         // For POLY_CARBONATE: when calculationBase='W' or null
+        // POLY_CARBONATE_ROLL: no loading charge
         BigDecimal loadingCharge = item.getLoadingCharge() != null ? item.getLoadingCharge() : BigDecimal.ZERO;
         if (product.getType() == ProductMainType.REGULAR || product.getType() == ProductMainType.ACCESSORIES || 
             product.getType() == ProductMainType.POLY_CARBONATE) {
@@ -801,7 +894,8 @@ public class QuotationService {
         item = quotationItemRepository.save(item);
 
         // Save calculations if present
-        if ((product.getType() == ProductMainType.REGULAR || product.getType() == ProductMainType.POLY_CARBONATE) && itemDto.getCalculations() != null) {
+        if ((product.getType() == ProductMainType.REGULAR || product.getType() == ProductMainType.POLY_CARBONATE || 
+             product.getType() == ProductMainType.POLY_CARBONATE_ROLL) && itemDto.getCalculations() != null) {
             List<QuotationItemCalculation> quotationItemCalculations = saveCalculations(item, itemDto.getCalculations(), currentUser, quotation);
             System.out.printf("quotationItemCalculations : " + quotationItemCalculations);
         }
@@ -831,6 +925,8 @@ public class QuotationService {
         calc.setRunningFeet(dto.getRunningFeet());
         calc.setSqFeet(dto.getSqFeet());
         calc.setWeight(dto.getWeight());
+        calc.setLength(dto.getLength());
+        calc.setWidth(dto.getWidth());
         calc.setClient(currentUser.getClient());
         calc.setQuotation(quotation);
         return calc;
@@ -913,6 +1009,7 @@ public class QuotationService {
                 throw new ValidationException("Product ID is required");
             }
             // For ACCESSORIES, quantity is derived; require accessoriesSize and nos instead
+            // For POLY_CARBONATE_ROLL, quantity is derived from calculations (length * width)
             Product product = productRepository.findById(item.getProductId())
                 .orElseThrow(() -> new ValidationException("Product not found"));
             if (product.getType() == ProductMainType.ACCESSORIES) {
@@ -927,6 +1024,30 @@ public class QuotationService {
                     if (item.getWeight() == null || item.getWeight().compareTo(BigDecimal.ZERO) <= 0) {
                         throw new ValidationException("Weight is required for Custom accessories size");
                     }
+                }
+            } else if (product.getType() == ProductMainType.POLY_CARBONATE_ROLL) {
+                // For POLY_CARBONATE_ROLL, check calculationBase
+                String calculationBase = item.getCalculationBase();
+                if (calculationBase == null || calculationBase.trim().isEmpty()) {
+                    calculationBase = "SF"; // Default to SF
+                    item.setCalculationBase("SF");
+                } else {
+                    calculationBase = calculationBase.trim();
+                    item.setCalculationBase(calculationBase);
+                }
+                
+                if ("M".equalsIgnoreCase(calculationBase)) {
+                    // For Manual mode, validate manual quantity
+                    if (item.getQuantity() == null || item.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+                        throw new ValidationException("Manual quantity is required and must be greater than 0 for POLY_CARBONATE_ROLL items when calculationBase is 'M'");
+                    }
+                    // Quantity will be set to manualQuantity in calculation method
+                } else {
+                    // For SF mode, validate calculations with length and width
+                    if (item.getCalculations() == null || item.getCalculations().isEmpty()) {
+                        throw new ValidationException("Calculations with length and width are required for POLY_CARBONATE_ROLL items when calculationBase is 'SF'");
+                    }
+                    // Quantity will be calculated from length * width in calculations
                 }
             } else {
                 if (item.getQuantity() == null || item.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
@@ -1048,6 +1169,8 @@ public class QuotationService {
                         calcMap.put("runningFeet", calc.getRunningFeet());
                         calcMap.put("sqFeet", calc.getSqFeet());
                         calcMap.put("weight", calc.getWeight());
+                        calcMap.put("length", calc.getLength());
+                        calcMap.put("width", calc.getWidth());
                         return calcMap;
                     })
                     .collect(Collectors.toList());

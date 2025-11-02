@@ -7,6 +7,7 @@ public enum ProductMainType {
     NOS("Nos"),
     REGULAR("Regular"),
     POLY_CARBONATE("Poly Carbonate"),
+    POLY_CARBONATE_ROLL("Poly Carbonate Roll"),
     ACCESSORIES("Accessories");
 
     private final String text;

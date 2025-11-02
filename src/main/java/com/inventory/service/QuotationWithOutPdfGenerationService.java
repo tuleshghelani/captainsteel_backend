@@ -155,8 +155,31 @@ public class QuotationWithOutPdfGenerationService {
         // Left side - Quote details
         Cell quoteDetails = new Cell();
         quoteDetails.add(new Paragraph("To,").setBold())
-                    .add(new Paragraph(data.get("customerName").toString()).setBold())
-                    .add(new Paragraph("Quote Number: " + data.get("quoteNumber")))
+                    .add(new Paragraph(data.get("customerName").toString()).setBold());
+        
+        // Add address - first try quotation address, then customer address
+        String address = null;
+        if (data.get("address") != null && !data.get("address").toString().trim().isEmpty()) {
+            address = data.get("address").toString();
+        } else if (data.get("customerAddress") != null && !data.get("customerAddress").toString().trim().isEmpty()) {
+            address = data.get("customerAddress").toString();
+        }
+        if (address != null) {
+            quoteDetails.add(new Paragraph(address));
+        }
+        
+        // Add GST number
+        String gstNumber = null;
+        if (data.get("customerGst") != null && !data.get("customerGst").toString().trim().isEmpty()) {
+            gstNumber = data.get("customerGst").toString();
+        } else if (data.get("gst") != null && !data.get("gst").toString().trim().isEmpty()) {
+            gstNumber = data.get("gst").toString();
+        }
+        if (gstNumber != null) {
+            quoteDetails.add(new Paragraph("GST No: " + gstNumber));
+        }
+        
+        quoteDetails.add(new Paragraph("Quote Number: " + data.get("quoteNumber")))
                    .add(new Paragraph("Quote Date: " + data.get("quoteDate")))
                    .add(new Paragraph("Valid Until: " + data.get("validUntil")))
                    .add(new Paragraph("Mobile No. : " + (data.get("contactNumber") != null ? data.get("contactNumber") : "")))
