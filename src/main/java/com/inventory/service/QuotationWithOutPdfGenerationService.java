@@ -377,7 +377,7 @@ public class QuotationWithOutPdfGenerationService {
         if ("N".equals(calculationBase) || "NOS".equals(calculationType)) {
             return false;
         }
-        return "REGULAR".equals(productType) || "POLY_CARBONATE".equals(productType);
+        return "REGULAR".equals(productType) || "POLY_CARBONATE".equals(productType) || "POLY_CARBONATE_ROLL".equals(productType);
     }
     
     private void addCalculationDetailsTable(Document document, Map<String, Object> item) {
@@ -394,12 +394,16 @@ public class QuotationWithOutPdfGenerationService {
             return;
         }
 
+        String productType = (String) item.get("productType");
         String calculationType = (String) item.get("calculationType");
         Table table;
 
         System.out.println("calculationType : " + calculationType);
+        System.out.println("productType : " + productType);
         
-        if ("SQ_FEET".equals(calculationType)) {
+        if ("POLY_CARBONATE_ROLL".equals(productType)) {
+            table = createPolyCarbonateRollCalculationTable(calculations);
+        } else if ("SQ_FEET".equals(calculationType)) {
             table = createSqFeetCalculationTable(calculations);
         } else if ("MM".equals(calculationType)) {
             table = createMMCalculationTable(calculations);
@@ -501,6 +505,42 @@ public class QuotationWithOutPdfGenerationService {
         return table;
     }
     
+    private Table createPolyCarbonateRollCalculationTable(List<Map<String, Object>> calculations) {
+        Table table = new Table(new float[]{3, 3, 3})
+            .useAllAvailableWidth()
+            .setMarginTop(5);
+        
+        // Add headers with specific colors
+        Stream.of("Length", "Width", "Total (sq. feet)")
+            .forEach(title -> {
+                Cell header = new Cell()
+                    .add(new Paragraph(title))
+                    .setBackgroundColor(PRIMARY_COLOR)
+                    .setFontColor(ColorConstants.WHITE)
+                    .setPadding(5);
+                table.addHeaderCell(header);
+            });
+        
+        // Add data rows with matching background colors
+        for (Map<String, Object> calc : calculations) {
+            BigDecimal sqFeet = toBigDecimal(calc.get("sqFeet"));
+            
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(calc.get("length"))))
+                .setBackgroundColor(new DeviceRgb(230, 185, 184)));
+                
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(calc.get("width"))))
+                .setBackgroundColor(new DeviceRgb(141, 180, 227)));
+                
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(sqFeet)))
+                .setBackgroundColor(new DeviceRgb(187, 173, 219)));  
+        }
+        
+        return table;
+    }
+    
     private Cell createHeaderCell(String title) {
         return new Cell()
             .add(new Paragraph(title))
@@ -543,7 +583,7 @@ public class QuotationWithOutPdfGenerationService {
         table.addCell(new Cell().add(new Paragraph(item.get("finalPrice").toString())));
     }
     
-    private void addBankDetailsAndTerms(Document document) {
+    private void addBankDetailsAndTerms(Document document, Map<String, Object> data) {
         // Start new page
         document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
         
@@ -578,13 +618,27 @@ public class QuotationWithOutPdfGenerationService {
             .setFontSize(14)
             .setMarginTop(20)
             .setMarginBottom(10));
-        
+
         // Add terms
         addTerm(document, "1.", "Customer will be billed after indicating acceptance of this quote.", new DeviceRgb(66, 133, 244));
         addTerm(document, "2.", "Payment 50% Advance And 50% before goods Dispatched.", new DeviceRgb(66, 133, 244));
         addTerm(document, "3.", "Transport Transaction Extra", new DeviceRgb(66, 133, 244));
         addTerm(document, "4.", "The Responsibility Of All the Material Will Be With That Company.\nThere Will Be No Responsibility Of The Distributor I.E. Captain Steel.", new DeviceRgb(66, 133, 244));
         addTerm(document, "5.", "SUBJECT TO GONDAL JURISDICTION.", new DeviceRgb(66, 133, 244));
+        Object termsConditionsObj = data.get("termsConditions");
+        if (termsConditionsObj != null && !termsConditionsObj.toString().trim().isEmpty()) {
+            // Use quotation's terms and conditions
+            String termsConditions = termsConditionsObj.toString().trim();
+            String[] termsLines = termsConditions.split("\n");
+            int termNumber = 6;
+            for (String line : termsLines) {
+                String trimmedLine = line.trim();
+                if (!trimmedLine.isEmpty()) {
+                    addTerm(document, termNumber + ".", trimmedLine, new DeviceRgb(66, 133, 244));
+                    termNumber++;
+                }
+            }
+        }
     }
 
     private void addBankDetail(Table table, String label, String value) {

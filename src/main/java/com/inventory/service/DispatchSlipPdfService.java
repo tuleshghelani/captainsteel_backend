@@ -239,7 +239,7 @@ public class DispatchSlipPdfService {
         if ("N".equals(calculationBase) || "NOS".equals(calculationType)) {
             return false;
         }
-        return "REGULAR".equals(productType) || "POLY_CARBONATE".equals(productType);
+        return "REGULAR".equals(productType) || "POLY_CARBONATE".equals(productType) || "POLY_CARBONATE_ROLL".equals(productType);
     }
 
     private void addCalculationDetailsTable(Document document, Map<String, Object> item) {
@@ -256,12 +256,16 @@ public class DispatchSlipPdfService {
             return;
         }
 
+        String productType = (String) item.get("productType");
         String calculationType = (String) item.get("calculationType");
         Table table;
 
         System.out.println("calculationType : " + calculationType);
+        System.out.println("productType : " + productType);
 
-        if ("SQ_FEET".equals(calculationType)) {
+        if ("POLY_CARBONATE_ROLL".equals(productType)) {
+            table = createPolyCarbonateRollCalculationTable(calculations);
+        } else if ("SQ_FEET".equals(calculationType)) {
             table = createSqFeetCalculationTable(calculations);
         } else if ("MM".equals(calculationType)) {
             table = createMMCalculationTable(calculations);
@@ -354,6 +358,42 @@ public class DispatchSlipPdfService {
             table.addCell(new Cell()
                 .add(new Paragraph(formatValue(meter)))
                 .setBackgroundColor(new DeviceRgb(169, 208, 142)));
+                
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(sqFeet)))
+                .setBackgroundColor(new DeviceRgb(187, 173, 219)));  
+        }
+        
+        return table;
+    }
+    
+    private Table createPolyCarbonateRollCalculationTable(List<Map<String, Object>> calculations) {
+        Table table = new Table(new float[]{3, 3, 3})
+            .useAllAvailableWidth()
+            .setMarginTop(5);
+        
+        // Add headers with specific colors
+        Stream.of("Length", "Width", "Total (sq. feet)")
+            .forEach(title -> {
+                Cell header = new Cell()
+                    .add(new Paragraph(title))
+                    .setBackgroundColor(PRIMARY_COLOR)
+                    .setFontColor(ColorConstants.WHITE)
+                    .setPadding(5);
+                table.addHeaderCell(header);
+            });
+        
+        // Add data rows with matching background colors
+        for (Map<String, Object> calc : calculations) {
+            BigDecimal sqFeet = toBigDecimal(calc.get("sqFeet"));
+            
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(calc.get("length"))))
+                .setBackgroundColor(new DeviceRgb(230, 185, 184)));
+                
+            table.addCell(new Cell()
+                .add(new Paragraph(formatValue(calc.get("width"))))
+                .setBackgroundColor(new DeviceRgb(141, 180, 227)));
                 
             table.addCell(new Cell()
                 .add(new Paragraph(formatValue(sqFeet)))
