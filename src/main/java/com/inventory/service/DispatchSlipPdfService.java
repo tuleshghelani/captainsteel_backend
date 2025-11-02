@@ -288,6 +288,7 @@ public class DispatchSlipPdfService {
                     .add(new Paragraph(title))
                     .setBackgroundColor(PRIMARY_COLOR)
                     .setFontColor(ColorConstants.WHITE)
+                    .setTextAlignment(TextAlignment.CENTER)
                     .setPadding(5);
                 table.addHeaderCell(header);
             });
@@ -298,24 +299,29 @@ public class DispatchSlipPdfService {
             BigDecimal meter = sqFeet.divide(SQ_FEET_TO_METER, 4, RoundingMode.HALF_UP);
             
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("feet"))))
-                .setBackgroundColor(new DeviceRgb(230, 185, 184)));
+                .add(new Paragraph(formatValue(calc.get("feet"))).setFontSize(9))
+                .setBackgroundColor(new DeviceRgb(230, 185, 184))
+                .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("inch"))))
-                .setBackgroundColor(new DeviceRgb(141, 180, 227)));
+                .add(new Paragraph(formatValue(calc.get("inch"))).setFontSize(9))
+                .setBackgroundColor(new DeviceRgb(141, 180, 227))
+                .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("nos"))))
-                .setBackgroundColor(new DeviceRgb(252, 213, 180)));
+                .add(new Paragraph(formatValue(calc.get("nos"))).setFontSize(9))
+                .setBackgroundColor(new DeviceRgb(252, 213, 180))
+                .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(meter)))
-                .setBackgroundColor(new DeviceRgb(169, 208, 142)));
+                .add(new Paragraph(formatValue(meter)).setFontSize(9))
+                .setBackgroundColor(new DeviceRgb(169, 208, 142))
+                .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(sqFeet)))
-                .setBackgroundColor(new DeviceRgb(187, 173, 219))); 
+                .add(new Paragraph(formatValue(sqFeet)).setFontSize(9))
+                .setBackgroundColor(new DeviceRgb(187, 173, 219))
+                .setTextAlignment(TextAlignment.CENTER)); 
         }
         
         return table;
@@ -333,6 +339,7 @@ public class DispatchSlipPdfService {
                     .add(new Paragraph(title))
                     .setBackgroundColor(PRIMARY_COLOR)
                     .setFontColor(ColorConstants.WHITE)
+                    .setTextAlignment(TextAlignment.CENTER)
                     .setPadding(5);
                 table.addHeaderCell(header);
             });
@@ -344,24 +351,29 @@ public class DispatchSlipPdfService {
             BigDecimal sqFeet = toBigDecimal(calc.get("sqFeet"));
             
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("mm"))))
-                .setBackgroundColor(new DeviceRgb(230, 185, 184)));
+                .add(new Paragraph(formatValue(calc.get("mm"))).setFontSize(9))
+                .setBackgroundColor(new DeviceRgb(230, 185, 184))
+                .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("runningFeet"))))
-                .setBackgroundColor(new DeviceRgb(141, 180, 227)));
+                .add(new Paragraph(formatValue(calc.get("runningFeet"))).setFontSize(9))
+                .setBackgroundColor(new DeviceRgb(141, 180, 227))
+                .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("nos"))))
-                .setBackgroundColor(new DeviceRgb(252, 213, 180)));
+                .add(new Paragraph(formatValue(calc.get("nos"))).setFontSize(9))
+                .setBackgroundColor(new DeviceRgb(252, 213, 180))
+                .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(meter)))
-                .setBackgroundColor(new DeviceRgb(169, 208, 142)));
+                .add(new Paragraph(formatValue(meter)).setFontSize(9))
+                .setBackgroundColor(new DeviceRgb(169, 208, 142))
+                .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(sqFeet)))
-                .setBackgroundColor(new DeviceRgb(187, 173, 219)));  
+                .add(new Paragraph(formatValue(sqFeet)).setFontSize(9))
+                .setBackgroundColor(new DeviceRgb(187, 173, 219))
+                .setTextAlignment(TextAlignment.CENTER));  
         }
         
         return table;
@@ -379,6 +391,7 @@ public class DispatchSlipPdfService {
                     .add(new Paragraph(title))
                     .setBackgroundColor(PRIMARY_COLOR)
                     .setFontColor(ColorConstants.WHITE)
+                    .setTextAlignment(TextAlignment.CENTER)
                     .setPadding(5);
                 table.addHeaderCell(header);
             });
@@ -388,16 +401,19 @@ public class DispatchSlipPdfService {
             BigDecimal sqFeet = toBigDecimal(calc.get("sqFeet"));
             
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("length"))))
-                .setBackgroundColor(new DeviceRgb(230, 185, 184)));
+                .add(new Paragraph(formatValue(calc.get("length"))).setFontSize(9))
+                .setBackgroundColor(new DeviceRgb(230, 185, 184))
+                .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("width"))))
-                .setBackgroundColor(new DeviceRgb(141, 180, 227)));
+                .add(new Paragraph(formatValue(calc.get("width"))).setFontSize(9))
+                .setBackgroundColor(new DeviceRgb(141, 180, 227))
+                .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(sqFeet)))
-                .setBackgroundColor(new DeviceRgb(187, 173, 219)));  
+                .add(new Paragraph(formatValue(sqFeet)).setFontSize(9))
+                .setBackgroundColor(new DeviceRgb(187, 173, 219))
+                .setTextAlignment(TextAlignment.CENTER));  
         }
         
         return table;
