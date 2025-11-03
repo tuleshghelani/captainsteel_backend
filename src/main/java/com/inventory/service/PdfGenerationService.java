@@ -84,7 +84,7 @@ public class PdfGenerationService {
         Table nameTable = new Table(1).useAllAvailableWidth();
         Cell nameCell = new Cell()
             .add(new Paragraph("CAPTAIN STEEL")
-                .setFontSize(36)
+                .setFontSize(20)
                 .setBold()
                 .setFontColor(new DeviceRgb(0, 0, 0)))  // Black color
             .setBorder(Border.NO_BORDER)
@@ -98,15 +98,15 @@ public class PdfGenerationService {
         // Left side - Details
         Cell detailsCell = new Cell();
         detailsCell.add(new Paragraph("Address :- Survey No.39/2, Plot No.4, Nr.MaekwellbSpining Mill,")
-                        .setFontSize(10))
+                        .setFontSize(8))
                    .add(new Paragraph("Sadak Pipliya, National Highway, Ta. Gondal, Dist. Rajkot.")
-                        .setFontSize(10))
+                        .setFontSize(8))
                    .add(new Paragraph("E-mail: captainsteel39@gmail.com")
-                        .setFontSize(10))
+                        .setFontSize(8))
                    .add(new Paragraph("Mo.No. 96627 12222 / 89803 92009")
-                        .setFontSize(10))
+                        .setFontSize(8))
                    .add(new Paragraph("GST NO.24AALFC2707P1Z8")
-                        .setFontSize(11)
+                        .setFontSize(9)
                         .setBold()
                         .setFontColor(PRIMARY_COLOR))
                    .setBorder(Border.NO_BORDER)
@@ -147,7 +147,7 @@ public class PdfGenerationService {
         // Add Quotation text
         document.add(new Paragraph("Quotation")
             .setTextAlignment(TextAlignment.CENTER)
-            .setFontSize(24)
+            .setFontSize(16)
             .setBold()
             .setFontColor(PRIMARY_COLOR)
             .setMarginTop(10));
@@ -161,8 +161,8 @@ public class PdfGenerationService {
         
         // Left side - Quote details
         Cell quoteDetails = new Cell();
-        quoteDetails.add(new Paragraph("To,").setBold())
-                    .add(new Paragraph(data.get("customerName").toString()).setBold());
+        quoteDetails.add(new Paragraph("To,").setBold().setFontSize(8))
+                    .add(new Paragraph(data.get("customerName").toString()).setBold().setFontSize(8));
         
         // Add address - first try quotation address, then customer address
         String address = null;
@@ -172,7 +172,7 @@ public class PdfGenerationService {
             address = data.get("customerAddress").toString();
         }
         if (address != null) {
-            quoteDetails.add(new Paragraph(address));
+            quoteDetails.add(new Paragraph(address).setFontSize(8));
         }
         
         // Add GST number
@@ -183,13 +183,13 @@ public class PdfGenerationService {
             gstNumber = data.get("gst").toString();
         }
         if (gstNumber != null) {
-            quoteDetails.add(new Paragraph("GST No: " + gstNumber));
+            quoteDetails.add(new Paragraph("GST No: " + gstNumber).setFontSize(8));
         }
         
-        quoteDetails.add(new Paragraph("Quote Number: " + data.get("quoteNumber")))
-                   .add(new Paragraph("Quote Date: " + data.get("quoteDate")))
-                   .add(new Paragraph("Valid Until: " + data.get("validUntil")))
-                   .add(new Paragraph("Mobile No. : " + (data.get("contactNumber") != null ? data.get("contactNumber") : "")))
+        quoteDetails.add(new Paragraph("Quote Number: " + data.get("quoteNumber")).setFontSize(8))
+                   .add(new Paragraph("Quote Date: " + data.get("quoteDate")).setFontSize(8))
+                   .add(new Paragraph("Valid Until: " + data.get("validUntil")).setFontSize(8))
+                   .add(new Paragraph("Mobile No. : " + (data.get("contactNumber") != null ? data.get("contactNumber") : "")).setFontSize(8))
                    .setBorder(Border.NO_BORDER);
     
         
@@ -200,6 +200,7 @@ public class PdfGenerationService {
         // Add remarks if present
         if (data.get("remarks") != null && !data.get("remarks").toString().trim().isEmpty()) {
             document.add(new Paragraph("\nRemarks: " + data.get("remarks"))
+                .setFontSize(8)
                 .setFontColor(TEXT_PRIMARY)
                 .setMarginTop(10));
         }
@@ -214,9 +215,10 @@ public class PdfGenerationService {
         // Add simplified headers
         Stream.of("Sr. No.", "ITEM NAME", "QUANTITY", "PRICE", "TOTAL AMOUNT")
             .forEach(title -> table.addHeaderCell(
-                new Cell().add(new Paragraph(title))
+                new Cell().add(new Paragraph(title).setFontSize(8))
                         .setBackgroundColor(PRIMARY_COLOR)
                         .setFontColor(ColorConstants.WHITE)
+                        .setTextAlignment(TextAlignment.CENTER)
                         .setPadding(5)
             ));
             
@@ -226,7 +228,8 @@ public class PdfGenerationService {
         BigDecimal totalTaxAmount = BigDecimal.ZERO;
 
         for (Map<String, Object> item : items) {
-            table.addCell(new Cell().add(new Paragraph(String.valueOf(counter.getAndIncrement()))));
+            table.addCell(new Cell().add(new Paragraph(String.valueOf(counter.getAndIncrement())).setFontSize(8))
+                    .setTextAlignment(TextAlignment.CENTER));
             
             // Create item name cell with product name and optional remarks
             Paragraph itemNameParagraph = convertHtmlToParagraph(item, true);
@@ -235,7 +238,7 @@ public class PdfGenerationService {
             Object nos = item.get("nos");
             if (nos != null && !nos.toString().trim().isEmpty()) {
                 itemNameParagraph.add(new Text(" (" + nos.toString() + " nos)")
-                    .setFontSize(10)
+                    .setFontSize(8)
                     .setFontColor(new DeviceRgb(60, 60, 60)));
             }
             
@@ -243,12 +246,13 @@ public class PdfGenerationService {
             String itemRemarks = item.get("itemRemarks") != null ? item.get("itemRemarks").toString().trim() : "";
             if (!itemRemarks.isEmpty()) {
                 itemNameParagraph.add(new Text("\n(" + itemRemarks + ")")
-                    .setFontSize(9)
+                    .setFontSize(7)
                     .setItalic()
                     .setFontColor(new DeviceRgb(100, 100, 100)));
             }
             
-            table.addCell(new Cell().add(itemNameParagraph));
+            table.addCell(new Cell().add(itemNameParagraph)
+                    .setTextAlignment(TextAlignment.CENTER));
             
             // Check if calculationBase is N (NOS) or calculationType is NOS
             String calculationBase = item.get("calculationBase") != null ? item.get("calculationBase").toString().trim() : "";
@@ -279,9 +283,12 @@ public class PdfGenerationService {
             BigDecimal taxPercentage = new BigDecimal(item.get("taxPercentage").toString());
             BigDecimal itemTaxAmount = afterDiscount.multiply(taxPercentage).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
             
-            table.addCell(new Cell().add(new Paragraph(roundedQuantity.toString() + " " + displayMeasurement)));
-            table.addCell(new Cell().add(new Paragraph(unitPrice.toString())));
-            table.addCell(new Cell().add(new Paragraph(afterDiscount.toString())));
+            table.addCell(new Cell().add(new Paragraph(roundedQuantity.toString() + " " + displayMeasurement).setFontSize(8))
+                    .setTextAlignment(TextAlignment.CENTER));
+            table.addCell(new Cell().add(new Paragraph(unitPrice.toString()).setFontSize(8))
+                    .setTextAlignment(TextAlignment.CENTER));
+            table.addCell(new Cell().add(new Paragraph(afterDiscount.toString()).setFontSize(8))
+                    .setTextAlignment(TextAlignment.CENTER));
             
             totalAmount = totalAmount.add(afterDiscount);
             totalTaxAmount = totalTaxAmount.add(itemTaxAmount);
@@ -303,65 +310,69 @@ public class PdfGenerationService {
         
         // Add total row (not rounded, shows detail)
         Cell totalLabelCell = new Cell()
-            .add(new Paragraph("TOTAL"))
+            .add(new Paragraph("TOTAL").setFontSize(8))
             .setBorder(Border.NO_BORDER)
             .setBorderTop(new SolidBorder(BORDER_COLOR, 1))
             .setBorderBottom(new SolidBorder(BORDER_COLOR, 1))
+            .setTextAlignment(TextAlignment.CENTER)
             .setPadding(6);
         Cell totalValueCell = new Cell()
-            .add(new Paragraph(totalAmount.toString() + "/-"))
+            .add(new Paragraph(totalAmount.toString() + "/-").setFontSize(8))
             .setBorder(Border.NO_BORDER)
             .setBorderTop(new SolidBorder(BORDER_COLOR, 1))
             .setBorderBottom(new SolidBorder(BORDER_COLOR, 1))
-            .setTextAlignment(TextAlignment.RIGHT)
+            .setTextAlignment(TextAlignment.CENTER)
             .setPadding(6);
         summaryTable.addCell(totalLabelCell);
         summaryTable.addCell(totalValueCell);
         
         // Add loading charge row (not rounded, shows detail)
         Cell loadingLabelCell = new Cell()
-            .add(new Paragraph("Loading Charge"))
+            .add(new Paragraph("Loading Charge").setFontSize(8))
             .setBorder(Border.NO_BORDER)
             .setBorderBottom(new SolidBorder(BORDER_COLOR, 1))
+            .setTextAlignment(TextAlignment.CENTER)
             .setPadding(6);
         Cell loadingValueCell = new Cell()
-            .add(new Paragraph(loadingCharge.toString() + "/-"))
+            .add(new Paragraph(loadingCharge.toString() + "/-").setFontSize(8))
             .setBorder(Border.NO_BORDER)
             .setBorderBottom(new SolidBorder(BORDER_COLOR, 1))
-            .setTextAlignment(TextAlignment.RIGHT)
+            .setTextAlignment(TextAlignment.CENTER)
             .setPadding(6);
         summaryTable.addCell(loadingLabelCell);
         summaryTable.addCell(loadingValueCell);
         
         // Add GST row (not rounded, shows detail)
         Cell gstLabelCell = new Cell()
-            .add(new Paragraph("GST 18% (SGST 9% CGST 9%)"))
+            .add(new Paragraph("GST 18% (SGST 9% CGST 9%)").setFontSize(8))
             .setBorder(Border.NO_BORDER)
             .setBorderBottom(new SolidBorder(BORDER_COLOR, 1))
+            .setTextAlignment(TextAlignment.CENTER)
             .setPadding(6);
         Cell gstValueCell = new Cell()
-            .add(new Paragraph(totalTaxAmount.toString() + "/-"))
+            .add(new Paragraph(totalTaxAmount.toString() + "/-").setFontSize(8))
             .setBorder(Border.NO_BORDER)
             .setBorderBottom(new SolidBorder(BORDER_COLOR, 1))
-            .setTextAlignment(TextAlignment.RIGHT)
+            .setTextAlignment(TextAlignment.CENTER)
             .setPadding(6);
         summaryTable.addCell(gstLabelCell);
         summaryTable.addCell(gstValueCell);
         
         // Add grand total row with emphasis (ONLY THIS IS ROUNDED)
         Cell grandTotalLabelCell = new Cell()
-            .add(new Paragraph("GRAND TOTAL"))
+            .add(new Paragraph("GRAND TOTAL").setFontSize(8))
             .setBorder(Border.NO_BORDER)
             .setBorderTop(new SolidBorder(BORDER_COLOR, 2))
             .setBorderBottom(new SolidBorder(BORDER_COLOR, 2))
+            .setTextAlignment(TextAlignment.CENTER)
             .setBold()
             .setPadding(8);
         Cell grandTotalValueCell = new Cell()
-            .add(new Paragraph(grandTotal.toString() + "/-"))
+            .add(new Paragraph(grandTotal.toString() + "/-").setFontSize(8))
             .setBorder(Border.NO_BORDER)
             .setBorderTop(new SolidBorder(BORDER_COLOR, 2))
             .setBorderBottom(new SolidBorder(BORDER_COLOR, 2))
-            .setTextAlignment(TextAlignment.RIGHT)
+            .setTextAlignment(TextAlignment.CENTER)
             .setBold()
             .setPadding(8);
         summaryTable.addCell(grandTotalLabelCell);
@@ -395,6 +406,7 @@ public class PdfGenerationService {
         
         document.add(new Paragraph("\nCalculation Details for : ")
             .add(productNameParagraph)
+            .setFontSize(8)
             .setFontColor(TEXT_PRIMARY)
             .setMarginTop(10));
             
@@ -432,7 +444,7 @@ public class PdfGenerationService {
         Stream.of("Feet", "Inch", "Nos", "Sq. Meter", "Sq.Feet")
             .forEach(title -> {
                 Cell header = new Cell()
-                    .add(new Paragraph(title))
+                    .add(new Paragraph(title).setFontSize(8))
                     .setBackgroundColor(PRIMARY_COLOR)
                     .setFontColor(ColorConstants.WHITE)
                     .setTextAlignment(TextAlignment.CENTER)
@@ -446,27 +458,27 @@ public class PdfGenerationService {
             BigDecimal meter = sqFeet.divide(SQ_FEET_TO_METER, 4, RoundingMode.HALF_UP);
             
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("feet"))).setFontSize(9))
+                .add(new Paragraph(formatValue(calc.get("feet"))).setFontSize(8))
                 .setBackgroundColor(new DeviceRgb(230, 185, 184))
                 .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("inch"))).setFontSize(9))
+                .add(new Paragraph(formatValue(calc.get("inch"))).setFontSize(8))
                 .setBackgroundColor(new DeviceRgb(141, 180, 227))
                 .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("nos"))).setFontSize(9))
+                .add(new Paragraph(formatValue(calc.get("nos"))).setFontSize(8))
                 .setBackgroundColor(new DeviceRgb(252, 213, 180))
                 .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(meter)).setFontSize(9))
+                .add(new Paragraph(formatValue(meter)).setFontSize(8))
                 .setBackgroundColor(new DeviceRgb(169, 208, 142))
                 .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(sqFeet)).setFontSize(9))
+                .add(new Paragraph(formatValue(sqFeet)).setFontSize(8))
                 .setBackgroundColor(new DeviceRgb(187, 173, 219))
                 .setTextAlignment(TextAlignment.CENTER)); 
         }
@@ -483,7 +495,7 @@ public class PdfGenerationService {
         Stream.of("MM", "R.Feet", "Nos", "Sq. Meter", "Sq.Feet")
             .forEach(title -> {
                 Cell header = new Cell()
-                    .add(new Paragraph(title))
+                    .add(new Paragraph(title).setFontSize(8))
                     .setBackgroundColor(PRIMARY_COLOR)
                     .setFontColor(ColorConstants.WHITE)
                     .setTextAlignment(TextAlignment.CENTER)
@@ -498,27 +510,27 @@ public class PdfGenerationService {
             BigDecimal sqFeet = toBigDecimal(calc.get("sqFeet"));
             
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("mm"))).setFontSize(9))
+                .add(new Paragraph(formatValue(calc.get("mm"))).setFontSize(8))
                 .setBackgroundColor(new DeviceRgb(230, 185, 184))
                 .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("runningFeet"))).setFontSize(9))
+                .add(new Paragraph(formatValue(calc.get("runningFeet"))).setFontSize(8))
                 .setBackgroundColor(new DeviceRgb(141, 180, 227))
                 .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("nos"))).setFontSize(9))
+                .add(new Paragraph(formatValue(calc.get("nos"))).setFontSize(8))
                 .setBackgroundColor(new DeviceRgb(252, 213, 180))
                 .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(meter)).setFontSize(9))
+                .add(new Paragraph(formatValue(meter)).setFontSize(8))
                 .setBackgroundColor(new DeviceRgb(169, 208, 142))
                 .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(sqFeet)).setFontSize(9))
+                .add(new Paragraph(formatValue(sqFeet)).setFontSize(8))
                 .setBackgroundColor(new DeviceRgb(187, 173, 219))
                 .setTextAlignment(TextAlignment.CENTER));  
         }
@@ -535,7 +547,7 @@ public class PdfGenerationService {
         Stream.of("Length", "Width", "Total (sq. feet)")
             .forEach(title -> {
                 Cell header = new Cell()
-                    .add(new Paragraph(title))
+                    .add(new Paragraph(title).setFontSize(8))
                     .setBackgroundColor(PRIMARY_COLOR)
                     .setFontColor(ColorConstants.WHITE)
                     .setTextAlignment(TextAlignment.CENTER)
@@ -548,17 +560,17 @@ public class PdfGenerationService {
             BigDecimal sqFeet = toBigDecimal(calc.get("sqFeet"));
             
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("length"))).setFontSize(9))
+                .add(new Paragraph(formatValue(calc.get("length"))).setFontSize(8))
                 .setBackgroundColor(new DeviceRgb(230, 185, 184))
                 .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("width"))).setFontSize(9))
+                .add(new Paragraph(formatValue(calc.get("width"))).setFontSize(8))
                 .setBackgroundColor(new DeviceRgb(141, 180, 227))
                 .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(sqFeet)).setFontSize(9))
+                .add(new Paragraph(formatValue(sqFeet)).setFontSize(8))
                 .setBackgroundColor(new DeviceRgb(187, 173, 219))
                 .setTextAlignment(TextAlignment.CENTER));  
         }
@@ -615,20 +627,20 @@ public class PdfGenerationService {
         // GST Number
         document.add(new Paragraph("GST No: 24AALFC2707P1Z8")
             .setFontColor(TEXT_PRIMARY)
-            .setFontSize(12)
+            .setFontSize(8)
             .setMarginBottom(20));
         
         // Bank Details Section
         document.add(new Paragraph("BANK DETAILS:")
             .setFontColor(new DeviceRgb(41, 84, 153))  // Blue color
             .setBold()
-            .setFontSize(14)
+            .setFontSize(10)
             .setMarginBottom(10));
         
         document.add(new Paragraph("CENTRAL BANK OF INDIA")
             .setFontColor(new DeviceRgb(230, 108, 1))  // Orange color
             .setBold()
-            .setFontSize(12));
+            .setFontSize(8));
             
         Table bankTable = new Table(2).useAllAvailableWidth();
         addBankDetail(bankTable, "A/C NO:", "3592903798");
@@ -640,7 +652,7 @@ public class PdfGenerationService {
         document.add(new Paragraph("\nTERMS AND CONDITIONS:")
             .setFontColor(new DeviceRgb(207, 89, 86))  // Red color
             .setBold()
-            .setFontSize(14)
+            .setFontSize(10)
             .setMarginTop(20)
             .setMarginBottom(10));
         
@@ -668,15 +680,18 @@ public class PdfGenerationService {
     }
 
     private void addBankDetail(Table table, String label, String value) {
-        table.addCell(new Cell().add(new Paragraph(label))
+        table.addCell(new Cell().add(new Paragraph(label).setFontSize(8))
             .setBold()
+            .setTextAlignment(TextAlignment.CENTER)
             .setBorder(Border.NO_BORDER));
-        table.addCell(new Cell().add(new Paragraph(value))
+        table.addCell(new Cell().add(new Paragraph(value).setFontSize(8))
+            .setTextAlignment(TextAlignment.CENTER)
             .setBorder(Border.NO_BORDER));
     }
 
     private void addTerm(Document document, String number, String text, Color color) {
         document.add(new Paragraph(number + " " + text)
+            .setFontSize(8)
             .setFontColor(color)
             .setBold()
             .setMarginBottom(5));
@@ -732,8 +747,8 @@ public class PdfGenerationService {
         
         // Contact information cell (center-aligned)
         Cell contactCell = new Cell()
-            .add(new Paragraph("CAPTAIN STEEL [ CONTECT NO.9879109091 / 8980392009 / 7574879091 / 9879109121 ]")
-                .setFontSize(8)
+            .add(new Paragraph("CAPTAIN STEEL [ CONTACT NO.9879109091 / 8980392009 / 7574879091 / 9879109121 ]")
+                .setFontSize(7)
                 .setFontColor(TEXT_PRIMARY))
             .setBorder(Border.NO_BORDER)
             .setTextAlignment(TextAlignment.CENTER);
@@ -764,7 +779,7 @@ public class PdfGenerationService {
                 // Handle spacing between words
                 String formattedPart = part;
 
-                Text text = new Text(formattedPart);
+                Text text = new Text(formattedPart).setFontSize(8);
                 if (isBold) {
                     text.setBold();
                 }
@@ -785,17 +800,17 @@ public class PdfGenerationService {
             if (accessoriesSize != null) {
                 if ("C".equalsIgnoreCase(accessoriesSize)) {
                     // For Custom size, show "Custom" and weight
-                    paragraph.add(new Text(" (Custom"));
+                    paragraph.add(new Text(" (Custom").setFontSize(8));
                     
                     // Add weight if available
                     Object weightObj = item.get("weight");
                     if (weightObj != null) {
-                        paragraph.add(new Text(", " + weightObj.toString() + " "));
+                        paragraph.add(new Text(", " + weightObj.toString() + " ").setFontSize(8));
                     }
-                    paragraph.add(new Text(")"));
+                    paragraph.add(new Text(")").setFontSize(8));
                 } else {
                     // For standard sizes, show size in inches
-                    paragraph.add(new Text(" (" + accessoriesSize + "\")"));
+                    paragraph.add(new Text(" (" + accessoriesSize + "\")").setFontSize(8));
                 }
             }
             

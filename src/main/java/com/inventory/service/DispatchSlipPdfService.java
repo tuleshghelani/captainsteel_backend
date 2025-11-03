@@ -66,7 +66,7 @@ public class DispatchSlipPdfService {
         Table nameTable = new Table(1).useAllAvailableWidth();
         Cell nameCell = new Cell()
                 .add(new Paragraph("CAPTAIN STEEL")
-                        .setFontSize(36)
+                        .setFontSize(20)
                         .setBold()
                         .setFontColor(new DeviceRgb(0, 0, 0)))  // Black color
                 .setBorder(Border.NO_BORDER)
@@ -80,15 +80,15 @@ public class DispatchSlipPdfService {
         // Left side - Details
         Cell detailsCell = new Cell();
         detailsCell.add(new Paragraph("Address :- Survey No.39/2, Plot No.4, Nr.MaekwellbSpining Mill,")
-                        .setFontSize(10))
+                        .setFontSize(8))
                 .add(new Paragraph("Sadak Pipliya, National Highway, Ta. Gondal, Dist. Rajkot.")
-                        .setFontSize(10))
+                        .setFontSize(8))
                 .add(new Paragraph("E-mail: captainsteel39@gmail.com")
-                        .setFontSize(10))
+                        .setFontSize(8))
                 .add(new Paragraph("Mo.No. 96627 12222 / 89803 92009")
-                        .setFontSize(10))
+                        .setFontSize(8))
                 .add(new Paragraph("GST NO.24AALFC2707P1Z8")
-                        .setFontSize(11)
+                        .setFontSize(9)
                         .setBold()
                         .setFontColor(PRIMARY_COLOR))
                 .setBorder(Border.NO_BORDER)
@@ -124,7 +124,7 @@ public class DispatchSlipPdfService {
         // Add Dispatch text
         document.add(new Paragraph("Dispatch Slip")
                 .setTextAlignment(TextAlignment.CENTER)
-                .setFontSize(24)
+                .setFontSize(16)
                 .setBold()
                 .setFontColor(PRIMARY_COLOR)
                 .setMarginTop(10));
@@ -138,12 +138,12 @@ public class DispatchSlipPdfService {
 
         // Left side - Quote details
         Cell quoteDetails = new Cell();
-        quoteDetails.add(new Paragraph("To,").setBold())
-                .add(new Paragraph(data.get("customerName").toString()).setBold())
-                .add(new Paragraph("Quote Number: " + data.get("quoteNumber")))
-                .add(new Paragraph("Quote Date: " + data.get("quoteDate")))
-                .add(new Paragraph("Valid Until: " + data.get("validUntil")))
-                .add(new Paragraph("Mobile No. : " + (data.get("contactNumber") != null ? data.get("contactNumber") : "")))
+        quoteDetails.add(new Paragraph("To,").setBold().setFontSize(8))
+                .add(new Paragraph(data.get("customerName").toString()).setBold().setFontSize(8))
+                .add(new Paragraph("Quote Number: " + data.get("quoteNumber")).setFontSize(8))
+                .add(new Paragraph("Quote Date: " + data.get("quoteDate")).setFontSize(8))
+                .add(new Paragraph("Valid Until: " + data.get("validUntil")).setFontSize(8))
+                .add(new Paragraph("Mobile No. : " + (data.get("contactNumber") != null ? data.get("contactNumber") : "")).setFontSize(8))
                 .setBorder(Border.NO_BORDER);
 
 
@@ -154,6 +154,7 @@ public class DispatchSlipPdfService {
         // Add remarks if present
         if (data.get("remarks") != null) {
             document.add(new Paragraph("\nRemarks: ")
+                    .setFontSize(8)
                     .setFontColor(TEXT_PRIMARY)
                     .setMarginTop(10));
         }
@@ -167,9 +168,10 @@ public class DispatchSlipPdfService {
         // Add simplified headers
         Stream.of("Sr. No.", "ITEM NAME", "QUANTITY")
                 .forEach(title -> table.addHeaderCell(
-                        new Cell().add(new Paragraph(title))
+                        new Cell().add(new Paragraph(title).setFontSize(8))
                                 .setBackgroundColor(PRIMARY_COLOR)
                                 .setFontColor(ColorConstants.WHITE)
+                                .setTextAlignment(TextAlignment.CENTER)
                                 .setPadding(5)
                 ));
 
@@ -178,7 +180,8 @@ public class DispatchSlipPdfService {
         BigDecimal totalAmount = BigDecimal.ZERO;
 
         for (Map<String, Object> item : items) {
-            table.addCell(new Cell().add(new Paragraph(String.valueOf(counter.getAndIncrement()))));
+            table.addCell(new Cell().add(new Paragraph(String.valueOf(counter.getAndIncrement())).setFontSize(8))
+                    .setTextAlignment(TextAlignment.CENTER));
             
             // Create item name cell with product name and optional remarks
             Paragraph itemNameParagraph = convertHtmlToParagraph(item, true);
@@ -187,7 +190,7 @@ public class DispatchSlipPdfService {
             Object nos = item.get("nos");
             if (nos != null && !nos.toString().trim().isEmpty()) {
                 itemNameParagraph.add(new Text(" (" + nos.toString() + " nos)")
-                        .setFontSize(10)
+                        .setFontSize(8)
                         .setFontColor(new DeviceRgb(60, 60, 60)));
             }
 
@@ -195,12 +198,13 @@ public class DispatchSlipPdfService {
             String itemRemarks = item.get("itemRemarks") != null ? item.get("itemRemarks").toString().trim() : "";
             if (!itemRemarks.isEmpty()) {
                 itemNameParagraph.add(new Text("\n(" + itemRemarks + ")")
-                        .setFontSize(9)
+                        .setFontSize(7)
                         .setItalic()
                         .setFontColor(new DeviceRgb(100, 100, 100)));
             }
 
-            table.addCell(new Cell().add(itemNameParagraph));
+            table.addCell(new Cell().add(itemNameParagraph)
+                    .setTextAlignment(TextAlignment.CENTER));
 
             // Check if calculationBase is N (NOS) or calculationType is NOS
             String calculationBase = item.get("calculationBase") != null ? item.get("calculationBase").toString().trim() : "";
@@ -217,7 +221,8 @@ public class DispatchSlipPdfService {
                 displayMeasurement = measurement.toLowerCase().equals("kg") ? "\n " + measurement + "(approx.)" : "\n" + measurement;
             }
 
-            table.addCell(new Cell().add(new Paragraph(item.get("quantity").toString() + " " + displayMeasurement)));
+            table.addCell(new Cell().add(new Paragraph(item.get("quantity").toString() + " " + displayMeasurement).setFontSize(8))
+                    .setTextAlignment(TextAlignment.CENTER));
         }
 
         document.add(table);
@@ -248,6 +253,7 @@ public class DispatchSlipPdfService {
 
         document.add(new Paragraph("\nCalculation Details for : ")
                 .add(productNameParagraph)
+                .setFontSize(8)
                 .setFontColor(TEXT_PRIMARY)
                 .setMarginTop(10));
 
@@ -285,7 +291,7 @@ public class DispatchSlipPdfService {
         Stream.of("Feet", "Inch", "Nos", "Meter", "Sq.Feet")
             .forEach(title -> {
                 Cell header = new Cell()
-                    .add(new Paragraph(title))
+                    .add(new Paragraph(title).setFontSize(8))
                     .setBackgroundColor(PRIMARY_COLOR)
                     .setFontColor(ColorConstants.WHITE)
                     .setTextAlignment(TextAlignment.CENTER)
@@ -299,27 +305,27 @@ public class DispatchSlipPdfService {
             BigDecimal meter = sqFeet.divide(SQ_FEET_TO_METER, 4, RoundingMode.HALF_UP);
             
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("feet"))).setFontSize(9))
+                .add(new Paragraph(formatValue(calc.get("feet"))).setFontSize(8))
                 .setBackgroundColor(new DeviceRgb(230, 185, 184))
                 .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("inch"))).setFontSize(9))
+                .add(new Paragraph(formatValue(calc.get("inch"))).setFontSize(8))
                 .setBackgroundColor(new DeviceRgb(141, 180, 227))
                 .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("nos"))).setFontSize(9))
+                .add(new Paragraph(formatValue(calc.get("nos"))).setFontSize(8))
                 .setBackgroundColor(new DeviceRgb(252, 213, 180))
                 .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(meter)).setFontSize(9))
+                .add(new Paragraph(formatValue(meter)).setFontSize(8))
                 .setBackgroundColor(new DeviceRgb(169, 208, 142))
                 .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(sqFeet)).setFontSize(9))
+                .add(new Paragraph(formatValue(sqFeet)).setFontSize(8))
                 .setBackgroundColor(new DeviceRgb(187, 173, 219))
                 .setTextAlignment(TextAlignment.CENTER)); 
         }
@@ -336,7 +342,7 @@ public class DispatchSlipPdfService {
         Stream.of("MM", "R.Feet", "Nos", "Meter", "Sq.Feet")
             .forEach(title -> {
                 Cell header = new Cell()
-                    .add(new Paragraph(title))
+                    .add(new Paragraph(title).setFontSize(8))
                     .setBackgroundColor(PRIMARY_COLOR)
                     .setFontColor(ColorConstants.WHITE)
                     .setTextAlignment(TextAlignment.CENTER)
@@ -351,27 +357,27 @@ public class DispatchSlipPdfService {
             BigDecimal sqFeet = toBigDecimal(calc.get("sqFeet"));
             
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("mm"))).setFontSize(9))
+                .add(new Paragraph(formatValue(calc.get("mm"))).setFontSize(8))
                 .setBackgroundColor(new DeviceRgb(230, 185, 184))
                 .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("runningFeet"))).setFontSize(9))
+                .add(new Paragraph(formatValue(calc.get("runningFeet"))).setFontSize(8))
                 .setBackgroundColor(new DeviceRgb(141, 180, 227))
                 .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("nos"))).setFontSize(9))
+                .add(new Paragraph(formatValue(calc.get("nos"))).setFontSize(8))
                 .setBackgroundColor(new DeviceRgb(252, 213, 180))
                 .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(meter)).setFontSize(9))
+                .add(new Paragraph(formatValue(meter)).setFontSize(8))
                 .setBackgroundColor(new DeviceRgb(169, 208, 142))
                 .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(sqFeet)).setFontSize(9))
+                .add(new Paragraph(formatValue(sqFeet)).setFontSize(8))
                 .setBackgroundColor(new DeviceRgb(187, 173, 219))
                 .setTextAlignment(TextAlignment.CENTER));  
         }
@@ -388,7 +394,7 @@ public class DispatchSlipPdfService {
         Stream.of("Length", "Width", "Total (sq. feet)")
             .forEach(title -> {
                 Cell header = new Cell()
-                    .add(new Paragraph(title))
+                    .add(new Paragraph(title).setFontSize(8))
                     .setBackgroundColor(PRIMARY_COLOR)
                     .setFontColor(ColorConstants.WHITE)
                     .setTextAlignment(TextAlignment.CENTER)
@@ -401,17 +407,17 @@ public class DispatchSlipPdfService {
             BigDecimal sqFeet = toBigDecimal(calc.get("sqFeet"));
             
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("length"))).setFontSize(9))
+                .add(new Paragraph(formatValue(calc.get("length"))).setFontSize(8))
                 .setBackgroundColor(new DeviceRgb(230, 185, 184))
                 .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("width"))).setFontSize(9))
+                .add(new Paragraph(formatValue(calc.get("width"))).setFontSize(8))
                 .setBackgroundColor(new DeviceRgb(141, 180, 227))
                 .setTextAlignment(TextAlignment.CENTER));
                 
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(sqFeet)).setFontSize(9))
+                .add(new Paragraph(formatValue(sqFeet)).setFontSize(8))
                 .setBackgroundColor(new DeviceRgb(187, 173, 219))
                 .setTextAlignment(TextAlignment.CENTER));  
         }
@@ -450,8 +456,8 @@ public class DispatchSlipPdfService {
 
         // Contact information cell (center-aligned)
         Cell contactCell = new Cell()
-                .add(new Paragraph("CAPTAIN STEEL [ CONTECT NO.9879109091 / 8980392009 / 7574879091 / 9879109121 ]")
-                        .setFontSize(8)
+                .add(new Paragraph("CAPTAIN STEEL [ CONTACT NO.9879109091 / 8980392009 / 7574879091 / 9879109121 ]")
+                        .setFontSize(7)
                         .setFontColor(TEXT_PRIMARY))
                 .setBorder(Border.NO_BORDER)
                 .setTextAlignment(TextAlignment.CENTER);
@@ -482,7 +488,7 @@ public class DispatchSlipPdfService {
                 // Handle spacing between words
                 String formattedPart = part;
 
-                Text text = new Text(formattedPart);
+                Text text = new Text(formattedPart).setFontSize(8);
                 if (isBold) {
                     text.setBold();
                 }
@@ -503,17 +509,17 @@ public class DispatchSlipPdfService {
             if (accessoriesSize != null) {
                 if ("C".equalsIgnoreCase(accessoriesSize)) {
                     // For Custom size, show "Custom" and weight
-                    paragraph.add(new Text(" (Custom"));
+                    paragraph.add(new Text(" (Custom").setFontSize(8));
 
                     // Add weight if available
                     Object weightObj = item.get("weight");
                     if (weightObj != null) {
-                        paragraph.add(new Text(", " + weightObj.toString() + " "));
+                        paragraph.add(new Text(", " + weightObj.toString() + " ").setFontSize(8));
                     }
-                    paragraph.add(new Text(")"));
+                    paragraph.add(new Text(")").setFontSize(8));
                 } else {
                     // For standard sizes, show size in inches
-                    paragraph.add(new Text(" (" + accessoriesSize + "\")"));
+                    paragraph.add(new Text(" (" + accessoriesSize + "\")").setFontSize(8));
                 }
             }
 
