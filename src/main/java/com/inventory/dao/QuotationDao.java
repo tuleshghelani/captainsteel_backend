@@ -538,6 +538,7 @@ public class QuotationDao {
                 ? BigDecimal.valueOf(count).multiply(BigDecimal.valueOf(100))
                     .divide(BigDecimal.valueOf(totalCount), 2, java.math.RoundingMode.HALF_UP)
                 : BigDecimal.ZERO;
+
             QuotationStatus statusEnum = QuotationStatus.valueOf(status);
             response.add(new QuotationStatusChartResponseDto(
                 status,
