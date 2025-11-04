@@ -4,6 +4,11 @@ import com.inventory.dto.ApiResponse;
 import com.inventory.dto.QuotationDto;
 import com.inventory.dto.QuotationRequestDto;
 import com.inventory.dto.QuotationStatusUpdateDto;
+import com.inventory.dto.QuotationChartRequestDto;
+import com.inventory.dto.QuotationStatusChartResponseDto;
+import com.inventory.dto.QuotationTrendChartResponseDto;
+import com.inventory.dto.QuotationCustomerChartResponseDto;
+import com.inventory.dto.QuotationProductChartResponseDto;
 import com.inventory.service.QuotationService;
 import com.inventory.service.QuoteNumberResetService;
 import lombok.RequiredArgsConstructor;
@@ -83,5 +88,65 @@ public class QuotationController {
             return ResponseEntity.ok(new ApiResponse<>(false, 
                 "Failed to reset quote numbers: " + e.getMessage(), null));
         }
+    }
+    
+    /**
+     * Get quotation statistics grouped by status (for pie chart)
+     * Returns count and sum of totalAmount for each status
+     * POST /api/quotations/charts/status
+     */
+    @PostMapping("/charts/status")
+    public ResponseEntity<ApiResponse<?>> getQuotationStatusChart(@RequestBody QuotationChartRequestDto request) {
+        log.debug("Received quotation status chart request: startDate={}, endDate={}", 
+            request.getStartDate(), request.getEndDate());
+        return ResponseEntity.ok(quotationService.getQuotationStatusChart(request));
+    }
+    
+    /**
+     * Get quotation trend data grouped by period (month/day/week/year)
+     * For line/bar charts showing trends over time
+     * POST /api/quotations/charts/trend
+     */
+    @PostMapping("/charts/trend")
+    public ResponseEntity<ApiResponse<?>> getQuotationTrendChart(@RequestBody QuotationChartRequestDto request) {
+        log.debug("Received quotation trend chart request: startDate={}, endDate={}, groupBy={}", 
+            request.getStartDate(), request.getEndDate(), request.getGroupBy());
+        return ResponseEntity.ok(quotationService.getQuotationTrendChart(request));
+    }
+    
+    /**
+     * Get top customers by quotation count and total amount
+     * For bar charts showing customer performance
+     * POST /api/quotations/charts/top-customers
+     */
+    @PostMapping("/charts/top-customers")
+    public ResponseEntity<ApiResponse<?>> getTopCustomersChart(@RequestBody QuotationChartRequestDto request) {
+        log.debug("Received top customers chart request: startDate={}, endDate={}, limit={}", 
+            request.getStartDate(), request.getEndDate(), request.getLimit());
+        return ResponseEntity.ok(quotationService.getTopCustomersChart(request));
+    }
+    
+    /**
+     * Get top products by quotation count
+     * Shows which products appear most frequently in quotations
+     * POST /api/quotations/charts/top-products
+     */
+    @PostMapping("/charts/top-products")
+    public ResponseEntity<ApiResponse<?>> getTopProductsChart(@RequestBody QuotationChartRequestDto request) {
+        log.debug("Received top products chart request: startDate={}, endDate={}, limit={}", 
+            request.getStartDate(), request.getEndDate(), request.getLimit());
+        return ResponseEntity.ok(quotationService.getTopProductsChart(request));
+    }
+    
+    /**
+     * Get revenue by status over time (for area/stacked charts)
+     * Shows how revenue from different statuses changes over time
+     * POST /api/quotations/charts/revenue-by-status
+     */
+    @PostMapping("/charts/revenue-by-status")
+    public ResponseEntity<ApiResponse<?>> getRevenueByStatusOverTimeChart(@RequestBody QuotationChartRequestDto request) {
+        log.debug("Received revenue by status over time chart request: startDate={}, endDate={}, groupBy={}", 
+            request.getStartDate(), request.getEndDate(), request.getGroupBy());
+        return ResponseEntity.ok(quotationService.getRevenueByStatusOverTimeChart(request));
     }
 } 

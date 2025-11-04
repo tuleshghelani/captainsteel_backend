@@ -25,6 +25,11 @@ import com.inventory.dto.QuotationItemCalculationDto;
 import com.inventory.dto.QuotationItemRequestDto;
 import com.inventory.dto.QuotationRequestDto;
 import com.inventory.dto.QuotationStatusUpdateDto;
+import com.inventory.dto.QuotationChartRequestDto;
+import com.inventory.dto.QuotationStatusChartResponseDto;
+import com.inventory.dto.QuotationTrendChartResponseDto;
+import com.inventory.dto.QuotationCustomerChartResponseDto;
+import com.inventory.dto.QuotationProductChartResponseDto;
 import com.inventory.entity.Customer;
 import com.inventory.entity.Product;
 import com.inventory.entity.Quotation;
@@ -1435,6 +1440,91 @@ public class QuotationService {
         } catch (Exception e) {
             log.error("Error deleting quotation", e);
             throw new ValidationException("Failed to delete quotation: " + e.getMessage(), HttpStatus.UNPROCESSABLE_ENTITY);
+        }
+    }
+    
+    /**
+     * Get quotation statistics grouped by status (for pie chart)
+     * Returns count and sum of totalAmount for each status
+     */
+    public ApiResponse<List<QuotationStatusChartResponseDto>> getQuotationStatusChart(QuotationChartRequestDto request) {
+        try {
+            UserMaster currentUser = utilityService.getCurrentLoggedInUser();
+            request.setClientId(currentUser.getClient().getId());
+            
+            List<QuotationStatusChartResponseDto> data = quotationDao.getQuotationStatusStatistics(request);
+            return ApiResponse.success("Quotation status chart data fetched successfully", data);
+        } catch (Exception e) {
+            log.error("Error fetching quotation status chart data", e);
+            throw new ValidationException("Failed to fetch quotation status chart data: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Get quotation trend data grouped by period (month/day/week/year)
+     * For line/bar charts showing trends over time
+     */
+    public ApiResponse<List<QuotationTrendChartResponseDto>> getQuotationTrendChart(QuotationChartRequestDto request) {
+        try {
+            UserMaster currentUser = utilityService.getCurrentLoggedInUser();
+            request.setClientId(currentUser.getClient().getId());
+            
+            List<QuotationTrendChartResponseDto> data = quotationDao.getQuotationTrendData(request);
+            return ApiResponse.success("Quotation trend chart data fetched successfully", data);
+        } catch (Exception e) {
+            log.error("Error fetching quotation trend chart data", e);
+            throw new ValidationException("Failed to fetch quotation trend chart data: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Get top customers by quotation count and total amount
+     * For bar charts showing customer performance
+     */
+    public ApiResponse<List<QuotationCustomerChartResponseDto>> getTopCustomersChart(QuotationChartRequestDto request) {
+        try {
+            UserMaster currentUser = utilityService.getCurrentLoggedInUser();
+            request.setClientId(currentUser.getClient().getId());
+            
+            List<QuotationCustomerChartResponseDto> data = quotationDao.getTopCustomersByQuotation(request);
+            return ApiResponse.success("Top customers chart data fetched successfully", data);
+        } catch (Exception e) {
+            log.error("Error fetching top customers chart data", e);
+            throw new ValidationException("Failed to fetch top customers chart data: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Get top products by quotation count
+     * Shows which products appear most frequently in quotations
+     */
+    public ApiResponse<List<QuotationProductChartResponseDto>> getTopProductsChart(QuotationChartRequestDto request) {
+        try {
+            UserMaster currentUser = utilityService.getCurrentLoggedInUser();
+            request.setClientId(currentUser.getClient().getId());
+            
+            List<QuotationProductChartResponseDto> data = quotationDao.getTopProductsByQuotation(request);
+            return ApiResponse.success("Top products chart data fetched successfully", data);
+        } catch (Exception e) {
+            log.error("Error fetching top products chart data", e);
+            throw new ValidationException("Failed to fetch top products chart data: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Get revenue by status over time (for area/stacked charts)
+     * Shows how revenue from different statuses changes over time
+     */
+    public ApiResponse<List<QuotationTrendChartResponseDto>> getRevenueByStatusOverTimeChart(QuotationChartRequestDto request) {
+        try {
+            UserMaster currentUser = utilityService.getCurrentLoggedInUser();
+            request.setClientId(currentUser.getClient().getId());
+            
+            List<QuotationTrendChartResponseDto> data = quotationDao.getRevenueByStatusOverTime(request);
+            return ApiResponse.success("Revenue by status over time chart data fetched successfully", data);
+        } catch (Exception e) {
+            log.error("Error fetching revenue by status over time chart data", e);
+            throw new ValidationException("Failed to fetch revenue by status over time chart data: " + e.getMessage());
         }
     }
 }

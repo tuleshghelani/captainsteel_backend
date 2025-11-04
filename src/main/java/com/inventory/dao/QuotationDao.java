@@ -17,6 +17,14 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
 
 import java.time.LocalDate;
+import java.math.BigDecimal;
+
+import com.inventory.dto.QuotationChartRequestDto;
+import com.inventory.dto.QuotationStatusChartResponseDto;
+import com.inventory.dto.QuotationTrendChartResponseDto;
+import com.inventory.dto.QuotationCustomerChartResponseDto;
+import com.inventory.dto.QuotationProductChartResponseDto;
+import com.inventory.enums.QuotationStatus;
 
 @Repository
 public class QuotationDao {
@@ -469,5 +477,469 @@ public class QuotationDao {
         response.put("totalPages", (int) Math.ceil((double) totalRecords / searchParams.getPerPageRecord()));
 
         return response;
+    }
+    
+    /**
+     * Get quotation statistics grouped by status (for pie chart)
+     * Returns count and sum of totalAmount for each status
+     */
+    public List<QuotationStatusChartResponseDto> getQuotationStatusStatistics(QuotationChartRequestDto request) {
+        StringBuilder sql = new StringBuilder("""
+            SELECT 
+                q.status,
+                COUNT(*) as count,
+                COALESCE(SUM(q.total_amount), 0) as total_amount
+            FROM quotation q
+            WHERE q.client_id = :clientId
+            """);
+        
+        Map<String, Object> params = new HashMap<>();
+        params.put("clientId", request.getClientId());
+        
+        if (request.getStartDate() != null) {
+            sql.append(" AND q.quote_date >= :startDate");
+            params.put("startDate", request.getStartDate());
+        }
+        
+        if (request.getEndDate() != null) {
+            sql.append(" AND q.quote_date <= :endDate");
+            params.put("endDate", request.getEndDate());
+        }
+        
+        if (request.getCustomerId() != null) {
+            sql.append(" AND q.customer_id = :customerId");
+            params.put("customerId", request.getCustomerId());
+        }
+        
+        if (request.getStatuses() != null && !request.getStatuses().isEmpty()) {
+            sql.append(" AND q.status IN (:statuses)");
+            params.put("statuses", request.getStatuses());
+        }
+        
+        sql.append(" GROUP BY q.status ORDER BY q.status");
+        
+        Query query = entityManager.createNativeQuery(sql.toString());
+        params.forEach(query::setParameter);
+        
+        List<Object[]> results = query.getResultList();
+        
+        // Calculate total count for percentage calculation
+        long totalCount = results.stream()
+            .mapToLong(row -> ((Number) row[1]).longValue())
+            .sum();
+        
+        List<QuotationStatusChartResponseDto> response = new ArrayList<>();
+        for (Object[] row : results) {
+            String status = (String) row[0];
+            Long count = ((Number) row[1]).longValue();
+            BigDecimal totalAmount = (BigDecimal) row[2];
+            
+            BigDecimal percentage = totalCount > 0 
+                ? BigDecimal.valueOf(count).multiply(BigDecimal.valueOf(100))
+                    .divide(BigDecimal.valueOf(totalCount), 2, java.math.RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+            
+            QuotationStatus statusEnum = QuotationStatus.valueOf(status);
+            response.add(new QuotationStatusChartResponseDto(
+                status,
+                statusEnum.getText(),
+                count,
+                totalAmount != null ? totalAmount : BigDecimal.ZERO,
+                percentage
+            ));
+        }
+        
+        // Ensure all statuses are included (even with 0 count)
+        if (request.getStatuses() == null || request.getStatuses().isEmpty()) {
+            Map<String, QuotationStatusChartResponseDto> statusMap = response.stream()
+                .collect(Collectors.toMap(QuotationStatusChartResponseDto::getStatus, dto -> dto));
+            
+            for (QuotationStatus status : QuotationStatus.values()) {
+                if (!statusMap.containsKey(status.name())) {
+                    response.add(new QuotationStatusChartResponseDto(
+                        status.name(),
+                        status.getText(),
+                        0L,
+                        BigDecimal.ZERO,
+                        BigDecimal.ZERO
+                    ));
+                }
+            }
+        }
+        
+        return response;
+    }
+    
+    /**
+     * Get quotation trend data grouped by period (month/day/week/year)
+     * For line/bar charts showing trends over time
+     */
+    public List<QuotationTrendChartResponseDto> getQuotationTrendData(QuotationChartRequestDto request) {
+        String groupBy = request.getGroupBy() != null ? request.getGroupBy().toLowerCase() : "month";
+        String dateFormat;
+        
+        switch (groupBy) {
+            case "day":
+                dateFormat = "TO_CHAR(q.quote_date, 'YYYY-MM-DD')";
+                break;
+            case "week":
+                dateFormat = "TO_CHAR(q.quote_date, 'IYYY-IW')"; // ISO week
+                break;
+            case "year":
+                dateFormat = "TO_CHAR(q.quote_date, 'YYYY')";
+                break;
+            case "month":
+            default:
+                dateFormat = "TO_CHAR(q.quote_date, 'YYYY-MM')";
+                break;
+        }
+        
+        StringBuilder sql = new StringBuilder()
+            .append("SELECT ")
+            .append(dateFormat).append(" as period, ")
+            .append("COUNT(*) as count, ")
+            .append("COALESCE(SUM(q.total_amount), 0) as total_amount ")
+            .append("FROM quotation q ")
+            .append("WHERE q.client_id = :clientId ");
+        
+        Map<String, Object> params = new HashMap<>();
+        params.put("clientId", request.getClientId());
+        
+        if (request.getStartDate() != null) {
+            sql.append("AND q.quote_date >= :startDate ");
+            params.put("startDate", request.getStartDate());
+        }
+        
+        if (request.getEndDate() != null) {
+            sql.append("AND q.quote_date <= :endDate ");
+            params.put("endDate", request.getEndDate());
+        }
+        
+        if (request.getCustomerId() != null) {
+            sql.append("AND q.customer_id = :customerId ");
+            params.put("customerId", request.getCustomerId());
+        }
+        
+        if (request.getStatuses() != null && !request.getStatuses().isEmpty()) {
+            sql.append("AND q.status IN (:statuses) ");
+            params.put("statuses", request.getStatuses());
+        }
+        
+        sql.append("GROUP BY ").append(dateFormat)
+           .append(" ORDER BY ").append(dateFormat);
+        
+        Query query = entityManager.createNativeQuery(sql.toString());
+        params.forEach(query::setParameter);
+        
+        List<Object[]> results = query.getResultList();
+        List<QuotationTrendChartResponseDto> response = new ArrayList<>();
+        
+        for (Object[] row : results) {
+            String period = (String) row[0];
+            Long count = ((Number) row[1]).longValue();
+            BigDecimal totalAmount = (BigDecimal) row[2];
+            
+            // Get status breakdown for this period
+            List<QuotationTrendChartResponseDto.StatusData> statusData = getStatusBreakdownByPeriod(
+                request.getClientId(), period, groupBy, request);
+            
+            response.add(new QuotationTrendChartResponseDto(
+                period,
+                count,
+                totalAmount != null ? totalAmount : BigDecimal.ZERO,
+                statusData
+            ));
+        }
+        
+        return response;
+    }
+    
+    /**
+     * Get status breakdown for a specific period
+     */
+    private List<QuotationTrendChartResponseDto.StatusData> getStatusBreakdownByPeriod(
+            Long clientId, String period, String groupBy, QuotationChartRequestDto request) {
+        String dateFormat;
+        switch (groupBy) {
+            case "day":
+                dateFormat = "TO_CHAR(q.quote_date, 'YYYY-MM-DD')";
+                break;
+            case "week":
+                dateFormat = "TO_CHAR(q.quote_date, 'IYYY-IW')";
+                break;
+            case "year":
+                dateFormat = "TO_CHAR(q.quote_date, 'YYYY')";
+                break;
+            default:
+                dateFormat = "TO_CHAR(q.quote_date, 'YYYY-MM')";
+        }
+        
+        StringBuilder sql = new StringBuilder()
+            .append("SELECT q.status, COUNT(*) as count, ")
+            .append("COALESCE(SUM(q.total_amount), 0) as total_amount ")
+            .append("FROM quotation q ")
+            .append("WHERE q.client_id = :clientId ")
+            .append("AND ").append(dateFormat).append(" = :period ");
+        
+        Map<String, Object> params = new HashMap<>();
+        params.put("clientId", clientId);
+        params.put("period", period);
+        
+        if (request.getCustomerId() != null) {
+            sql.append("AND q.customer_id = :customerId ");
+            params.put("customerId", request.getCustomerId());
+        }
+        
+        sql.append("GROUP BY q.status ORDER BY q.status");
+        
+        Query query = entityManager.createNativeQuery(sql.toString());
+        params.forEach(query::setParameter);
+        
+        List<Object[]> results = query.getResultList();
+        List<QuotationTrendChartResponseDto.StatusData> statusData = new ArrayList<>();
+        
+        for (Object[] row : results) {
+            String status = (String) row[0];
+            Long count = ((Number) row[1]).longValue();
+            BigDecimal totalAmount = (BigDecimal) row[2];
+            
+            QuotationStatus statusEnum = QuotationStatus.valueOf(status);
+            statusData.add(new QuotationTrendChartResponseDto.StatusData(
+                status,
+                statusEnum.getText(),
+                count,
+                totalAmount != null ? totalAmount : BigDecimal.ZERO
+            ));
+        }
+        
+        return statusData;
+    }
+    
+    /**
+     * Get top customers by quotation count and total amount
+     * For bar charts showing customer performance
+     */
+    public List<QuotationCustomerChartResponseDto> getTopCustomersByQuotation(QuotationChartRequestDto request) {
+        StringBuilder sql = new StringBuilder("""
+            SELECT 
+                COALESCE(c.id, 0) as customer_id,
+                COALESCE(c.name, q.customer_name, 'Unknown') as customer_name,
+                COUNT(*) as count,
+                COALESCE(SUM(q.total_amount), 0) as total_amount,
+                COALESCE(AVG(q.total_amount), 0) as average_amount
+            FROM quotation q
+            LEFT JOIN customer c ON q.customer_id = c.id AND c.client_id = :clientId
+            WHERE q.client_id = :clientId
+            """);
+        
+        Map<String, Object> params = new HashMap<>();
+        params.put("clientId", request.getClientId());
+        
+        if (request.getStartDate() != null) {
+            sql.append(" AND q.quote_date >= :startDate");
+            params.put("startDate", request.getStartDate());
+        }
+        
+        if (request.getEndDate() != null) {
+            sql.append(" AND q.quote_date <= :endDate");
+            params.put("endDate", request.getEndDate());
+        }
+        
+        if (request.getStatuses() != null && !request.getStatuses().isEmpty()) {
+            sql.append(" AND q.status IN (:statuses)");
+            params.put("statuses", request.getStatuses());
+        }
+        
+        sql.append(" GROUP BY c.id, c.name, q.customer_name")
+           .append(" ORDER BY count DESC, total_amount DESC");
+        
+        if (request.getLimit() != null && request.getLimit() > 0) {
+            sql.append(" LIMIT :limit");
+            params.put("limit", request.getLimit());
+        } else {
+            sql.append(" LIMIT 10"); // Default top 10
+        }
+        
+        Query query = entityManager.createNativeQuery(sql.toString());
+        params.forEach(query::setParameter);
+        
+        List<Object[]> results = query.getResultList();
+        List<QuotationCustomerChartResponseDto> response = new ArrayList<>();
+        
+        for (Object[] row : results) {
+            Long customerId = row[0] != null ? ((Number) row[0]).longValue() : null;
+            String customerName = (String) row[1];
+            Long count = ((Number) row[2]).longValue();
+            BigDecimal totalAmount = (BigDecimal) row[3];
+            BigDecimal averageAmount = (BigDecimal) row[4];
+            
+            response.add(new QuotationCustomerChartResponseDto(
+                customerId,
+                customerName,
+                count,
+                totalAmount != null ? totalAmount : BigDecimal.ZERO,
+                averageAmount != null ? averageAmount : BigDecimal.ZERO
+            ));
+        }
+        
+        return response;
+    }
+    
+    /**
+     * Get top products by quotation count
+     * Shows which products appear most frequently in quotations
+     */
+    public List<QuotationProductChartResponseDto> getTopProductsByQuotation(QuotationChartRequestDto request) {
+        StringBuilder sql = new StringBuilder("""
+            SELECT 
+                p.id as product_id,
+                p.name as product_name,
+                p.type as product_type,
+                COUNT(DISTINCT q.id) as quotation_count,
+                COALESCE(SUM(qi.quantity), 0) as item_count,
+                COALESCE(SUM(DISTINCT q.total_amount), 0) as total_amount
+            FROM quotation q
+            JOIN quotation_items qi ON q.id = qi.quotation_id
+            JOIN product p ON qi.product_id = p.id
+            WHERE q.client_id = :clientId AND p.client_id = :clientId
+            """);
+        
+        Map<String, Object> params = new HashMap<>();
+        params.put("clientId", request.getClientId());
+        
+        if (request.getStartDate() != null) {
+            sql.append(" AND q.quote_date >= :startDate");
+            params.put("startDate", request.getStartDate());
+        }
+        
+        if (request.getEndDate() != null) {
+            sql.append(" AND q.quote_date <= :endDate");
+            params.put("endDate", request.getEndDate());
+        }
+        
+        if (request.getStatuses() != null && !request.getStatuses().isEmpty()) {
+            sql.append(" AND q.status IN (:statuses)");
+            params.put("statuses", request.getStatuses());
+        }
+        
+        sql.append(" GROUP BY p.id, p.name, p.type")
+           .append(" ORDER BY quotation_count DESC, total_amount DESC");
+        
+        if (request.getLimit() != null && request.getLimit() > 0) {
+            sql.append(" LIMIT :limit");
+            params.put("limit", request.getLimit());
+        } else {
+            sql.append(" LIMIT 10"); // Default top 10
+        }
+        
+        Query query = entityManager.createNativeQuery(sql.toString());
+        params.forEach(query::setParameter);
+        
+        List<Object[]> results = query.getResultList();
+        List<QuotationProductChartResponseDto> response = new ArrayList<>();
+        
+        for (Object[] row : results) {
+            Long productId = ((Number) row[0]).longValue();
+            String productName = (String) row[1];
+            String productType = row[2] != null ? row[2].toString() : null;
+            Long quotationCount = ((Number) row[3]).longValue();
+            BigDecimal itemCount = (BigDecimal) row[4];
+            BigDecimal totalAmount = (BigDecimal) row[5];
+            
+            response.add(new QuotationProductChartResponseDto(
+                productId,
+                productName,
+                productType,
+                quotationCount,
+                itemCount != null ? itemCount.longValue() : 0L,
+                totalAmount != null ? totalAmount : BigDecimal.ZERO
+            ));
+        }
+        
+        return response;
+    }
+    
+    /**
+     * Get revenue by status over time (for area/stacked charts)
+     * Shows how revenue from different statuses changes over time
+     */
+    public List<QuotationTrendChartResponseDto> getRevenueByStatusOverTime(QuotationChartRequestDto request) {
+        String groupBy = request.getGroupBy() != null ? request.getGroupBy().toLowerCase() : "month";
+        String dateFormat;
+        
+        switch (groupBy) {
+            case "day":
+                dateFormat = "TO_CHAR(q.quote_date, 'YYYY-MM-DD')";
+                break;
+            case "week":
+                dateFormat = "TO_CHAR(q.quote_date, 'IYYY-IW')";
+                break;
+            case "year":
+                dateFormat = "TO_CHAR(q.quote_date, 'YYYY')";
+                break;
+            default:
+                dateFormat = "TO_CHAR(q.quote_date, 'YYYY-MM')";
+        }
+        
+        StringBuilder sql = new StringBuilder()
+            .append("SELECT ")
+            .append(dateFormat).append(" as period, ")
+            .append("q.status, ")
+            .append("COUNT(*) as count, ")
+            .append("COALESCE(SUM(q.total_amount), 0) as total_amount ")
+            .append("FROM quotation q ")
+            .append("WHERE q.client_id = :clientId ");
+        
+        Map<String, Object> params = new HashMap<>();
+        params.put("clientId", request.getClientId());
+        
+        if (request.getStartDate() != null) {
+            sql.append("AND q.quote_date >= :startDate ");
+            params.put("startDate", request.getStartDate());
+        }
+        
+        if (request.getEndDate() != null) {
+            sql.append("AND q.quote_date <= :endDate ");
+            params.put("endDate", request.getEndDate());
+        }
+        
+        if (request.getCustomerId() != null) {
+            sql.append("AND q.customer_id = :customerId ");
+            params.put("customerId", request.getCustomerId());
+        }
+        
+        sql.append("GROUP BY ").append(dateFormat).append(", q.status ")
+           .append("ORDER BY ").append(dateFormat).append(", q.status");
+        
+        Query query = entityManager.createNativeQuery(sql.toString());
+        params.forEach(query::setParameter);
+        
+        List<Object[]> results = query.getResultList();
+        
+        // Group by period
+        Map<String, QuotationTrendChartResponseDto> periodMap = new HashMap<>();
+        
+        for (Object[] row : results) {
+            String period = (String) row[0];
+            String status = (String) row[1];
+            Long count = ((Number) row[2]).longValue();
+            BigDecimal totalAmount = (BigDecimal) row[3];
+            
+            QuotationTrendChartResponseDto trend = periodMap.computeIfAbsent(period, 
+                k -> new QuotationTrendChartResponseDto(period, 0L, BigDecimal.ZERO, new ArrayList<>()));
+            
+            trend.setCount(trend.getCount() + count);
+            trend.setTotalAmount(trend.getTotalAmount().add(totalAmount != null ? totalAmount : BigDecimal.ZERO));
+            
+            QuotationStatus statusEnum = QuotationStatus.valueOf(status);
+            trend.getStatusData().add(new QuotationTrendChartResponseDto.StatusData(
+                status,
+                statusEnum.getText(),
+                count,
+                totalAmount != null ? totalAmount : BigDecimal.ZERO
+            ));
+        }
+        
+        return new ArrayList<>(periodMap.values());
     }
 }
