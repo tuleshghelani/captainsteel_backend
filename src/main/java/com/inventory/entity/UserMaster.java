@@ -78,6 +78,9 @@ public class UserMaster {
     @Column(name = "fail_login_count", nullable = false)
     private Integer failLoginCount = 0;
 
+    @Column(name = "is_system", columnDefinition = "bool default false")
+    private Boolean isSystem = false;
+
     @Column(name = "roles", columnDefinition = "jsonb default '[]'")
     @Type(value = com.vladmihalcea.hibernate.type.json.JsonType.class)
     private List<String> roles = new ArrayList<>();
