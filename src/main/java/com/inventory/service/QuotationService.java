@@ -649,9 +649,11 @@ public class QuotationService {
                     itemDto.setQuantity(totalSqFeet);
                     itemDto.setWeight(BigDecimal.ZERO);
                     // Calculate loading charge when calculationBase is 'W'
-                    itemDto.setLoadingCharge(itemDto.getQuantity().multiply(BigDecimal.valueOf(0.1)).setScale(2, RoundingMode.HALF_UP));
+//                    itemDto.setLoadingCharge(itemDto.getQuantity().multiply(BigDecimal.valueOf(0.1)).setScale(2, RoundingMode.HALF_UP));
+                    itemDto.setLoadingCharge(BigDecimal.ZERO);
                     break;
                 case "SF": // Sq. Feet (default)
+                    itemDto.setLoadingCharge(BigDecimal.ZERO);
                 default:
                     itemDto.setQuantity(totalSqFeet);
                     itemDto.setWeight(BigDecimal.ZERO);
@@ -721,8 +723,8 @@ public class QuotationService {
             }
             totalSqFeet = totalSqFeet.add(sqFeet);
 
-            // Calculate meter
-            BigDecimal meter = calc.getMm().divide(MM_TO_METER, 4, RoundingMode.HALF_UP);
+            // Calculate meter from sq feet instead of MM (matching SQ_FEET calculation behavior)
+            BigDecimal meter = sqFeet.divide(SQ_FEET_TO_METER, 4, RoundingMode.HALF_UP);
             calc.setMeter(meter);
         }
 
@@ -802,9 +804,11 @@ public class QuotationService {
                     itemDto.setQuantity(totalSqFeet);
                     itemDto.setWeight(BigDecimal.ZERO);
                     // Calculate loading charge when calculationBase is 'W'
-                    itemDto.setLoadingCharge(itemDto.getQuantity().multiply(BigDecimal.valueOf(0.1)).setScale(2, RoundingMode.HALF_UP));
+//                    itemDto.setLoadingCharge(itemDto.getQuantity().multiply(BigDecimal.valueOf(0.1)).setScale(2, RoundingMode.HALF_UP));
+                    itemDto.setLoadingCharge(BigDecimal.ZERO);
                     break;
                 case "SF": // Sq. Feet (default)
+                    itemDto.setLoadingCharge(BigDecimal.ZERO);
                 default:
                     itemDto.setQuantity(totalSqFeet);
                     itemDto.setWeight(BigDecimal.ZERO);

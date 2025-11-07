@@ -505,9 +505,8 @@ public class PdfGenerationService {
         
         // Add data rows with matching background colors
         for (Map<String, Object> calc : calculations) {
-            BigDecimal mm = toBigDecimal(calc.get("mm"));
-            BigDecimal meter = mm.divide(MM_TO_METER, 4, RoundingMode.HALF_UP);
             BigDecimal sqFeet = toBigDecimal(calc.get("sqFeet"));
+            BigDecimal meter = sqFeet.divide(SQ_FEET_TO_METER, 4, RoundingMode.HALF_UP);
             
             table.addCell(new Cell()
                 .add(new Paragraph(formatValue(calc.get("mm"))).setFontSize(8))
@@ -682,11 +681,14 @@ public class PdfGenerationService {
     private void addBankDetail(Table table, String label, String value) {
         table.addCell(new Cell().add(new Paragraph(label).setFontSize(8))
             .setBold()
-            .setTextAlignment(TextAlignment.RIGHT)
-            .setBorder(Border.NO_BORDER));
-        table.addCell(new Cell().add(new Paragraph(value).setFontSize(8))
             .setTextAlignment(TextAlignment.LEFT)
+            .setBorder(Border.NO_BORDER)
+            .add(new Paragraph(value).setFontSize(8))
+//            .setTextAlignment(TextAlignment.LEFT)
             .setBorder(Border.NO_BORDER));
+        /*table.addCell(new Cell().add(new Paragraph(value).setFontSize(8))
+            .setTextAlignment(TextAlignment.LEFT)
+            .setBorder(Border.NO_BORDER));*/
     }
 
     private void addTerm(Document document, String number, String text, Color color) {
