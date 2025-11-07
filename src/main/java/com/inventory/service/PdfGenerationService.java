@@ -97,7 +97,7 @@ public class PdfGenerationService {
         
         // Left side - Details
         Cell detailsCell = new Cell();
-        detailsCell.add(new Paragraph("Address :- Survey No.39/2, Plot No.4, Nr.MaekwellbSpining Mill,")
+        detailsCell.add(new Paragraph("Address :- Survey No.39/2, Plot No.4, Nr.Markwell Spinning Mill,")
                         .setFontSize(8))
                    .add(new Paragraph("Sadak Pipliya, National Highway, Ta. Gondal, Dist. Rajkot.")
                         .setFontSize(8))
@@ -315,6 +315,7 @@ public class PdfGenerationService {
             .setBorderTop(new SolidBorder(BORDER_COLOR, 1))
             .setBorderBottom(new SolidBorder(BORDER_COLOR, 1))
             .setTextAlignment(TextAlignment.CENTER)
+            .setBold()
             .setPadding(6);
         Cell totalValueCell = new Cell()
             .add(new Paragraph(totalAmount.toString() + "/-").setFontSize(8))
@@ -332,6 +333,7 @@ public class PdfGenerationService {
             .setBorder(Border.NO_BORDER)
             .setBorderBottom(new SolidBorder(BORDER_COLOR, 1))
             .setTextAlignment(TextAlignment.CENTER)
+            .setBold()
             .setPadding(6);
         Cell loadingValueCell = new Cell()
             .add(new Paragraph(loadingCharge.toString() + "/-").setFontSize(8))
@@ -348,6 +350,7 @@ public class PdfGenerationService {
             .setBorder(Border.NO_BORDER)
             .setBorderBottom(new SolidBorder(BORDER_COLOR, 1))
             .setTextAlignment(TextAlignment.CENTER)
+            .setBold()
             .setPadding(6);
         Cell gstValueCell = new Cell()
             .add(new Paragraph(totalTaxAmount.toString() + "/-").setFontSize(8))
@@ -392,7 +395,7 @@ public class PdfGenerationService {
         String productType = (String) item.get("productType");
         String calculationBase = (String) item.get("calculationBase");
         String calculationType = (String) item.get("calculationType");
-        System.out.println("item : " + item);
+        
         // Don't show calculation details if calculationBase is N (NOS) or calculationType is NOS
         if ("N".equals(calculationBase) || "NOS".equals(calculationType)) {
             return false;
@@ -418,9 +421,6 @@ public class PdfGenerationService {
         String productType = (String) item.get("productType");
         String calculationType = (String) item.get("calculationType");
         Table table;
-
-        System.out.println("calculationType : " + calculationType);
-        System.out.println("productType : " + productType);
         
         if ("POLY_CARBONATE_ROLL".equals(productType)) {
             table = createPolyCarbonateRollCalculationTable(calculations);
@@ -682,10 +682,10 @@ public class PdfGenerationService {
     private void addBankDetail(Table table, String label, String value) {
         table.addCell(new Cell().add(new Paragraph(label).setFontSize(8))
             .setBold()
-            .setTextAlignment(TextAlignment.CENTER)
+            .setTextAlignment(TextAlignment.RIGHT)
             .setBorder(Border.NO_BORDER));
         table.addCell(new Cell().add(new Paragraph(value).setFontSize(8))
-            .setTextAlignment(TextAlignment.CENTER)
+            .setTextAlignment(TextAlignment.LEFT)
             .setBorder(Border.NO_BORDER));
     }
 
@@ -769,6 +769,7 @@ public class PdfGenerationService {
         if (html == null || html.trim().isEmpty()) {
             return paragraph;
         }
+        html.replaceAll("&nbsp;","");
 
         // Handle non-ACCESSORIES products (existing logic)
         String[] parts = html.split("(<b>|</b>)");

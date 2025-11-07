@@ -90,7 +90,7 @@ public class QuotationWithOutPdfGenerationService {
         
         // Left side - Details
         Cell detailsCell = new Cell();
-        detailsCell.add(new Paragraph("Address :- Survey No.39/2, Plot No.4, Nr.MaekwellbSpining Mill,")
+        detailsCell.add(new Paragraph("Address :- Survey No.39/2, Plot No.4, Nr.Markwell Spinning Mill,")
                         .setFontSize(8))
                    .add(new Paragraph("Sadak Pipliya, National Highway, Ta. Gondal, Dist. Rajkot.")
                         .setFontSize(8))
@@ -303,6 +303,7 @@ public class QuotationWithOutPdfGenerationService {
         Cell totalLabelCell = new Cell()
             .add(new Paragraph("TOTAL").setFontSize(8))
             .setBorder(Border.NO_BORDER)
+            .setBold()
             .setBorderTop(new SolidBorder(BORDER_COLOR, 1))
             .setBorderBottom(new SolidBorder(BORDER_COLOR, 1))
             .setTextAlignment(TextAlignment.CENTER)
@@ -321,6 +322,7 @@ public class QuotationWithOutPdfGenerationService {
         Cell loadingLabelCell = new Cell()
             .add(new Paragraph("Loading Charge").setFontSize(8))
             .setBorder(Border.NO_BORDER)
+            .setBold()
             .setBorderBottom(new SolidBorder(BORDER_COLOR, 1))
             .setTextAlignment(TextAlignment.CENTER)
             .setPadding(6);
@@ -382,7 +384,7 @@ public class QuotationWithOutPdfGenerationService {
         String productType = (String) item.get("productType");
         String calculationBase = (String) item.get("calculationBase");
         String calculationType = (String) item.get("calculationType");
-        System.out.println("item : " + item);
+        
         // Don't show calculation details if calculationBase is N (NOS) or calculationType is NOS
         if ("N".equals(calculationBase) || "NOS".equals(calculationType)) {
             return false;
@@ -408,9 +410,6 @@ public class QuotationWithOutPdfGenerationService {
         String productType = (String) item.get("productType");
         String calculationType = (String) item.get("calculationType");
         Table table;
-
-        System.out.println("calculationType : " + calculationType);
-        System.out.println("productType : " + productType);
         
         if ("POLY_CARBONATE_ROLL".equals(productType)) {
             table = createPolyCarbonateRollCalculationTable(calculations);
@@ -671,10 +670,10 @@ public class QuotationWithOutPdfGenerationService {
     private void addBankDetail(Table table, String label, String value) {
         table.addCell(new Cell().add(new Paragraph(label).setFontSize(8))
             .setBold()
-            .setTextAlignment(TextAlignment.CENTER)
+            .setTextAlignment(TextAlignment.RIGHT)
             .setBorder(Border.NO_BORDER));
         table.addCell(new Cell().add(new Paragraph(value).setFontSize(8))
-            .setTextAlignment(TextAlignment.CENTER)
+            .setTextAlignment(TextAlignment.LEFT)
             .setBorder(Border.NO_BORDER));
     }
 
@@ -758,6 +757,7 @@ public class QuotationWithOutPdfGenerationService {
         if (html == null || html.trim().isEmpty()) {
             return paragraph;
         }
+        html.replaceAll("&nbsp;","");
 
         // Handle non-ACCESSORIES products (existing logic)
         String[] parts = html.split("(<b>|</b>)");
