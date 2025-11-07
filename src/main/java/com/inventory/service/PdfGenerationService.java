@@ -641,7 +641,7 @@ public class PdfGenerationService {
             .setBold()
             .setFontSize(8));
             
-        Table bankTable = new Table(2).useAllAvailableWidth();
+        Table bankTable = new Table(1).useAllAvailableWidth();
         addBankDetail(bankTable, "A/C NO:", "3592903798");
         addBankDetail(bankTable, "IFSC CODE:", "CBIN0280569");
         addBankDetail(bankTable, "BRANCH:", "BHUPENDRAROAD,RAJKOT");
@@ -679,18 +679,15 @@ public class PdfGenerationService {
     }
 
     private void addBankDetail(Table table, String label, String value) {
-        table.addCell(new Cell().add(new Paragraph(label).setFontSize(8))
-            .setBold()
-            .setTextAlignment(TextAlignment.LEFT)
-            .setBorder(Border.NO_BORDER)
-            .add(new Paragraph(value).setFontSize(8))
+        Paragraph paragraph = new Paragraph();
+        paragraph.add(new Text(label + " ").setFontSize(8).setBold());
+        paragraph.add(new Text(value).setFontSize(8));
+        table.addCell(new Cell().add(paragraph)
 //            .setTextAlignment(TextAlignment.LEFT)
             .setBorder(Border.NO_BORDER));
-        /*table.addCell(new Cell().add(new Paragraph(value).setFontSize(8))
-            .setTextAlignment(TextAlignment.LEFT)
-            .setBorder(Border.NO_BORDER));*/
     }
 
+// ... (rest of the code remains the same)
     private void addTerm(Document document, String number, String text, Color color) {
         document.add(new Paragraph(number + " " + text)
             .setFontSize(8)
