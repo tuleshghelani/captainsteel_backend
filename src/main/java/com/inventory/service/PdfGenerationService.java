@@ -768,7 +768,7 @@ public class PdfGenerationService {
         if (html == null || html.trim().isEmpty()) {
             return paragraph;
         }
-        html.replaceAll("&nbsp;","");
+        html=html.replaceAll("&nbsp;","");
 
         // Handle non-ACCESSORIES products (existing logic)
         String[] parts = html.split("(<b>|</b>)");
