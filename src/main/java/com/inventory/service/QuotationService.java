@@ -365,7 +365,8 @@ public class QuotationService {
             itemDto.setQuantity(total);
             // Weight is already set by the user for Custom size
             // No loading charge for Custom size ('C')
-            itemDto.setLoadingCharge(BigDecimal.ZERO);
+//            itemDto.setLoadingCharge(BigDecimal.ZERO);
+            itemDto.setLoadingCharge(total.multiply(BigDecimal.valueOf(0.1)).setScale(2, RoundingMode.HALF_UP));
         } else {
             BigDecimal unitWeight = product.getAccessoriesWeight().get(itemDto.getAccessoriesSize());
             total = unitWeight.multiply(BigDecimal.valueOf(itemDto.getNos()))
@@ -906,7 +907,7 @@ public class QuotationService {
         if ((product.getType() == ProductMainType.REGULAR || product.getType() == ProductMainType.POLY_CARBONATE || 
              product.getType() == ProductMainType.POLY_CARBONATE_ROLL) && itemDto.getCalculations() != null) {
             List<QuotationItemCalculation> quotationItemCalculations = saveCalculations(item, itemDto.getCalculations(), currentUser, quotation);
-            System.out.printf("quotationItemCalculations : " + quotationItemCalculations);
+            // System.out.printf("quotationItemCalculations : " + quotationItemCalculations);
         }
 
         return item;

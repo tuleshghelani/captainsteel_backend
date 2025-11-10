@@ -5,9 +5,13 @@ import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.itextpdf.io.image.ImageData;
@@ -279,14 +283,95 @@ public class PdfGenerationService {
         }
     }
     
+    /**
+     * Consolidates ACCESSORIES items with the same productId into a single item.
+     * Combines their details (sizes, weights, nos) into consolidated lists.
+     * Non-ACCESSORIES items are returned as-is.
+     */
+    private List<Map<String, Object>> consolidateAccessoriesItems(List<Map<String, Object>> items) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        Map<Long, List<Map<String, Object>>> accessoriesGroups = new LinkedHashMap<>();
+        
+        for (Map<String, Object> item : items) {
+            String productType = (String) item.get("productType");
+            
+            if ("ACCESSORIES".equals(productType)) {
+                Long productId = ((Number) item.get("productId")).longValue();
+                accessoriesGroups.computeIfAbsent(productId, k -> new ArrayList<>()).add(item);
+            } else {
+                // Non-ACCESSORIES items are added directly without consolidation
+                result.add(item);
+            }
+        }
+        
+        // Process consolidated ACCESSORIES groups
+        for (Map.Entry<Long, List<Map<String, Object>>> entry : accessoriesGroups.entrySet()) {
+            List<Map<String, Object>> group = entry.getValue();
+            
+            if (group.size() == 1) {
+                // Single item, no consolidation needed
+                result.add(group.get(0));
+            } else {
+                // Multiple items with same productId - consolidate them
+                Map<String, Object> consolidatedItem = new HashMap<>(group.get(0));
+                
+                // Collect all variations
+                List<Map<String, Object>> variations = new ArrayList<>();
+                BigDecimal totalQuantity = BigDecimal.ZERO;
+                BigDecimal totalAfterDiscount = BigDecimal.ZERO;
+                BigDecimal totalTaxAmount = BigDecimal.ZERO;
+                
+                for (Map<String, Object> item : group) {
+                    // Calculate amounts for this item
+                    BigDecimal quantity = new BigDecimal(item.get("quantity").toString());
+                    
+                    // Store variation info
+                    Map<String, Object> variation = new HashMap<>();
+                    variation.put("accessoriesSize", item.get("accessoriesSize"));
+                    variation.put("weight", item.get("weight"));
+                    variation.put("nos", item.get("nos"));
+                    variation.put("itemRemarks", item.get("itemRemarks"));
+                    variation.put("quantity", quantity); // Store quantity for Weight column
+                    variations.add(variation);
+                    BigDecimal unitPrice = new BigDecimal(item.get("unitPrice").toString());
+                    BigDecimal roundedQuantity = quantity.setScale(0, RoundingMode.HALF_UP);
+                    BigDecimal itemSubTotal = roundedQuantity.multiply(unitPrice).setScale(2, RoundingMode.HALF_UP);
+                    BigDecimal discountPercentage = new BigDecimal(item.get("discountPercentage").toString());
+                    BigDecimal discountAmount = itemSubTotal.multiply(discountPercentage).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                    BigDecimal afterDiscount = itemSubTotal.subtract(discountAmount);
+                    BigDecimal taxPercentage = new BigDecimal(item.get("taxPercentage").toString());
+                    BigDecimal itemTaxAmount = afterDiscount.multiply(taxPercentage).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                    
+                    totalQuantity = totalQuantity.add(roundedQuantity);
+                    totalAfterDiscount = totalAfterDiscount.add(afterDiscount);
+                    totalTaxAmount = totalTaxAmount.add(itemTaxAmount);
+                }
+                
+                // Update consolidated item with totals
+                consolidatedItem.put("quantity", totalQuantity);
+                consolidatedItem.put("consolidatedPrice", totalAfterDiscount);
+                consolidatedItem.put("consolidatedTaxAmount", totalTaxAmount);
+                consolidatedItem.put("variations", variations);
+                consolidatedItem.put("isConsolidated", true);
+                
+                result.add(consolidatedItem);
+            }
+        }
+        
+        return result;
+    }
+    
     private void addItemsTable(Document document, List<Map<String, Object>> items, Map<String, Object> quotationData) {
+        // Consolidate ACCESSORIES items by productId
+        List<Map<String, Object>> consolidatedItems = consolidateAccessoriesItems(items);
+        
         // Create table with 5 columns instead of 8
-        Table table = new Table(new float[]{2, 4, 2, 2, 2})
+        Table table = new Table(new float[]{1, 5.5f, 2, 1.5f, 2f})
             .useAllAvailableWidth()
             .setMarginTop(20);
             
         // Add simplified headers
-        Stream.of("Sr. No.", "ITEM NAME", "QUANTITY", "PRICE", "TOTAL AMOUNT")
+        Stream.of("No.", "ITEM NAME", "QUANTITY", "PRICE", "TOTAL AMOUNT")
             .forEach(title -> table.addHeaderCell(
                 new Cell().add(new Paragraph(title).setFontSize(8))
                         .setBackgroundColor(PRIMARY_COLOR)
@@ -300,34 +385,69 @@ public class PdfGenerationService {
         BigDecimal totalAmount = BigDecimal.ZERO;
         BigDecimal totalTaxAmount = BigDecimal.ZERO;
 
-        for (Map<String, Object> item : items) {
+        for (Map<String, Object> item : consolidatedItems) {
             table.addCell(new Cell().add(new Paragraph(String.valueOf(counter.getAndIncrement())).setFontSize(8))
                     .setTextAlignment(TextAlignment.CENTER));
             
             // Create item name cell with product name and optional remarks
             Paragraph itemNameParagraph = convertHtmlToParagraph(item, true);
             
-            // Add nos in brackets if available and not null (after item name)
-            Object nos = item.get("nos");
-            if (nos != null && !nos.toString().trim().isEmpty()) {
-                itemNameParagraph.add(new Text(" (" + nos.toString() + " nos)")
-                    .setFontSize(8)
-                    .setFontColor(new DeviceRgb(60, 60, 60)));
-            }
+            // Check if this is a consolidated item
+            Boolean isConsolidated = item.get("isConsolidated") != null && (Boolean) item.get("isConsolidated");
             
-            // Add item remarks if available
-            String itemRemarks = item.get("itemRemarks") != null ? item.get("itemRemarks").toString().trim() : "";
-            if (!itemRemarks.isEmpty()) {
-                itemNameParagraph.add(new Text("\n(" + itemRemarks + ")")
-                    .setFontSize(7)
-                    .setItalic()
-                    .setFontColor(new DeviceRgb(100, 100, 100)));
+            if (!isConsolidated) {
+                // Add nos in brackets if available and not null (after item name) - for non-consolidated items
+                Object nos = item.get("nos");
+                if (nos != null && !nos.toString().trim().isEmpty()) {
+                    itemNameParagraph.add(new Text(" (" + nos.toString() + " nos)")
+                        .setFontSize(8)
+                        .setFontColor(new DeviceRgb(60, 60, 60)));
+                }
+                
+                // Add item remarks if available (only for non-consolidated items)
+                String itemRemarks = item.get("itemRemarks") != null ? item.get("itemRemarks").toString().trim() : "";
+                if (!itemRemarks.isEmpty()) {
+                    itemNameParagraph.add(new Text("\n(" + itemRemarks + ")")
+                        .setFontSize(7)
+                        .setItalic()
+                        .setFontColor(new DeviceRgb(100, 100, 100)));
+                }
             }
             
             table.addCell(new Cell().add(itemNameParagraph)
                     .setTextAlignment(TextAlignment.CENTER));
             
-            // Check if calculationBase is N (NOS) or calculationType is NOS
+            BigDecimal roundedQuantity;
+            BigDecimal afterDiscount;
+            BigDecimal itemTaxAmount;
+            
+            if (isConsolidated) {
+                // For consolidated items, use pre-calculated values
+                roundedQuantity = new BigDecimal(item.get("quantity").toString()).setScale(0, RoundingMode.HALF_UP);
+                afterDiscount = new BigDecimal(item.get("consolidatedPrice").toString());
+                itemTaxAmount = new BigDecimal(item.get("consolidatedTaxAmount").toString());
+            } else {
+                // For non-consolidated items, calculate normally
+                // Check if calculationBase is N (NOS) or calculationType is NOS
+                String calculationBase = item.get("calculationBase") != null ? item.get("calculationBase").toString().trim() : "";
+                String calculationType = item.get("calculationType") != null ? item.get("calculationType").toString().trim() : "";
+                
+                // Round quantity for display (55.335 -> 55, 55.658 -> 56)
+                roundedQuantity = new BigDecimal(item.get("quantity").toString()).setScale(0, RoundingMode.HALF_UP);
+                BigDecimal unitPrice = new BigDecimal(item.get("unitPrice").toString());
+                
+                // Recalculate TOTAL AMOUNT based on rounded quantity
+                BigDecimal itemSubTotal = roundedQuantity.multiply(unitPrice).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal discountPercentage = new BigDecimal(item.get("discountPercentage").toString());
+                BigDecimal discountAmount = itemSubTotal.multiply(discountPercentage).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                afterDiscount = itemSubTotal.subtract(discountAmount);
+                
+                // Recalculate tax based on new after discount amount
+                BigDecimal taxPercentage = new BigDecimal(item.get("taxPercentage").toString());
+                itemTaxAmount = afterDiscount.multiply(taxPercentage).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            }
+            
+            // Determine display measurement
             String calculationBase = item.get("calculationBase") != null ? item.get("calculationBase").toString().trim() : "";
             String calculationType = item.get("calculationType") != null ? item.get("calculationType").toString().trim() : "";
             String displayMeasurement;
@@ -342,19 +462,7 @@ public class PdfGenerationService {
                 displayMeasurement = measurement.toLowerCase().equals("kg") ? "\n " + measurement + "(approx.)" : "\n" + measurement;
             }
             
-            // Round quantity for display (55.335 -> 55, 55.658 -> 56)
-            BigDecimal roundedQuantity = new BigDecimal(item.get("quantity").toString()).setScale(0, RoundingMode.HALF_UP);
             BigDecimal unitPrice = new BigDecimal(item.get("unitPrice").toString());
-            
-            // Recalculate TOTAL AMOUNT based on rounded quantity
-            BigDecimal itemSubTotal = roundedQuantity.multiply(unitPrice).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal discountPercentage = new BigDecimal(item.get("discountPercentage").toString());
-            BigDecimal discountAmount = itemSubTotal.multiply(discountPercentage).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-            BigDecimal afterDiscount = itemSubTotal.subtract(discountAmount);
-            
-            // Recalculate tax based on new after discount amount
-            BigDecimal taxPercentage = new BigDecimal(item.get("taxPercentage").toString());
-            BigDecimal itemTaxAmount = afterDiscount.multiply(taxPercentage).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
             
             table.addCell(new Cell().add(new Paragraph(roundedQuantity.toString() + " " + displayMeasurement).setFontSize(8))
                     .setTextAlignment(TextAlignment.CENTER));
@@ -877,26 +985,136 @@ public class PdfGenerationService {
         // Handle ACCESSORIES product type
         String productType = (String) item.get("productType");
         if ("ACCESSORIES".equals(productType)) {
-            // Add product name
-//            paragraph.add(new Text(html));
+            // Check if this is a consolidated item
+            Boolean isConsolidated = item.get("isConsolidated") != null && (Boolean) item.get("isConsolidated");
             
-            // Add accessories size information
-            String accessoriesSize = (String) item.get("accessoriesSize");
-            System.out.println("accessoriesSize inside convertHtmlToParagraph"+ accessoriesSize);
-            if (accessoriesSize != null) {
-                if ("C".equalsIgnoreCase(accessoriesSize)) {
-                    // For Custom size, show "Custom" and weight
-                    paragraph.add(new Text(" (Custom").setFontSize(8));
+            if (isConsolidated) {
+                // For consolidated items, create a mini-table for variations
+                List<Map<String, Object>> variations = (List<Map<String, Object>>) item.get("variations");
+                if (variations != null && !variations.isEmpty()) {
+                    // Add spacing before the table
+                    paragraph.add(new Text("\n").setFontSize(6));
                     
-                    // Add weight if available
-                    Object weightObj = item.get("weight");
-                    if (weightObj != null) {
-                        paragraph.add(new Text(", " + weightObj.toString() + " ").setFontSize(8));
+                    // Create a nested table for variation details with 5 columns
+                    Table variationsTable = new Table(new float[]{2.5f, 1.5f, 1.5f, 1.5f, 3})
+//                        .useAllAvailableWidth()
+                        .setMarginTop(5)
+                        .setMarginBottom(5)
+                        .setMarginLeft(0)
+                        .setMarginRight(0);
+                    
+                    // Add table headers
+                    variationsTable.addHeaderCell(new Cell()
+                        .add(new Paragraph("Description").setFontSize(7).setBold())
+                        .setBackgroundColor(new DeviceRgb(240, 240, 240))
+                        .setTextAlignment(TextAlignment.CENTER)
+                        .setPadding(3));
+                    variationsTable.addHeaderCell(new Cell()
+                        .add(new Paragraph("Inch/Kg").setFontSize(7).setBold())
+                        .setBackgroundColor(new DeviceRgb(240, 240, 240))
+                        .setTextAlignment(TextAlignment.CENTER)
+                        .setPadding(3));
+                    variationsTable.addHeaderCell(new Cell()
+                        .add(new Paragraph("NOS").setFontSize(7).setBold())
+                        .setBackgroundColor(new DeviceRgb(240, 240, 240))
+                        .setTextAlignment(TextAlignment.CENTER)
+                        .setPadding(3));
+                    variationsTable.addHeaderCell(new Cell()
+                        .add(new Paragraph("Weight").setFontSize(7).setBold())
+                        .setBackgroundColor(new DeviceRgb(240, 240, 240))
+                        .setTextAlignment(TextAlignment.CENTER)
+                        .setPadding(3));
+                    variationsTable.addHeaderCell(new Cell()
+                        .add(new Paragraph("Remarks").setFontSize(7).setBold())
+                        .setBackgroundColor(new DeviceRgb(240, 240, 240))
+                        .setTextAlignment(TextAlignment.CENTER)
+                        .setPadding(3));
+                    
+                    // Add variation rows
+                    for (Map<String, Object> variation : variations) {
+                        String accessoriesSize = (String) variation.get("accessoriesSize");
+                        Object weightObj = variation.get("weight");
+                        Object nosObj = variation.get("nos");
+                        Object remarksObj = variation.get("itemRemarks");
+                        Object quantityObj = variation.get("quantity");
+                        
+                        // Description column
+                        String description = "";
+                        if (accessoriesSize != null) {
+                            if ("C".equalsIgnoreCase(accessoriesSize)) {
+                                description = "Custom Size";
+                            } else {
+                                description = "Standard Size";
+                            }
+                        }
+                        variationsTable.addCell(new Cell()
+                            .add(new Paragraph(description).setFontSize(7))
+                            .setTextAlignment(TextAlignment.CENTER)
+                            .setPadding(3));
+                        
+                        // Inch/Kg column
+                        String sizeOrWeight = "";
+                        if (accessoriesSize != null) {
+                            if ("C".equalsIgnoreCase(accessoriesSize)) {
+                                // For custom, show weight in kg
+                                if (weightObj != null) {
+                                    sizeOrWeight = weightObj.toString() + " kg";
+                                }
+                            } else {
+                                // For standard, show size in inches
+                                sizeOrWeight = accessoriesSize + "\"";
+                            }
+                        }
+                        variationsTable.addCell(new Cell()
+                            .add(new Paragraph(sizeOrWeight).setFontSize(7))
+                            .setTextAlignment(TextAlignment.CENTER)
+                            .setPadding(3));
+                        
+                        // NOS column
+                        String nos = nosObj != null ? nosObj.toString() : "-";
+                        variationsTable.addCell(new Cell()
+                            .add(new Paragraph(nos).setFontSize(7))
+                            .setTextAlignment(TextAlignment.CENTER)
+                            .setPadding(3));
+                        
+                        // Weight column (displays quantity value)
+                        String quantityStr = quantityObj != null ? quantityObj.toString() : "-";
+                        variationsTable.addCell(new Cell()
+                            .add(new Paragraph(quantityStr).setFontSize(7))
+                            .setTextAlignment(TextAlignment.CENTER)
+                            .setPadding(3));
+                        
+                        // Remarks column
+                        String remarks = (remarksObj != null && !remarksObj.toString().trim().isEmpty()) 
+                            ? remarksObj.toString().trim() 
+                            : "-";
+                        variationsTable.addCell(new Cell()
+                            .add(new Paragraph(remarks).setFontSize(7))
+                            .setTextAlignment(TextAlignment.LEFT)
+                            .setPadding(3));
                     }
-                    paragraph.add(new Text(")").setFontSize(8));
-                } else {
-                    // For standard sizes, show size in inches
-                    paragraph.add(new Text(" (" + accessoriesSize + "\")").setFontSize(8));
+                    
+                    // Add the table to the paragraph
+                    paragraph.add(variationsTable);
+                }
+            } else {
+                // For single (non-consolidated) items, use the original logic
+                String accessoriesSize = (String) item.get("accessoriesSize");
+                if (accessoriesSize != null) {
+                    if ("C".equalsIgnoreCase(accessoriesSize)) {
+                        // For Custom size, show "Custom" and weight
+                        paragraph.add(new Text(" (Custom").setFontSize(8));
+                        
+                        // Add weight if available
+                        Object weightObj = item.get("weight");
+                        if (weightObj != null) {
+                            paragraph.add(new Text(", " + weightObj.toString() + " kg").setFontSize(8));
+                        }
+                        paragraph.add(new Text(")").setFontSize(8));
+                    } else {
+                        // For standard sizes, show size in inches
+                        paragraph.add(new Text(" (" + accessoriesSize + "\")").setFontSize(8));
+                    }
                 }
             }
             

@@ -562,7 +562,7 @@ public class DispatchSlipPdfService {
 
             // Add accessories size information
             String accessoriesSize = (String) item.get("accessoriesSize");
-            System.out.println("accessoriesSize inside convertHtmlToParagraph"+ accessoriesSize);
+            // System.out.println("accessoriesSize inside convertHtmlToParagraph"+ accessoriesSize);
             if (accessoriesSize != null) {
                 if ("C".equalsIgnoreCase(accessoriesSize)) {
                     // For Custom size, show "Custom" and weight
