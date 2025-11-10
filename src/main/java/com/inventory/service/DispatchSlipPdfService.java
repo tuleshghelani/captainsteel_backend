@@ -37,24 +37,68 @@ public class DispatchSlipPdfService {
     private static final BigDecimal SQ_FEET_TO_METER = BigDecimal.valueOf(10.764);
     private static final BigDecimal MM_TO_METER = BigDecimal.valueOf(1000);
 
+    private final UtilityService utilityService;
+
     public byte[] generateDispatchSlipPdf(Map<String, Object> dispatchData) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
              PdfDocument pdf = new PdfDocument(new PdfWriter(baos))) {
-            
+
             Document document = new Document(pdf, PageSize.A4);
             document.setMargins(36, 36, 36, 36);
-            
+
+            // Get client info from logged-in user
+            String clientName = "CAPTAIN STEEL";  // Default fallback
+            String clientEmail = "captainsteel39@gmail.com";  // Default fallback
+            String clientAddress1 = "Survey No.39/2, Plot No.4, Nr.Markwell Spinning Mill,";
+            String clientAddress2 = "Sadak Pipliya, National Highway, Ta. Gondal, Dist. Rajkot.";
+            String clientGst = "24AALFC2707P1Z8";
+
+            try {
+                var currentUser = utilityService.getCurrentLoggedInUser();
+                if (currentUser != null && currentUser.getClient() != null) {
+                    if (currentUser.getClient().getName() != null && !currentUser.getClient().getName().trim().isEmpty()) {
+                        clientName = currentUser.getClient().getName().toUpperCase();
+                    }
+                    if (currentUser.getClient().getEmail() != null && !currentUser.getClient().getEmail().trim().isEmpty()) {
+                        clientEmail = currentUser.getClient().getEmail();
+                    }
+
+                    // Extract data from 'other' JSONB field
+                    if (currentUser.getClient().getOther() != null && !currentUser.getClient().getOther().isEmpty()) {
+                        var otherData = currentUser.getClient().getOther();
+                        if (otherData.get("address1") != null && !otherData.get("address1").toString().trim().isEmpty()) {
+                            clientAddress1 = otherData.get("address1").toString();
+                        }
+                        if (otherData.get("address2") != null && !otherData.get("address2").toString().trim().isEmpty()) {
+                            clientAddress2 = otherData.get("address2").toString();
+                        }
+                        if (otherData.get("gst") != null && !otherData.get("gst").toString().trim().isEmpty()) {
+                            clientGst = otherData.get("gst").toString();
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Could not retrieve client info, using defaults: {}", e.getMessage());
+            }
+
+            // Store client info in dispatch data for use in other methods
+            dispatchData.put("clientName", clientName);
+            dispatchData.put("clientEmail", clientEmail);
+            dispatchData.put("clientAddress1", clientAddress1);
+            dispatchData.put("clientAddress2", clientAddress2);
+            dispatchData.put("clientGst", clientGst);
+
             // Add content
             addHeader(document, dispatchData);
             addPageFooter(pdf, document, 1);
-            
+
             addDispatchDetails(document, dispatchData);
             addItemsTable(document, (List<Map<String, Object>>) dispatchData.get("items"), dispatchData);
             addPageFooter(pdf, document, 2);
-            
+
             document.close();
             return baos.toByteArray();
-            
+
         } catch (Exception e) {
             log.error("Error generating dispatch slip PDF", e);
             throw new ValidationException("Failed to generate dispatch slip PDF: " + e.getMessage());
@@ -62,10 +106,17 @@ public class DispatchSlipPdfService {
     }
 
     private void addHeader(Document document, Map<String, Object> data) {
+        // Get client info from data (set in generateDispatchSlipPdf)
+        String clientName = data.get("clientName") != null ? data.get("clientName").toString() : "CAPTAIN STEEL";
+        String clientEmail = data.get("clientEmail") != null ? data.get("clientEmail").toString() : "captainsteel39@gmail.com";
+        String clientAddress1 = data.get("clientAddress1") != null ? data.get("clientAddress1").toString() : "Survey No.39/2, Plot No.4, Nr.Markwell Spinning Mill,";
+        String clientAddress2 = data.get("clientAddress2") != null ? data.get("clientAddress2").toString() : "Sadak Pipliya, National Highway, Ta. Gondal, Dist. Rajkot.";
+        String clientGst = data.get("clientGst") != null ? data.get("clientGst").toString() : "24AALFC2707P1Z8";
+
         // Company name with border
         Table nameTable = new Table(1).useAllAvailableWidth();
         Cell nameCell = new Cell()
-                .add(new Paragraph("CAPTAIN STEEL")
+                .add(new Paragraph(clientName)
                         .setFontSize(20)
                         .setBold()
                         .setFontColor(new DeviceRgb(0, 0, 0)))  // Black color
@@ -79,15 +130,15 @@ public class DispatchSlipPdfService {
 
         // Left side - Details
         Cell detailsCell = new Cell();
-        detailsCell.add(new Paragraph("Address :- Survey No.39/2, Plot No.4, Nr.Markwell Spinning Mill,")
+        detailsCell.add(new Paragraph("Address :- " + clientAddress1)
                         .setFontSize(8))
-                .add(new Paragraph("Sadak Pipliya, National Highway, Ta. Gondal, Dist. Rajkot.")
+                .add(new Paragraph(clientAddress2)
                         .setFontSize(8))
-                .add(new Paragraph("E-mail: captainsteel39@gmail.com")
+                .add(new Paragraph("E-mail: " + clientEmail)
                         .setFontSize(8))
                 .add(new Paragraph("Mo.No. 96627 12222 / 89803 92009")
                         .setFontSize(8))
-                .add(new Paragraph("GST NO.24AALFC2707P1Z8")
+                .add(new Paragraph("GST NO." + clientGst)
                         .setFontSize(9)
                         .setBold()
                         .setFontColor(PRIMARY_COLOR))
@@ -146,7 +197,6 @@ public class DispatchSlipPdfService {
                 .add(new Paragraph("Mobile No. : " + (data.get("contactNumber") != null ? data.get("contactNumber") : "")).setFontSize(8))
                 .setBorder(Border.NO_BORDER);
 
-
         infoTable.addCell(quoteDetails);
 
         document.add(infoTable);
@@ -182,7 +232,7 @@ public class DispatchSlipPdfService {
         for (Map<String, Object> item : items) {
             table.addCell(new Cell().add(new Paragraph(String.valueOf(counter.getAndIncrement())).setFontSize(8))
                     .setTextAlignment(TextAlignment.CENTER));
-            
+
             // Create item name cell with product name and optional remarks
             Paragraph itemNameParagraph = convertHtmlToParagraph(item, true);
 
@@ -229,9 +279,9 @@ public class DispatchSlipPdfService {
 
         // Add calculation details tables for each item
         for (Map<String, Object> item : items) {
-                if (shouldShowCalculationDetails(item)) {
-                        addCalculationDetailsTable(document, item);
-                }
+            if (shouldShowCalculationDetails(item)) {
+                addCalculationDetailsTable(document, item);
+            }
         }
     }
 
@@ -239,7 +289,7 @@ public class DispatchSlipPdfService {
         String productType = (String) item.get("productType");
         String calculationBase = (String) item.get("calculationBase");
         String calculationType = (String) item.get("calculationType");
-        
+
         // Don't show calculation details if calculationBase is N (NOS) or calculationType is NOS
         if ("N".equals(calculationBase) || "NOS".equals(calculationType)) {
             return false;
@@ -278,149 +328,148 @@ public class DispatchSlipPdfService {
 
         document.add(table);
     }
-    
+
     private Table createSqFeetCalculationTable(List<Map<String, Object>> calculations) {
         Table table = new Table(new float[]{2, 2, 2, 2, 2})
-            .useAllAvailableWidth()
-            .setMarginTop(5);
-        
+                .useAllAvailableWidth()
+                .setMarginTop(5);
+
         // Add headers with specific colors
         Stream.of("Feet", "Inch", "Nos", "Meter", "Sq.Feet")
-            .forEach(title -> {
-                Cell header = new Cell()
-                    .add(new Paragraph(title).setFontSize(8))
-                    .setBackgroundColor(PRIMARY_COLOR)
-                    .setFontColor(ColorConstants.WHITE)
-                    .setTextAlignment(TextAlignment.CENTER)
-                    .setPadding(5);
-                table.addHeaderCell(header);
-            });
-        
+                .forEach(title -> {
+                    Cell header = new Cell()
+                            .add(new Paragraph(title).setFontSize(8))
+                            .setBackgroundColor(PRIMARY_COLOR)
+                            .setFontColor(ColorConstants.WHITE)
+                            .setTextAlignment(TextAlignment.CENTER)
+                            .setPadding(5);
+                    table.addHeaderCell(header);
+                });
+
         // Add data rows with matching background colors
         for (Map<String, Object> calc : calculations) {
             BigDecimal sqFeet = toBigDecimal(calc.get("sqFeet"));
             BigDecimal meter = sqFeet.divide(SQ_FEET_TO_METER, 4, RoundingMode.HALF_UP);
-            
+
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("feet"))).setFontSize(8))
-                .setBackgroundColor(new DeviceRgb(230, 185, 184))
-                .setTextAlignment(TextAlignment.CENTER));
-                
+                    .add(new Paragraph(formatValue(calc.get("feet"))).setFontSize(8))
+                    .setBackgroundColor(new DeviceRgb(230, 185, 184))
+                    .setTextAlignment(TextAlignment.CENTER));
+
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("inch"))).setFontSize(8))
-                .setBackgroundColor(new DeviceRgb(141, 180, 227))
-                .setTextAlignment(TextAlignment.CENTER));
-                
+                    .add(new Paragraph(formatValue(calc.get("inch"))).setFontSize(8))
+                    .setBackgroundColor(new DeviceRgb(141, 180, 227))
+                    .setTextAlignment(TextAlignment.CENTER));
+
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("nos"))).setFontSize(8))
-                .setBackgroundColor(new DeviceRgb(252, 213, 180))
-                .setTextAlignment(TextAlignment.CENTER));
-                
+                    .add(new Paragraph(formatValue(calc.get("nos"))).setFontSize(8))
+                    .setBackgroundColor(new DeviceRgb(252, 213, 180))
+                    .setTextAlignment(TextAlignment.CENTER));
+
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(meter)).setFontSize(8))
-                .setBackgroundColor(new DeviceRgb(169, 208, 142))
-                .setTextAlignment(TextAlignment.CENTER));
-                
+                    .add(new Paragraph(formatValue(meter)).setFontSize(8))
+                    .setBackgroundColor(new DeviceRgb(169, 208, 142))
+                    .setTextAlignment(TextAlignment.CENTER));
+
             table.addCell(new Cell()
-                .add(new Paragraph(formatValue(sqFeet)).setFontSize(8))
-                .setBackgroundColor(new DeviceRgb(187, 173, 219))
-                .setTextAlignment(TextAlignment.CENTER)); 
+                    .add(new Paragraph(formatValue(sqFeet)).setFontSize(8))
+                    .setBackgroundColor(new DeviceRgb(187, 173, 219))
+                    .setTextAlignment(TextAlignment.CENTER));
         }
-        
-        return table;
-    }
-    
-    private Table createMMCalculationTable(List<Map<String, Object>> calculations) {
-        Table table = new Table(new float[]{2, 2, 2, 2, 2})
-            .useAllAvailableWidth()
-            .setMarginTop(5);
-        
-        // Add headers with specific colors
-        Stream.of("MM", "R.Feet", "Nos", "Meter", "Sq.Feet")
-            .forEach(title -> {
-                Cell header = new Cell()
-                    .add(new Paragraph(title).setFontSize(8))
-                    .setBackgroundColor(PRIMARY_COLOR)
-                    .setFontColor(ColorConstants.WHITE)
-                    .setTextAlignment(TextAlignment.CENTER)
-                    .setPadding(5);
-                table.addHeaderCell(header);
-            });
-        
-        // Add data rows with matching background colors
-        for (Map<String, Object> calc : calculations) {
-            BigDecimal sqFeet = toBigDecimal(calc.get("sqFeet"));
-            BigDecimal meter = sqFeet.divide(SQ_FEET_TO_METER, 4, RoundingMode.HALF_UP);
-            
-            table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("mm"))).setFontSize(8))
-                .setBackgroundColor(new DeviceRgb(230, 185, 184))
-                .setTextAlignment(TextAlignment.CENTER));
-                
-            table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("runningFeet"))).setFontSize(8))
-                .setBackgroundColor(new DeviceRgb(141, 180, 227))
-                .setTextAlignment(TextAlignment.CENTER));
-                
-            table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("nos"))).setFontSize(8))
-                .setBackgroundColor(new DeviceRgb(252, 213, 180))
-                .setTextAlignment(TextAlignment.CENTER));
-                
-            table.addCell(new Cell()
-                .add(new Paragraph(formatValue(meter)).setFontSize(8))
-                .setBackgroundColor(new DeviceRgb(169, 208, 142))
-                .setTextAlignment(TextAlignment.CENTER));
-                
-            table.addCell(new Cell()
-                .add(new Paragraph(formatValue(sqFeet)).setFontSize(8))
-                .setBackgroundColor(new DeviceRgb(187, 173, 219))
-                .setTextAlignment(TextAlignment.CENTER));  
-        }
-        
-        return table;
-    }
-    
-    private Table createPolyCarbonateRollCalculationTable(List<Map<String, Object>> calculations) {
-        Table table = new Table(new float[]{3, 3, 3})
-            .useAllAvailableWidth()
-            .setMarginTop(5);
-        
-        // Add headers with specific colors
-        Stream.of("Length", "Width", "Total (sq. feet)")
-            .forEach(title -> {
-                Cell header = new Cell()
-                    .add(new Paragraph(title).setFontSize(8))
-                    .setBackgroundColor(PRIMARY_COLOR)
-                    .setFontColor(ColorConstants.WHITE)
-                    .setTextAlignment(TextAlignment.CENTER)
-                    .setPadding(5);
-                table.addHeaderCell(header);
-            });
-        
-        // Add data rows with matching background colors
-        for (Map<String, Object> calc : calculations) {
-            BigDecimal sqFeet = toBigDecimal(calc.get("sqFeet"));
-            
-            table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("length"))).setFontSize(8))
-                .setBackgroundColor(new DeviceRgb(230, 185, 184))
-                .setTextAlignment(TextAlignment.CENTER));
-                
-            table.addCell(new Cell()
-                .add(new Paragraph(formatValue(calc.get("width"))).setFontSize(8))
-                .setBackgroundColor(new DeviceRgb(141, 180, 227))
-                .setTextAlignment(TextAlignment.CENTER));
-                
-            table.addCell(new Cell()
-                .add(new Paragraph(formatValue(sqFeet)).setFontSize(8))
-                .setBackgroundColor(new DeviceRgb(187, 173, 219))
-                .setTextAlignment(TextAlignment.CENTER));  
-        }
-        
+
         return table;
     }
 
+    private Table createMMCalculationTable(List<Map<String, Object>> calculations) {
+        Table table = new Table(new float[]{2, 2, 2, 2, 2})
+                .useAllAvailableWidth()
+                .setMarginTop(5);
+
+        // Add headers with specific colors
+        Stream.of("MM", "R.Feet", "Nos", "Meter", "Sq.Feet")
+                .forEach(title -> {
+                    Cell header = new Cell()
+                            .add(new Paragraph(title).setFontSize(8))
+                            .setBackgroundColor(PRIMARY_COLOR)
+                            .setFontColor(ColorConstants.WHITE)
+                            .setTextAlignment(TextAlignment.CENTER)
+                            .setPadding(5);
+                    table.addHeaderCell(header);
+                });
+
+        // Add data rows with matching background colors
+        for (Map<String, Object> calc : calculations) {
+            BigDecimal sqFeet = toBigDecimal(calc.get("sqFeet"));
+            BigDecimal meter = sqFeet.divide(SQ_FEET_TO_METER, 4, RoundingMode.HALF_UP);
+
+            table.addCell(new Cell()
+                    .add(new Paragraph(formatValue(calc.get("mm"))).setFontSize(8))
+                    .setBackgroundColor(new DeviceRgb(230, 185, 184))
+                    .setTextAlignment(TextAlignment.CENTER));
+
+            table.addCell(new Cell()
+                    .add(new Paragraph(formatValue(calc.get("runningFeet"))).setFontSize(8))
+                    .setBackgroundColor(new DeviceRgb(141, 180, 227))
+                    .setTextAlignment(TextAlignment.CENTER));
+
+            table.addCell(new Cell()
+                    .add(new Paragraph(formatValue(calc.get("nos"))).setFontSize(8))
+                    .setBackgroundColor(new DeviceRgb(252, 213, 180))
+                    .setTextAlignment(TextAlignment.CENTER));
+
+            table.addCell(new Cell()
+                    .add(new Paragraph(formatValue(meter)).setFontSize(8))
+                    .setBackgroundColor(new DeviceRgb(169, 208, 142))
+                    .setTextAlignment(TextAlignment.CENTER));
+
+            table.addCell(new Cell()
+                    .add(new Paragraph(formatValue(sqFeet)).setFontSize(8))
+                    .setBackgroundColor(new DeviceRgb(187, 173, 219))
+                    .setTextAlignment(TextAlignment.CENTER));
+        }
+
+        return table;
+    }
+
+    private Table createPolyCarbonateRollCalculationTable(List<Map<String, Object>> calculations) {
+        Table table = new Table(new float[]{3, 3, 3})
+                .useAllAvailableWidth()
+                .setMarginTop(5);
+
+        // Add headers with specific colors
+        Stream.of("Length", "Width", "Total (sq. feet)")
+                .forEach(title -> {
+                    Cell header = new Cell()
+                            .add(new Paragraph(title).setFontSize(8))
+                            .setBackgroundColor(PRIMARY_COLOR)
+                            .setFontColor(ColorConstants.WHITE)
+                            .setTextAlignment(TextAlignment.CENTER)
+                            .setPadding(5);
+                    table.addHeaderCell(header);
+                });
+
+        // Add data rows with matching background colors
+        for (Map<String, Object> calc : calculations) {
+            BigDecimal sqFeet = toBigDecimal(calc.get("sqFeet"));
+
+            table.addCell(new Cell()
+                    .add(new Paragraph(formatValue(calc.get("length"))).setFontSize(8))
+                    .setBackgroundColor(new DeviceRgb(230, 185, 184))
+                    .setTextAlignment(TextAlignment.CENTER));
+
+            table.addCell(new Cell()
+                    .add(new Paragraph(formatValue(calc.get("width"))).setFontSize(8))
+                    .setBackgroundColor(new DeviceRgb(141, 180, 227))
+                    .setTextAlignment(TextAlignment.CENTER));
+
+            table.addCell(new Cell()
+                    .add(new Paragraph(formatValue(sqFeet)).setFontSize(8))
+                    .setBackgroundColor(new DeviceRgb(187, 173, 219))
+                    .setTextAlignment(TextAlignment.CENTER));
+        }
+
+        return table;
+    }
 
     private BigDecimal toBigDecimal(Object value) {
         if (value == null) return BigDecimal.ZERO;
@@ -434,6 +483,17 @@ public class DispatchSlipPdfService {
     private void addPageFooter(PdfDocument pdfDoc, Document document, int pageNumber) {
         float footerY = 20;  // Distance from bottom
         float pageWidth = pdfDoc.getDefaultPageSize().getWidth();
+
+        // Get client name from current user
+        String clientName = "CAPTAIN STEEL";  // Default fallback
+        try {
+            var currentUser = utilityService.getCurrentLoggedInUser();
+            if (currentUser != null && currentUser.getClient() != null && currentUser.getClient().getName() != null && !currentUser.getClient().getName().trim().isEmpty()) {
+                clientName = currentUser.getClient().getName().toUpperCase();
+            }
+        } catch (Exception e) {
+            log.warn("Could not retrieve client name for footer, using default: {}", e.getMessage());
+        }
 
         // Create HR line table
         Table lineTable = new Table(1)
@@ -452,7 +512,7 @@ public class DispatchSlipPdfService {
 
         // Contact information cell (center-aligned)
         Cell contactCell = new Cell()
-                .add(new Paragraph("CAPTAIN STEEL [ CONTACT NO.9879109091 / 8980392009 / 7574879091 / 9879109121 ]")
+                .add(new Paragraph(clientName + " [ CONTACT NO.9879109091 / 8980392009 / 7574879091 / 9879109121 ]")
                         .setFontSize(7)
                         .setFontColor(TEXT_PRIMARY))
                 .setBorder(Border.NO_BORDER)

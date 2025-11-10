@@ -2,8 +2,11 @@ package com.inventory.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Type;
 
 import java.time.OffsetDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 @Data
 @Entity
@@ -40,4 +43,8 @@ public class Client {
     
     @Column(name = "last_quote_number", columnDefinition = "BIGINT DEFAULT 0")
     private Long lastQuoteNumber = 0L;
+    
+    @Column(name = "other", columnDefinition = "jsonb default '{}'")
+    @Type(value = com.vladmihalcea.hibernate.type.json.JsonType.class)
+    private Map<String, Object> other = new HashMap<>();
 }

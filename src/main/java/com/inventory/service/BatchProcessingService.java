@@ -49,7 +49,7 @@ public class BatchProcessingService {
                                 saleItem.getProduct().getId(),
                                 saleItem.getQuantity(),
                                 isPurchase,  // true for purchase, false for sale
-                                false,
+                                true,
                                 null
                             );
                         }

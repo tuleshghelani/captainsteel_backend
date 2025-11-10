@@ -41,12 +41,76 @@ public class QuotationWithOutPdfGenerationService {
     private static final BigDecimal SQ_FEET_TO_METER = BigDecimal.valueOf(10.764);
     private static final BigDecimal MM_TO_METER = BigDecimal.valueOf(1000);
     
+    private final UtilityService utilityService;
+    
     public byte[] generateQuotationPdf(Map<String, Object> quotationData) {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         
         try (PdfDocument pdf = new PdfDocument(new PdfWriter(outputStream))) {
             Document document = new Document(pdf, PageSize.A4);
             document.setMargins(36, 36, 36, 36);
+            
+            // Get client info from logged-in user
+            String clientName = "CAPTAIN STEEL";  // Default fallback
+            String clientEmail = "captainsteel39@gmail.com";  // Default fallback
+            String clientAddress1 = "Survey No.39/2, Plot No.4, Nr.Markwell Spinning Mill,";
+            String clientAddress2 = "Sadak Pipliya, National Highway, Ta. Gondal, Dist. Rajkot.";
+            String clientGst = "24AALFC2707P1Z8";
+            String bankName = "CENTRAL BANK OF INDIA";
+            String acNumber = "3592903798";
+            String ifscCode = "CBIN0280569";
+            String branch = "BHUPENDRA ROAD,RAJKOT";
+            
+            try {
+                var currentUser = utilityService.getCurrentLoggedInUser();
+                if (currentUser != null && currentUser.getClient() != null) {
+                    if (currentUser.getClient().getName() != null && !currentUser.getClient().getName().trim().isEmpty()) {
+                        clientName = currentUser.getClient().getName().toUpperCase();
+                    }
+                    if (currentUser.getClient().getEmail() != null && !currentUser.getClient().getEmail().trim().isEmpty()) {
+                        clientEmail = currentUser.getClient().getEmail();
+                    }
+                    
+                    // Extract data from 'other' JSONB field
+                    if (currentUser.getClient().getOther() != null && !currentUser.getClient().getOther().isEmpty()) {
+                        var otherData = currentUser.getClient().getOther();
+                        if (otherData.get("address1") != null && !otherData.get("address1").toString().trim().isEmpty()) {
+                            clientAddress1 = otherData.get("address1").toString();
+                        }
+                        if (otherData.get("address2") != null && !otherData.get("address2").toString().trim().isEmpty()) {
+                            clientAddress2 = otherData.get("address2").toString();
+                        }
+                        if (otherData.get("gst") != null && !otherData.get("gst").toString().trim().isEmpty()) {
+                            clientGst = otherData.get("gst").toString();
+                        }
+                        if (otherData.get("bank_name") != null && !otherData.get("bank_name").toString().trim().isEmpty()) {
+                            bankName = otherData.get("bank_name").toString();
+                        }
+                        if (otherData.get("ac_number") != null && !otherData.get("ac_number").toString().trim().isEmpty()) {
+                            acNumber = otherData.get("ac_number").toString();
+                        }
+                        if (otherData.get("ifsc_code") != null && !otherData.get("ifsc_code").toString().trim().isEmpty()) {
+                            ifscCode = otherData.get("ifsc_code").toString();
+                        }
+                        if (otherData.get("branch") != null && !otherData.get("branch").toString().trim().isEmpty()) {
+                            branch = otherData.get("branch").toString();
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Could not retrieve client info, using defaults: {}", e.getMessage());
+            }
+            
+            // Store client info in quotation data for use in other methods
+            quotationData.put("clientName", clientName);
+            quotationData.put("clientEmail", clientEmail);
+            quotationData.put("clientAddress1", clientAddress1);
+            quotationData.put("clientAddress2", clientAddress2);
+            quotationData.put("clientGst", clientGst);
+            quotationData.put("bankName", bankName);
+            quotationData.put("acNumber", acNumber);
+            quotationData.put("ifscCode", ifscCode);
+            quotationData.put("branch", branch);
             
             // Add content
 //            addHeader(document, quotationData);
@@ -56,7 +120,7 @@ public class QuotationWithOutPdfGenerationService {
             addItemsTable(document, (List<Map<String, Object>>) quotationData.get("items"), quotationData);
             addPageFooter(pdf, document, 2);
             
-//            addBankDetailsAndTerms(document);
+//            addBankDetailsAndTerms(document, quotationData);
 //            addPageFooter(pdf, document, 3);
             
 //            addLastPage(document);
@@ -73,10 +137,17 @@ public class QuotationWithOutPdfGenerationService {
     }
     
     private void addHeader(Document document, Map<String, Object> data) {
+        // Get client info from data (set in generateQuotationPdf)
+        String clientName = data.get("clientName") != null ? data.get("clientName").toString() : "CAPTAIN STEEL";
+        String clientEmail = data.get("clientEmail") != null ? data.get("clientEmail").toString() : "captainsteel39@gmail.com";
+        String clientAddress1 = data.get("clientAddress1") != null ? data.get("clientAddress1").toString() : "Survey No.39/2, Plot No.4, Nr.Markwell Spinning Mill,";
+        String clientAddress2 = data.get("clientAddress2") != null ? data.get("clientAddress2").toString() : "Sadak Pipliya, National Highway, Ta. Gondal, Dist. Rajkot.";
+        String clientGst = data.get("clientGst") != null ? data.get("clientGst").toString() : "24AALFC2707P1Z8";
+        
         // Company name with border
         Table nameTable = new Table(1).useAllAvailableWidth();
         Cell nameCell = new Cell()
-            .add(new Paragraph("CAPTAIN STEEL")
+            .add(new Paragraph(clientName)
                 .setFontSize(20)
                 .setBold()
                 .setFontColor(new DeviceRgb(0, 0, 0)))  // Black color
@@ -90,15 +161,15 @@ public class QuotationWithOutPdfGenerationService {
         
         // Left side - Details
         Cell detailsCell = new Cell();
-        detailsCell.add(new Paragraph("Address :- Survey No.39/2, Plot No.4, Nr.Markwell Spinning Mill,")
+        detailsCell.add(new Paragraph("Address :- " + clientAddress1)
                         .setFontSize(8))
-                   .add(new Paragraph("Sadak Pipliya, National Highway, Ta. Gondal, Dist. Rajkot.")
+                   .add(new Paragraph(clientAddress2)
                         .setFontSize(8))
-                   .add(new Paragraph("E-mail: captainsteel39@gmail.com")
+                   .add(new Paragraph("E-mail: " + clientEmail)
                         .setFontSize(8))
                    .add(new Paragraph("Mo.No. 96627 12222 / 89803 92009")
                         .setFontSize(8))
-                   .add(new Paragraph("GST NO.24AALFC2707P1Z8")
+                   .add(new Paragraph("GST NO." + clientGst)
                         .setFontSize(9)
                         .setBold()
                         .setFontColor(PRIMARY_COLOR))
@@ -612,8 +683,15 @@ public class QuotationWithOutPdfGenerationService {
         // Start new page
         document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));
         
+        // Get bank details from data
+        String clientGst = data.get("clientGst") != null ? data.get("clientGst").toString() : "24AALFC2707P1Z8";
+        String bankName = data.get("bankName") != null ? data.get("bankName").toString() : "CENTRAL BANK OF INDIA";
+        String acNumber = data.get("acNumber") != null ? data.get("acNumber").toString() : "3592903798";
+        String ifscCode = data.get("ifscCode") != null ? data.get("ifscCode").toString() : "CBIN0280569";
+        String branch = data.get("branch") != null ? data.get("branch").toString() : "BHUPENDRA ROAD,RAJKOT";
+        
         // GST Number
-        document.add(new Paragraph("GST No: 24AALFC2707P1Z8")
+        document.add(new Paragraph("GST No: " + clientGst)
             .setFontColor(TEXT_PRIMARY)
             .setFontSize(8)
             .setMarginBottom(20));
@@ -625,15 +703,15 @@ public class QuotationWithOutPdfGenerationService {
             .setFontSize(10)
             .setMarginBottom(10));
         
-        document.add(new Paragraph("CENTRAL BANK OF INDIA")
+        document.add(new Paragraph(bankName)
             .setFontColor(new DeviceRgb(230, 108, 1))  // Orange color
             .setBold()
             .setFontSize(8));
             
         Table bankTable = new Table(1).useAllAvailableWidth();
-        addBankDetail(bankTable, "A/C NO:", "3592903798");
-        addBankDetail(bankTable, "IFSC CODE:", "CBIN0280569");
-        addBankDetail(bankTable, "BRANCH:", "BHUPENDRAROAD,RAJKOT");
+        addBankDetail(bankTable, "A/C NO:", acNumber);
+        addBankDetail(bankTable, "IFSC CODE:", ifscCode);
+        addBankDetail(bankTable, "BRANCH:", branch);
         document.add(bankTable);
         
         // Terms and Conditions Section
@@ -648,7 +726,9 @@ public class QuotationWithOutPdfGenerationService {
         addTerm(document, "1.", "Customer will be billed after indicating acceptance of this quote.", new DeviceRgb(66, 133, 244));
         addTerm(document, "2.", "Payment 50% Advance And 50% before goods Dispatched.", new DeviceRgb(66, 133, 244));
         addTerm(document, "3.", "Transport Transaction Extra", new DeviceRgb(66, 133, 244));
-        addTerm(document, "4.", "The Responsibility Of All the Material Will Be With That Company.\nThere Will Be No Responsibility Of The Distributor I.E. Captain Steel.", new DeviceRgb(66, 133, 244));
+        // Get client name from data
+        String clientName = data.get("clientName") != null ? data.get("clientName").toString() : "Captain Steel";
+        addTerm(document, "4.", "The Responsibility Of All the Material Will Be With That Company.\nThere Will Be No Responsibility Of The Distributor I.E. " + clientName + ".", new DeviceRgb(66, 133, 244));
         addTerm(document, "5.", "SUBJECT TO GONDAL JURISDICTION.", new DeviceRgb(66, 133, 244));
         Object termsConditionsObj = data.get("termsConditions");
         if (termsConditionsObj != null && !termsConditionsObj.toString().trim().isEmpty()) {
