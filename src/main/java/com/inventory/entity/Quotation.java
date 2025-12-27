@@ -38,7 +38,8 @@ import lombok.Setter;
     @Index(name = "idx_quotation_status", columnList = "status"),
     @Index(name = "idx_quotation_quote_date", columnList = "quote_date"),
     @Index(name = "idx_quotation_client_id", columnList = "client_id"),
-    @Index(name = "idx_quotation_quote_number", columnList = "quote_number")
+    @Index(name = "idx_quotation_quote_number", columnList = "quote_number"),
+    @Index(name = "idx_quotation_customer_name", columnList = "customer_name"),
 }, uniqueConstraints = {
     @UniqueConstraint(name = "uk_quotation_quote_number_client_id", columnNames = {"quote_number", "client_id"})
 })

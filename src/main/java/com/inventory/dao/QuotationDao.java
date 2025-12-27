@@ -90,7 +90,7 @@ public class QuotationDao {
         StringBuilder conditions = new StringBuilder();
         
         if (searchParams.getSearch() != null && !searchParams.getSearch().trim().isEmpty()) {
-            conditions.append(" AND (q.quote_number LIKE :search OR c.name LIKE :search)");
+            conditions.append(" AND (q.quote_number LIKE :search OR c.name LIKE :search OR q.customer_name LIKE :search)");
             params.put("search", "%" + searchParams.getSearch().trim() + "%");
         }
         if (searchParams.getStartDate() != null) {
